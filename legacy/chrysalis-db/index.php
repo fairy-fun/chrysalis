@@ -31,29 +31,33 @@ function runSql(string $sql, string $apiKey): array {
 }
 
 function getTables(string $apiKey): array {
-    $ch = curl_init('https://makeyourfairytale.com/pecherie/chill-api/tables.php');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['x-api-key: ' . $apiKey],
-    ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
-    $data = json_decode($response, true);
+    $result = http_get(
+        'https://makeyourfairytale.com/pecherie/chill-api/tables.php',
+        ['x-api-key: ' . $apiKey]
+    );
+
+    if ($result['curl_error']) {
+        return [];
+    }
+
+    $data = json_decode($result['body'], true);
     if (!is_array($data)) return [];
+
     $tables = $data['tables'] ?? $data;
     return is_array($tables) ? $tables : [];
 }
 
 function getColumns(string $table, string $apiKey): array {
-    $url = 'https://makeyourfairytale.com/pecherie/chill-api/columns.php?table=' . urlencode($table);
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['x-api-key: ' . $apiKey],
-    ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
-    $data = json_decode($response, true);
+    $result = http_get(
+        'https://makeyourfairytale.com/pecherie/chill-api/columns.php?table=' . urlencode($table),
+        ['x-api-key: ' . $apiKey]
+    );
+
+    if ($result['curl_error']) {
+        return [];
+    }
+
+    $data = json_decode($result['body'], true);
     return $data['columns'] ?? [];
 }
 
