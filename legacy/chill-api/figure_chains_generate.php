@@ -17,7 +17,7 @@ function respond(int $code, array $data): never
 
 function getConfig(): array
 {
-    $config = require __DIR__ . '/../../../pecherie_config.php';
+    $config = require dirname(__DIR__, 2) . '/config/bootstrap.php';
 
     if (!is_array($config)) {
         respond(500, ['error' => 'Invalid server configuration']);

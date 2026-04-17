@@ -1,10 +1,19 @@
 <?php
 set_time_limit(180);
-define('PROMPT_FILE',  __DIR__ . '/system_prompt.txt');
-define('SCHEMA_FILE',  __DIR__ . '/schema_cache.txt');
+define('STORAGE_DIR', dirname(__DIR__, 2) . '/storage/chrysalis-db');
+define('PROMPT_FILE', STORAGE_DIR . '/prompts/system_prompt.txt');
+define('SCHEMA_FILE', STORAGE_DIR . '/cache/schema_cache.txt');
+
+if (!is_dir(dirname(PROMPT_FILE))) {
+    mkdir(dirname(PROMPT_FILE), 0777, true);
+}
+
+if (!is_dir(dirname(SCHEMA_FILE))) {
+    mkdir(dirname(SCHEMA_FILE), 0777, true);
+}
 
 function getConfig(): array {
-    $config = require __DIR__ . '/../../../pecherie_config.php';
+	$config = require dirname(__DIR__, 2) . '/config/bootstrap.php';
     if (!is_array($config)) { http_response_code(500); echo json_encode(['error' => 'Invalid config']); exit; }
     return $config;
 }
