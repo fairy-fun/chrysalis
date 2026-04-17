@@ -18,19 +18,16 @@ function getConfig(): array {
     return $config;
 }
 
+
+require_once dirname(__DIR__, 2) . '/api/HttpClient.php';
+
+
 function runSql(string $sql, string $apiKey): array {
-    $ch = curl_init('https://makeyourfairytale.com/pecherie/chill-api/query.php');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode(['sql' => $sql, 'limit' => 200]),
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'x-api-key: ' . $apiKey],
-    ]);
-    $response = curl_exec($ch);
-    $curlErr  = curl_error($ch);
-    $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    return ['status' => $status, 'body' => $response, 'curl_error' => $curlErr];
+    return http_post_json(
+        'https://makeyourfairytale.com/pecherie/chill-api/query.php',
+        ['sql' => $sql, 'limit' => 200],
+        ['x-api-key: ' . $apiKey]
+    );
 }
 
 function getTables(string $apiKey): array {
