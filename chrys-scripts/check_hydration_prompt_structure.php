@@ -23,8 +23,6 @@ if (!defined('FW_AUDIT_ENTRYPOINT')) {
 
 $repoRoot = dirname(__DIR__, 3);
 $relativePath = FW_AUDIT_ENTRYPOINT;
-
-// Make path OS-safe (Windows + Linux)
 $normalizedPath = str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
 $fullPath = $repoRoot . DIRECTORY_SEPARATOR . $normalizedPath;
 
