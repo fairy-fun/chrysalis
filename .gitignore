@@ -10,3 +10,9 @@ private/chrysalis-slack.env
 *.bak
 .idea/
 private/docs/prompts.txt
+hello.txt
+public_html/pecherie/chill-api/error_log
+public_html/pecherie/chill-api/admin/error_log
+public_html/pecherie/chill-api/public/error_log
+public_html/pecherie/chrysalis-db/error_log
+**/error_log
