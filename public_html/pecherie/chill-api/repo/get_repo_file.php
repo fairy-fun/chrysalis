@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 
-require_once dirname(__DIR__, 4) . '/pecherie_config.php';
-
 function respond(int $statusCode, array $payload): void
 {
     http_response_code($statusCode);
