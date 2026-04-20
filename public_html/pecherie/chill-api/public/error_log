@@ -1,0 +1,39 @@
+[18-Apr-2026 10:26:36 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:26:36 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:26:36 UTC] PHP Fatal error:  require(): Failed opening required '/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php' (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:27:06 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:27:06 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:27:06 UTC] PHP Fatal error:  require(): Failed opening required '/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php' (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Fatal error:  require(): Failed opening required '/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php' (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Fatal error:  require(): Failed opening required '/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php' (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Fatal error:  require(): Failed opening required '/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php' (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Warning:  require(/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php): failed to open stream: No such file or directory in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 10:28:20 UTC] PHP Fatal error:  require(): Failed opening required '/home/sxnzlfun/public_html/pecherie/chill-api/public/../../../pecherie_config.php' (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/sxnzlfun/public_html/pecherie/chill-api/public/tables.php on line 16
+[18-Apr-2026 14:08:07 UTC] PHP Parse error:  syntax error, unexpected '=>' (T_DOUBLE_ARROW) in /home/sxnzlfun/private/bootstrap.php on line 190
+[18-Apr-2026 14:25:38 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 204
+[18-Apr-2026 14:25:55 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 204
+[18-Apr-2026 14:26:59 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 204
+[18-Apr-2026 14:30:44 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 203
+[18-Apr-2026 14:32:53 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 203
+[18-Apr-2026 14:34:30 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 203
+[18-Apr-2026 14:35:15 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 203
+[18-Apr-2026 18:31:45 UTC] PHP Parse error:  syntax error, unexpected '|', expecting variable (T_VARIABLE) in /home/sxnzlfun/private/bootstrap.php on line 203
+[18-Apr-2026 18:59:45 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function json_response() in /home/sxnzlfun/public_html/pecherie/chill-api/public/db_probe.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/sxnzlfun/public_html/pecherie/chill-api/public/db_probe.php on line 19
+[18-Apr-2026 18:59:53 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function json_response() in /home/sxnzlfun/public_html/pecherie/chill-api/public/db_probe.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/sxnzlfun/public_html/pecherie/chill-api/public/db_probe.php on line 19
+[18-Apr-2026 19:00:25 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function json_response() in /home/sxnzlfun/public_html/pecherie/chill-api/public/db_probe.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/sxnzlfun/public_html/pecherie/chill-api/public/db_probe.php on line 19
