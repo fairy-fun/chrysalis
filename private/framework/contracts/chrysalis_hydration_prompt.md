@@ -1,5 +1,7 @@
 # Chrysalis Hydration Prompt
 
+<!-- CHRYSALIS_PROMPT_VERSION: 1.0 -->
+
 Purpose:
 Defines the canonical repository audit procedure used by GPT and developers
 to evaluate boundary compliance and doctrine alignment.
