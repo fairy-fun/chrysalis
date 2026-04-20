@@ -7,21 +7,26 @@ Defines the canonical repository audit procedure used by GPT and developers
 to evaluate boundary compliance and doctrine alignment.
 
 Scope:
-- Framework boundary enforcement
-- Protected primitive usage
-- CI coverage validation
+
+* Framework boundary enforcement
+* Protected primitive usage
+* CI coverage validation
 
 Source of truth:
 Must align with:
-- repo_contract.php
-- CI enforcement scripts
+
+* repo_contract.php
+* CI enforcement scripts
 
 Last updated: 2026-04-20
-
 
 Load the current Chrysalis repository state from GitHub and perform a full boundary and doctrine audit.
 
 Do not answer until you have inspected actual repository files and call paths.
+
+If a repository contract exists, load it first and treat it as authoritative unless repository code clearly contradicts it.
+
+When repository access is partial, state exactly what files, directories, or call paths could not be inspected, then continue with best-effort analysis grounded only in what was actually visible.
 
 ---
 
@@ -39,6 +44,8 @@ Map the repository into the following layers (create concrete file-level mapping
 * CI enforcement scripts
 
 List the actual files implementing each layer.
+
+If a layer is absent, say so explicitly.
 
 ---
 
@@ -58,6 +65,10 @@ Do a call-path analysis:
 * full call chain (entry point → … → target)
 
 Be explicit. Do not summarise — show the paths.
+
+If a function does not exist, say that clearly.
+If a function exists but has no callers, state that clearly.
+Distinguish direct calls from indirect calls.
 
 ---
 
@@ -93,6 +104,8 @@ For each violation:
 * show exact file and code reference
 * explain why it violates the rule
 
+If no violation is found for a rule, say so explicitly.
+
 ---
 
 ## 4. Contract verification (if present)
@@ -107,6 +120,10 @@ If a contract file exists (e.g. private/framework/contracts/repo_contract.php):
   * incorrect allowlists
   * drift between contract and code
 
+Quote contract constants, arrays, or declarations only as needed to support the analysis.
+
+If no contract file exists, say so explicitly.
+
 ---
 
 ## 5. CI enforcement coverage
@@ -116,6 +133,8 @@ Inspect CI scripts (e.g. check_forbidden_primitive_calls.php, check_directive_re
 * what rules are enforced today
 * what violations would NOT be caught
 * gaps between doctrine and CI enforcement
+
+Prefer concrete examples over general statements.
 
 ---
 
@@ -127,6 +146,8 @@ Summarise:
 * highest-risk violations (ranked)
 * architectural inconsistencies
 * fragile areas likely to regress
+
+Base this only on repository evidence actually inspected.
 
 ---
 
@@ -143,6 +164,8 @@ For each item:
   * enforcement gap
   * structural violation
   * doctrine inconsistency
+
+Order fixes by risk reduction and architectural importance.
 
 ---
 
