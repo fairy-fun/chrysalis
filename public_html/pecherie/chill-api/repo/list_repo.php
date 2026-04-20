@@ -166,16 +166,38 @@ function ensure_within_repo_root(string $repoRoot, string $resolvedPath): void
     }
 }
 
-function is_visible_path(string $relativePath, array $visiblePrefixes, array $visibleFiles): bool
+/**
+ * A path is traversable/visible if it is:
+ * - exactly a visible prefix
+ * - below a visible prefix
+ * - an ancestor of a visible prefix
+ * - exactly a visible file
+ * - an ancestor of a visible file
+ *
+ * This ensures that if a directory appears in a listing, a follow-up listRepo()
+ * call on that directory will also succeed.
+ */
+function is_visible_or_ancestor_path(string $relativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
-    foreach ($visibleFiles as $file) {
-        if ($relativePath === $file) {
+    if ($relativePath === '') {
+        return true;
+    }
+
+    foreach ($visiblePrefixes as $prefix) {
+        if (
+            $relativePath === $prefix ||
+            strpos($relativePath, $prefix . '/') === 0 ||
+            strpos($prefix, $relativePath . '/') === 0
+        ) {
             return true;
         }
     }
 
-    foreach ($visiblePrefixes as $prefix) {
-        if ($relativePath === $prefix || strpos($relativePath, $prefix . '/') === 0) {
+    foreach ($visibleFiles as $file) {
+        if (
+            $relativePath === $file ||
+            strpos($file, $relativePath . '/') === 0
+        ) {
             return true;
         }
     }
@@ -185,23 +207,7 @@ function is_visible_path(string $relativePath, array $visiblePrefixes, array $vi
 
 function should_include_child(string $childRelativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
-    if (is_visible_path($childRelativePath, $visiblePrefixes, $visibleFiles)) {
-        return true;
-    }
-
-    foreach ($visiblePrefixes as $prefix) {
-        if (strpos($prefix, $childRelativePath . '/') === 0) {
-            return true;
-        }
-    }
-
-    foreach ($visibleFiles as $file) {
-        if (strpos($file, $childRelativePath . '/') === 0) {
-            return true;
-        }
-    }
-
-    return false;
+    return is_visible_or_ancestor_path($childRelativePath, $visiblePrefixes, $visibleFiles);
 }
 
 require_post();
@@ -219,6 +225,18 @@ if (!is_string($inputPath)) {
 reject_dangerous_input($inputPath);
 
 $relativePath = normalize_relative_path($inputPath);
+
+if (
+    $relativePath !== '' &&
+    !is_visible_or_ancestor_path(
+        $relativePath,
+        $config['visible_prefixes'],
+        $config['visible_files']
+    )
+) {
+    fail(403, 'Path is not visible', ['path' => $relativePath]);
+}
+
 $absolutePath = build_absolute_path($config['repo_root'], $relativePath);
 $resolvedPath = realpath($absolutePath);
 
@@ -229,16 +247,12 @@ if ($resolvedPath === false || !is_dir($resolvedPath)) {
 $resolvedPath = str_replace('\\', '/', $resolvedPath);
 ensure_within_repo_root($config['repo_root'], $resolvedPath);
 
-if ($relativePath !== '' && !is_visible_path($relativePath, $config['visible_prefixes'], $config['visible_files'])) {
-    fail(403, 'Path is not visible', ['path' => $relativePath]);
-}
-
-$entries = [];
 $items = scandir($resolvedPath);
-
 if ($items === false) {
     fail(500, 'Unable to read directory', ['path' => $relativePath]);
 }
+
+$entries = [];
 
 foreach ($items as $item) {
     if ($item === '.' || $item === '..') {
