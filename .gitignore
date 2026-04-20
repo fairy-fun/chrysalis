@@ -6,3 +6,4 @@
 *.bak
 pecherie_config.php
 private/chrysalis-slack.env
+*.live.php
