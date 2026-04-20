@@ -1,3 +1,22 @@
+# Chrysalis Hydration Prompt
+
+Purpose:
+Defines the canonical repository audit procedure used by GPT and developers
+to evaluate boundary compliance and doctrine alignment.
+
+Scope:
+- Framework boundary enforcement
+- Protected primitive usage
+- CI coverage validation
+
+Source of truth:
+Must align with:
+- repo_contract.php
+- CI enforcement scripts
+
+Last updated: 2026-04-20
+
+
 Load the current Chrysalis repository state from GitHub and perform a full boundary and doctrine audit.
 
 Do not answer until you have inspected actual repository files and call paths.

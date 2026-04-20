@@ -31,7 +31,13 @@ if (!is_array($rows)) {
     fwrite(STDERR, "Failed to fetch directive registry drift rows.\n");
     exit(2);
 }
+if (!defined('FW_AUDIT_ENTRYPOINT')) {
+    throw new RuntimeException('FW_AUDIT_ENTRYPOINT is not defined');
+}
 
+if (!is_file(dirname(__DIR__, 3) . '/' . FW_AUDIT_ENTRYPOINT)) {
+    throw new RuntimeException('Audit entrypoint file missing: ' . FW_AUDIT_ENTRYPOINT);
+}
 $errors = [];
 
 foreach ($rows as $row) {
