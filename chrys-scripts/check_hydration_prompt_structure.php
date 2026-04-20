@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 3) . '/private/bootstrap.php';
 require_once dirname(__DIR__, 3) . '/private/framework/contracts/repo_contract.php';
 
-function fail(string $message, array $extra = []): void
+function hydration_prompt_fail(string $message, array $extra = []): void
 {
     http_response_code(500);
 
@@ -13,20 +13,23 @@ function fail(string $message, array $extra = []): void
         'message' => $message,
     ], $extra);
 
-    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . PHP_EOL;
     exit(1);
 }
 
 if (!defined('FW_AUDIT_ENTRYPOINT')) {
-    fail('FW_AUDIT_ENTRYPOINT is not defined in repo_contract.php');
+    hydration_prompt_fail('FW_AUDIT_ENTRYPOINT is not defined in repo_contract.php');
 }
 
 $repoRoot = dirname(__DIR__, 3);
 $relativePath = FW_AUDIT_ENTRYPOINT;
-$fullPath = $repoRoot . '/' . $relativePath;
+
+// Make path OS-safe (Windows + Linux)
+$normalizedPath = str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+$fullPath = $repoRoot . DIRECTORY_SEPARATOR . $normalizedPath;
 
 if (!is_file($fullPath)) {
-    fail('Hydration prompt file is missing', [
+    hydration_prompt_fail('Hydration prompt file is missing', [
         'expected_path' => $relativePath,
         'resolved_path' => $fullPath,
     ]);
@@ -34,7 +37,7 @@ if (!is_file($fullPath)) {
 
 $content = file_get_contents($fullPath);
 if ($content === false) {
-    fail('Unable to read hydration prompt file', [
+    hydration_prompt_fail('Unable to read hydration prompt file', [
         'expected_path' => $relativePath,
         'resolved_path' => $fullPath,
     ]);
@@ -61,7 +64,7 @@ foreach ($requiredSections as $section) {
 }
 
 if ($missingSections !== []) {
-    fail('Hydration prompt is missing required sections', [
+    hydration_prompt_fail('Hydration prompt is missing required sections', [
         'expected_path' => $relativePath,
         'resolved_path' => $fullPath,
         'missing_sections' => $missingSections,
@@ -69,7 +72,7 @@ if ($missingSections !== []) {
 }
 
 echo json_encode([
-    'status' => 'ok',
-    'message' => 'Hydration prompt structure is valid',
-    'checked_path' => $relativePath,
-], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . PHP_EOL;
+        'status' => 'ok',
+        'message' => 'Hydration prompt structure is valid',
+        'checked_path' => $relativePath,
+    ], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . PHP_EOL;
