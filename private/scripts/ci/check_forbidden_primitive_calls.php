@@ -41,19 +41,39 @@ foreach ($scanRoots as $scanRoot) {
     }
 }
 
-$violations = fw_find_direct_primitive_call_violations(
+sort($filePaths);
+
+$rawPrimitiveViolations = fw_find_direct_primitive_call_violations(
     $filePaths,
     FW_PROTECTED_PRIMITIVES,
     FW_ALLOWED_PRIMITIVE_CALLERS
 );
 
-if ($violations !== []) {
-    fwrite(STDERR, "Forbidden direct protected-primitive calls detected:\n");
-    foreach ($violations as $violation) {
-        fwrite(STDERR, "- {$violation['file']} -> {$violation['primitive']}\n");
+$dbAdapterViolations = fw_find_direct_primitive_call_violations(
+    $filePaths,
+    FW_PROTECTED_DB_ADAPTERS,
+    FW_ALLOWED_DB_ADAPTER_CALLERS
+);
+
+if ($rawPrimitiveViolations !== [] || $dbAdapterViolations !== []) {
+    fwrite(STDERR, "Forbidden direct protected-layer calls detected:\n");
+
+    foreach ($rawPrimitiveViolations as $violation) {
+        fwrite(
+            STDERR,
+            "- raw primitive bypass: {$violation['file']} -> {$violation['primitive']}\n"
+        );
     }
+
+    foreach ($dbAdapterViolations as $violation) {
+        fwrite(
+            STDERR,
+            "- DB adapter bypass: {$violation['file']} -> {$violation['primitive']}\n"
+        );
+    }
+
     exit(1);
 }
 
-fwrite(STDOUT, "OK: no forbidden direct protected-primitive calls detected.\n");
+fwrite(STDOUT, "OK: no forbidden direct protected-layer calls detected.\n");
 exit(0);

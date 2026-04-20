@@ -7,39 +7,51 @@ require_once __DIR__ . '/../../framework/bootstrap.php';
 $pdo = db();
 $schemaName = db_name();
 
-/**
- * Adjust table/column names only if your schema differs.
- */
 $sql = "
     SELECT directive_key, directive_text, target_procedure
     FROM system_directives
     WHERE target_procedure IS NOT NULL
+    ORDER BY directive_key ASC, target_procedure ASC
 ";
 
-$stmt = $pdo->query($sql);
+$stmt = $pdo->prepare($sql);
+if (!$stmt instanceof PDOStatement) {
+    fwrite(STDERR, "Failed to prepare directive registry drift query.\n");
+    exit(2);
+}
+
+$ok = $stmt->execute();
+if ($ok !== true) {
+    fwrite(STDERR, "Failed to execute directive registry drift query.\n");
+    exit(2);
+}
+
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if (!is_array($rows)) {
+    fwrite(STDERR, "Failed to fetch directive registry drift rows.\n");
+    exit(2);
+}
 
 $errors = [];
 
 foreach ($rows as $row) {
-    $directiveKey = (string)$row['directive_key'];
-    $directiveText = (string)$row['directive_text'];
-    $targetProcedure = (string)$row['target_procedure'];
+    $directiveKey = (string)($row['directive_key'] ?? '');
+    $directiveText = (string)($row['directive_text'] ?? '');
+    $targetProcedure = (string)($row['target_procedure'] ?? '');
 
-    $expectedText = fw_build_procedure_call_directive_text($schemaName, $targetProcedure);
-
-    if ($directiveText !== $expectedText) {
-        $errors[] = "Directive text drift for {$directiveKey}: expected '{$expectedText}', got '{$directiveText}'";
-    }
-
-    if (!fw_procedure_exists($pdo, $schemaName, $targetProcedure)) {
-        $errors[] = "Missing target procedure for {$directiveKey}: {$schemaName}.{$targetProcedure}";
-    }
-
-    if (!fw_is_registered_active_procedure($pdo, $targetProcedure)) {
-        $errors[] = "Inactive or missing registry entry for {$directiveKey}: {$targetProcedure}";
+    try {
+        fw_validate_procedure_execution_directive(
+            $pdo,
+            $schemaName,
+            $targetProcedure,
+            $directiveText
+        );
+    } catch (Throwable $e) {
+        $errors[] = "Directive validation failed for {$directiveKey}: " . $e->getMessage();
     }
 }
+
+sort($errors, SORT_STRING);
 
 if ($errors !== []) {
     fwrite(STDERR, implode(PHP_EOL, $errors) . PHP_EOL);
