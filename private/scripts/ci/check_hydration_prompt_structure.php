@@ -17,11 +17,35 @@ function hydration_prompt_fail(string $message, array $extra = []): void
     exit(1);
 }
 
+$repoRoot = dirname(__DIR__, 3);
+$expectedRelativePath = 'private/framework/contracts/chrysalis_hydration_prompt.md';
+
 if (!defined('FW_AUDIT_ENTRYPOINT')) {
     hydration_prompt_fail('FW_AUDIT_ENTRYPOINT is not defined in repo_contract.php');
 }
 
-$repoRoot = dirname(__DIR__, 3);
+if (FW_AUDIT_ENTRYPOINT !== $expectedRelativePath) {
+    hydration_prompt_fail('FW_AUDIT_ENTRYPOINT does not match expected hydration prompt path', [
+        'expected_path' => $expectedRelativePath,
+        'declared_path' => FW_AUDIT_ENTRYPOINT,
+    ]);
+}
+
+if (defined('FW_REPO_CONTRACT')) {
+    if (
+        !is_array(FW_REPO_CONTRACT)
+        || !array_key_exists('audit_entrypoint', FW_REPO_CONTRACT)
+        || FW_REPO_CONTRACT['audit_entrypoint'] !== FW_AUDIT_ENTRYPOINT
+    ) {
+        hydration_prompt_fail('FW_REPO_CONTRACT audit_entrypoint does not match FW_AUDIT_ENTRYPOINT', [
+            'contract_value' => is_array(FW_REPO_CONTRACT) && array_key_exists('audit_entrypoint', FW_REPO_CONTRACT)
+                ? FW_REPO_CONTRACT['audit_entrypoint']
+                : null,
+            'constant_value' => FW_AUDIT_ENTRYPOINT,
+        ]);
+    }
+}
+
 $relativePath = FW_AUDIT_ENTRYPOINT;
 $normalizedPath = str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
 $fullPath = $repoRoot . DIRECTORY_SEPARATOR . $normalizedPath;
@@ -42,6 +66,7 @@ if ($content === false) {
 }
 
 $requiredSections = [
+    '# Chrysalis Hydration Prompt',
     '## 1. Identify architecture layers',
     '## 2. Trace protected call paths',
     '## 3. Enforce boundary rules',
@@ -66,6 +91,13 @@ if ($missingSections !== []) {
         'expected_path' => $relativePath,
         'resolved_path' => $fullPath,
         'missing_sections' => $missingSections,
+    ]);
+}
+
+if (strpos($content, '<!-- CHRYSALIS_PROMPT_VERSION:') === false) {
+    hydration_prompt_fail('Hydration prompt is missing version marker', [
+        'expected_path' => $relativePath,
+        'resolved_path' => $fullPath,
     ]);
 }
 
