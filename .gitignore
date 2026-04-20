@@ -9,3 +9,5 @@ private/chrysalis-slack.env
 *.live.php
 *.bak
 .idea/
+private/docs/prompts.txt
+private/docs/chrysalis_hydration_prompt.md
