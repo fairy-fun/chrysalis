@@ -1,98 +1,296 @@
 <?php
+
 declare(strict_types=1);
 
-require_once dirname(__DIR__, 3) . '/private/bootstrap.php';
+header('Content-Type: application/json; charset=utf-8');
 
-function fail(int $statusCode, string $message, array $extra = []): void
+const DEBUG_MODE = false;
+
+function respond(int $statusCode, array $payload, array $headers = []): void
 {
     http_response_code($statusCode);
-    header('Content-Type: application/json; charset=utf-8');
 
-    echo json_encode(array_merge([
-        'status' => 'error',
-        'message' => $message,
-    ], $extra), JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . PHP_EOL;
+    foreach ($headers as $name => $value) {
+        header($name . ': ' . $value);
+    }
+
+    echo json_encode(
+        $payload,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+
     exit;
 }
 
-function get_repo_root(): string
-{
-    return '/home/sxnzlfun/repositories/chrysalis';
+function fail(
+    int $statusCode,
+    string $error,
+    array $extra = [],
+    array $headers = []
+): void {
+    respond($statusCode, array_merge([
+        'status' => 'error',
+        'error' => $error,
+    ], $extra), $headers);
 }
 
-function normalise_repo_path(string $path): string
+function debugFail(
+    int $statusCode,
+    string $error,
+    array $extra = [],
+    ?Throwable $e = null,
+    array $headers = []
+): void {
+    if (DEBUG_MODE && $e !== null) {
+        $extra['debug'] = [
+            'exception' => get_class($e),
+            'message' => $e->getMessage(),
+        ];
+    }
+
+    fail($statusCode, $error, $extra, $headers);
+}
+
+function loadConfig(): array
+{
+    $configPath = __DIR__ . '/../../../../pecherie_config.php';
+
+    if (!is_file($configPath)) {
+        fail(500, 'Missing server configuration');
+    }
+
+    $config = require $configPath;
+
+    if (!is_array($config)) {
+        fail(500, 'Invalid server configuration');
+    }
+
+    return $config;
+}
+
+function getHeaderValue(string $headerName): ?string
+{
+    $target = strtolower($headerName);
+
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if (is_array($headers)) {
+            foreach ($headers as $key => $value) {
+                if (strtolower((string)$key) === $target) {
+                    return trim((string)$value);
+                }
+            }
+        }
+    }
+
+    $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $headerName));
+    if (isset($_SERVER[$serverKey])) {
+        return trim((string)$_SERVER[$serverKey]);
+    }
+
+    return null;
+}
+
+function requireAuth(array $config): void
+{
+    $expected = trim((string)($config['pecherie_api_key'] ?? ''));
+
+    if ($expected === '') {
+        fail(500, 'Server auth is not configured');
+    }
+
+    $provided = getHeaderValue('X-API-Key');
+
+    if ($provided === null || $provided === '' || !hash_equals($expected, $provided)) {
+        fail(401, 'Unauthorized');
+    }
+}
+
+function getJsonBody(): array
+{
+    $raw = file_get_contents('php://input');
+
+    if ($raw === false) {
+        fail(400, 'Unable to read request body');
+    }
+
+    $trimmed = trim($raw);
+    if ($trimmed === '') {
+        return [];
+    }
+
+    try {
+        $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $e) {
+        debugFail(400, 'Request body must be valid JSON', [], $e);
+    }
+
+    if (!is_array($decoded)) {
+        fail(400, 'Request body must decode to a JSON object');
+    }
+
+    return $decoded;
+}
+
+function normaliseRepoPath(string $path): string
 {
     $path = trim($path);
     $path = str_replace('\\', '/', $path);
+    $path = preg_replace('#/+#', '/', $path) ?? $path;
     $path = ltrim($path, '/');
-
-    if (str_contains($path, "\0")) {
-        fail(400, 'Invalid path');
-    }
-
-    if (preg_match('#(^|/)\.\.(/|$)#', $path)) {
-        fail(400, 'Parent traversal is not allowed');
-    }
 
     return $path;
 }
 
-$requestedPath = $_GET['path'] ?? '';
-$relativePath = normalise_repo_path($requestedPath);
-
-$repoRoot = rtrim(get_repo_root(), DIRECTORY_SEPARATOR);
-$basePath = $relativePath === ''
-    ? $repoRoot
-    : $repoRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
-
-$realRepoRoot = realpath($repoRoot);
-$realBasePath = realpath($basePath);
-
-if ($realRepoRoot === false) {
-    fail(500, 'Configured repo root does not exist');
-}
-
-if ($realBasePath === false || !is_dir($realBasePath)) {
-    fail(404, 'Directory not found', [
-        'requested_path' => $relativePath,
-    ]);
-}
-
-if ($realBasePath !== $realRepoRoot
-    && strncmp($realBasePath, $realRepoRoot . DIRECTORY_SEPARATOR, strlen($realRepoRoot . DIRECTORY_SEPARATOR)) !== 0) {
-    fail(403, 'Resolved path escapes repo root');
-}
-
-$items = scandir($realBasePath);
-if ($items === false) {
-    fail(500, 'Unable to read directory', [
-        'requested_path' => $relativePath,
-    ]);
-}
-
-$entries = [];
-foreach ($items as $item) {
-    if ($item === '.' || $item === '..') {
-        continue;
+function validateRelativePath(string $path): void
+{
+    if (strpos($path, "\0") !== false) {
+        fail(400, 'Invalid path');
     }
 
-    $itemPath = $realBasePath . DIRECTORY_SEPARATOR . $item;
-    $relativeItemPath = ltrim(str_replace($realRepoRoot, '', $itemPath), DIRECTORY_SEPARATOR);
-    $relativeItemPath = str_replace(DIRECTORY_SEPARATOR, '/', $relativeItemPath);
-
-    $entries[] = [
-        'name' => $item,
-        'path' => $relativeItemPath,
-        'type' => is_dir($itemPath) ? 'dir' : 'file',
-    ];
+    if (preg_match('#(^|/)\.\.(/|$)#', $path) === 1) {
+        fail(403, 'Path traversal is not allowed', [
+            'path' => $path,
+        ]);
+    }
 }
 
-header('Content-Type: application/json; charset=utf-8');
+function getRepoRoot(array $config): string
+{
+    $configuredRoot = trim((string)($config['chrysalis_repo_root'] ?? ''));
 
-echo json_encode([
-    'status' => 'ok',
-    'repo_root' => $realRepoRoot,
-    'requested_path' => $relativePath,
-    'resolved_path' => $realBasePath,
-    'entries' => $entries,
-], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . PHP_EOL;
+    if ($configuredRoot === '') {
+        fail(500, 'Repo root is not configured', [
+            'hint' => 'Add chrysalis_repo_root to pecherie_config.php',
+        ]);
+    }
+
+    $repoRoot = realpath($configuredRoot);
+
+    if ($repoRoot === false || !is_dir($repoRoot)) {
+        fail(500, 'Repo root is not accessible');
+    }
+
+    return rtrim($repoRoot, DIRECTORY_SEPARATOR);
+}
+
+function resolveDirectoryPath(string $repoRoot, string $relativePath): string
+{
+    $candidate = $relativePath === ''
+        ? $repoRoot
+        : $repoRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+
+    if (!file_exists($candidate)) {
+        fail(404, 'Directory not found', [
+            'path' => $relativePath,
+        ]);
+    }
+
+    $resolved = realpath($candidate);
+
+    if ($resolved === false) {
+        fail(404, 'Directory not found', [
+            'path' => $relativePath,
+        ]);
+    }
+
+    $repoPrefix = $repoRoot . DIRECTORY_SEPARATOR;
+
+    if (!str_starts_with($resolved, $repoPrefix) && $resolved !== $repoRoot) {
+        fail(403, 'Resolved path is outside repo root', [
+            'path' => $relativePath,
+        ]);
+    }
+
+    if (!is_dir($resolved)) {
+        fail(400, 'Requested path is not a directory', [
+            'path' => $relativePath,
+        ]);
+    }
+
+    if (!is_readable($resolved)) {
+        fail(403, 'Directory is not readable', [
+            'path' => $relativePath,
+        ]);
+    }
+
+    return $resolved;
+}
+
+function toRepoRelativePath(string $repoRoot, string $resolvedPath): string
+{
+    if ($resolvedPath === $repoRoot) {
+        return '';
+    }
+
+    $prefixLength = strlen($repoRoot) + 1;
+    $relative = substr($resolvedPath, $prefixLength);
+
+    return str_replace('\\', '/', (string)$relative);
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    fail(405, 'Method not allowed', [], [
+        'Allow' => 'POST',
+    ]);
+}
+
+try {
+    $config = loadConfig();
+    requireAuth($config);
+
+    $body = getJsonBody();
+
+    $path = isset($body['path']) && is_string($body['path'])
+        ? normaliseRepoPath($body['path'])
+        : '';
+
+    validateRelativePath($path);
+
+    $repoRoot = getRepoRoot($config);
+    $directoryPath = resolveDirectoryPath($repoRoot, $path);
+
+    $items = scandir($directoryPath);
+    if ($items === false) {
+        fail(500, 'Unable to read directory', [
+            'path' => $path,
+        ]);
+    }
+
+    $entries = [];
+
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        $itemPath = $directoryPath . DIRECTORY_SEPARATOR . $item;
+        $resolvedItemPath = realpath($itemPath);
+
+        if ($resolvedItemPath === false) {
+            continue;
+        }
+
+        $entries[] = [
+            'name' => $item,
+            'path' => toRepoRelativePath($repoRoot, $resolvedItemPath),
+            'type' => is_dir($resolvedItemPath) ? 'dir' : 'file',
+        ];
+    }
+
+    usort($entries, static function (array $a, array $b): int {
+        if ($a['type'] !== $b['type']) {
+            return $a['type'] === 'dir' ? -1 : 1;
+        }
+
+        return strcmp($a['name'], $b['name']);
+    });
+
+    respond(200, [
+        'status' => 'ok',
+        'path' => toRepoRelativePath($repoRoot, $directoryPath),
+        'entries' => $entries,
+    ]);
+} catch (Throwable $e) {
+    debugFail(500, 'Unexpected server error', [], $e);
+}
