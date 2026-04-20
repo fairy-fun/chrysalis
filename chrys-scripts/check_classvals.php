@@ -1,24 +1,32 @@
 <?php
+declare(strict_types=1);
 
-$envFile  = '/home/sxnzlfun/private/chrysalis-slack.env';
+$projectRoot = dirname(__DIR__);
+$envFile = $projectRoot . '/private/chrysalis-slack.env';
 $endpoint = 'https://antheapeche.com/pecherie/chill-api/admin/check_classvals_code_rules.php';
 
-if (!file_exists($envFile)) {
-    exit("Missing env file\n");
-}
-
-$env = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 $slackWebhook = null;
 
-foreach ($env as $line) {
-    if (strpos($line, 'SLACK_WEBHOOK_URL=') === 0) {
-        $slackWebhook = trim(substr($line, strlen('SLACK_WEBHOOK_URL=')), " \t\n\r\0\x0B'\"");
-        break;
-    }
-}
+if (is_file($envFile)) {
+    $env = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-if (!$slackWebhook) {
-    exit("Missing SLACK_WEBHOOK_URL\n");
+    if ($env !== false) {
+        foreach ($env as $line) {
+            if (strpos($line, 'SLACK_WEBHOOK_URL=') === 0) {
+                $slackWebhook = trim(
+                    substr($line, strlen('SLACK_WEBHOOK_URL=')),
+                    " \t\n\r\0\x0B'\""
+                );
+                break;
+            }
+        }
+    }
+
+    if (!$slackWebhook) {
+        fwrite(STDERR, "WARN: SLACK_WEBHOOK_URL not found in env file: {$envFile}\n");
+    }
+} else {
+    fwrite(STDERR, "INFO: Slack env not found, continuing without Slack: {$envFile}\n");
 }
 
 function httpGet(string $url): array
@@ -32,21 +40,21 @@ function httpGet(string $url): array
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
     $response = curl_exec($ch);
-    $error    = curl_error($ch);
+    $error = curl_error($ch);
     $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
     curl_close($ch);
 
     return [
         'http_code' => $httpCode,
-        'response'  => $response,
-        'error'     => $error,
+        'response' => $response,
+        'error' => $error,
     ];
 }
 
 function postJson(string $url, array $payload): array
 {
-    $ch   = curl_init($url);
+    $ch = curl_init($url);
     $json = json_encode($payload);
 
     curl_setopt($ch, CURLOPT_POST, true);
@@ -58,20 +66,24 @@ function postJson(string $url, array $payload): array
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
     $response = curl_exec($ch);
-    $error    = curl_error($ch);
+    $error = curl_error($ch);
     $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
     curl_close($ch);
 
     return [
         'http_code' => $httpCode,
-        'response'  => $response,
-        'error'     => $error,
+        'response' => $response,
+        'error' => $error,
     ];
 }
 
-function sendSlack(string $webhook, string $text): void
+function sendSlack(?string $webhook, string $text): void
 {
+    if (!$webhook) {
+        return;
+    }
+
     postJson($webhook, ['text' => $text]);
 }
 
@@ -92,17 +104,17 @@ function safeJsonDecode(?string $json): ?array
 
 function extractDriftSummary(?array $data): array
 {
-    $checked      = null;
-    $drifted      = null;
+    $checked = null;
+    $drifted = null;
     $driftedTables = [];
     $missingCount = 0;
     $invalidCount = 0;
 
     if (!$data) {
         return [
-            'checked'       => null,
-            'drifted'       => null,
-            'tables'        => [],
+            'checked' => null,
+            'drifted' => null,
+            'tables' => [],
             'missing_count' => 0,
             'invalid_count' => 0,
         ];
@@ -124,8 +136,8 @@ function extractDriftSummary(?array $data): array
                 continue;
             }
 
-            $table  = $row['table'] ?? null;
-            $ok     = $row['ok'] ?? null;
+            $table = $row['table'] ?? null;
+            $ok = $row['ok'] ?? null;
             $status = $row['status'] ?? null;
 
             if ($ok === false && is_string($table) && $table !== '') {
@@ -147,9 +159,9 @@ function extractDriftSummary(?array $data): array
     }
 
     return [
-        'checked'       => $checked,
-        'drifted'       => $drifted,
-        'tables'        => $driftedTables,
+        'checked' => $checked,
+        'drifted' => $drifted,
+        'tables' => $driftedTables,
         'missing_count' => $missingCount,
         'invalid_count' => $invalidCount,
     ];
@@ -157,16 +169,16 @@ function extractDriftSummary(?array $data): array
 
 function buildDriftSlackMessage(array $summary): string
 {
-    $checked      = $summary['checked'];
-    $drifted      = $summary['drifted'];
-    $tables       = $summary['tables'];
+    $checked = $summary['checked'];
+    $drifted = $summary['drifted'];
+    $tables = $summary['tables'];
     $missingCount = $summary['missing_count'] ?? 0;
     $invalidCount = $summary['invalid_count'] ?? 0;
 
-    $sample     = array_slice($tables, 0, 5);
+    $sample = array_slice($tables, 0, 5);
     $sampleText = !empty($sample) ? implode(', ', $sample) : 'None listed';
 
-    $lines   = [];
+    $lines = [];
     $lines[] = '⚠️ Trigger Drift Detected';
     $lines[] = '• Tables checked: ' . ($checked !== null ? $checked : 'Unknown');
     $lines[] = '• Drifted tables: ' . ($drifted !== null ? $drifted : 'Unknown');
@@ -185,12 +197,16 @@ function buildDriftSlackMessage(array $summary): string
     return implode("\n", $lines);
 }
 
-$check  = httpGet($endpoint);
+$check = httpGet($endpoint);
 $status = $check['http_code'];
 
 if ($check['error'] !== '') {
     sendSlack($slackWebhook, "🚨 Chrysalis trigger check request failed\n• cURL error: {$check['error']}");
-    echo "Request error, Slack sent\n";
+    echo "Request error";
+    if ($slackWebhook) {
+        echo ", Slack sent";
+    }
+    echo "\n";
     exit(1);
 }
 
@@ -200,7 +216,7 @@ if ($status === 200) {
 }
 
 if ($status === 409) {
-    $data    = safeJsonDecode($check['response']);
+    $data = safeJsonDecode($check['response']);
     $summary = extractDriftSummary($data);
     $message = buildDriftSlackMessage($summary);
 
@@ -209,7 +225,11 @@ if ($status === 409) {
     }
 
     sendSlack($slackWebhook, $message);
-    echo "Drift detected, Slack sent\n";
+    echo "Drift detected";
+    if ($slackWebhook) {
+        echo ", Slack sent";
+    }
+    echo "\n";
     exit(0);
 }
 
@@ -228,5 +248,11 @@ if (is_array($data)) {
 }
 
 sendSlack($slackWebhook, $message);
-echo "Error {$status}, Slack sent\n";
+
+echo "Error {$status}";
+if ($slackWebhook) {
+    echo ", Slack sent";
+}
+echo "\n";
+
 exit(1);
