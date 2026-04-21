@@ -38,10 +38,3 @@ deploy-manifest.txt
 # OS clutter
 .DS_Store
 Thumbs.db
-
-
-deploy-pecherie.sh
-deploy.ps1
-DEPLOYMENT.md
-public_html/pecherie/test.php
-public_html/php-root-test.php
