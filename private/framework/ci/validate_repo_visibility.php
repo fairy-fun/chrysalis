@@ -73,7 +73,7 @@ function assert_declared_paths_exist(array $paths, string $type, string $repoRoo
             continue;
         }
 
-        fail('CONTRACT_VIOLATION', "Unknown assertion type: {$type}");
+        fail('CONTRACT_VIOLATION', "Unknown assertion type: $type");
     }
 }
 
@@ -81,7 +81,7 @@ function load_switch_cases(string $indexPath): array
 {
     $contents = file_get_contents($indexPath);
     if ($contents === false) {
-        fail('API_SURFACE_INCOMPLETE', "Unable to read {$indexPath}");
+        fail('API_SURFACE_INCOMPLETE', "Unable to read $indexPath");
     }
 
     preg_match_all("/case\\s+'([^']+)'\\s*:/", $contents, $matches);
@@ -170,7 +170,7 @@ $allDeclared = [];
 foreach ($visiblePrefixes as $path) {
     $normalized = normalize_relative_path($path);
     if (isset($allDeclared[$normalized])) {
-        fail('CONTRACT_VIOLATION', "Duplicate declared visibility path: {$normalized}");
+        fail('CONTRACT_VIOLATION', "Duplicate declared visibility path: $normalized");
     }
     $allDeclared[$normalized] = 'prefix';
 }
@@ -178,7 +178,7 @@ foreach ($visiblePrefixes as $path) {
 foreach ($visibleFiles as $path) {
     $normalized = normalize_relative_path($path);
     if (isset($allDeclared[$normalized])) {
-        fail('CONTRACT_VIOLATION', "Path declared in more than one visibility list: {$normalized}");
+        fail('CONTRACT_VIOLATION', "Path declared in more than one visibility list: $normalized");
     }
     $allDeclared[$normalized] = 'file';
 }
@@ -189,17 +189,17 @@ foreach ($requiredOperations as $operation => $handlerPath) {
     }
 
     if (!is_string($handlerPath) || $handlerPath === '') {
-        fail('CONTRACT_VIOLATION', "required_operations handler path missing for operation {$operation}");
+        fail('CONTRACT_VIOLATION', "required_operations handler path missing for operation $operation");
     }
 
     $normalizedHandler = normalize_relative_path($handlerPath);
     $absoluteHandler = $repoRoot . '/' . $normalizedHandler;
 
     if (!is_file($absoluteHandler)) {
-        fail('API_SURFACE_INCOMPLETE', "Declared handler for {$operation} does not exist: {$normalizedHandler}");
+        fail('API_SURFACE_INCOMPLETE', "Declared handler for $operation does not exist: $normalizedHandler");
     }
 
-    ok("handler exists for {$operation}: {$normalizedHandler}");
+    ok("handler exists for $operation: $normalizedHandler");
 }
 
 if (!is_file($indexFile)) {
@@ -210,14 +210,14 @@ $indexCases = load_switch_cases($indexFile);
 
 foreach ($requiredOperations as $operation => $handlerPath) {
     if (!in_array($operation, $indexCases, true)) {
-        fail('API_SURFACE_INCOMPLETE', "Operation {$operation} is declared but not routed in chill-api/index.php");
+        fail('API_SURFACE_INCOMPLETE', "Operation $operation is declared but not routed in chill-api/index.php");
     }
-    ok("operation routed in index.php: {$operation}");
+    ok("operation routed in index.php: $operation");
 }
 
 foreach ($indexCases as $operation) {
     if (!array_key_exists($operation, $requiredOperations)) {
-        fail('CONTRACT_VIOLATION', "index.php exposes undeclared operation: {$operation}");
+        fail('CONTRACT_VIOLATION', "index.php exposes undeclared operation: $operation");
     }
 }
 
