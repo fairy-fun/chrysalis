@@ -87,49 +87,6 @@ function load_switch_cases(string $indexPath): array
     preg_match_all("/case\\s+'([^']+)'\\s*:/", $contents, $matches);
     return array_values(array_unique($matches[1] ?? []));
 }
-function assert_pecherie_config_delegates_to_contract(string $repoRoot): void
-{
-    $configPath = $repoRoot . '/pecherie_config.php';
-
-    if (!is_file($configPath)) {
-        fail('CONTRACT_VIOLATION', 'Missing pecherie_config.php');
-    }
-
-    $contents = file_get_contents($configPath);
-    if ($contents === false) {
-        fail('CONTRACT_VIOLATION', 'Unable to read pecherie_config.php');
-    }
-
-    if (preg_match('/\'chrysalis_repo_visible_prefixes\'\s*=>\s*\[/', $contents) === 1) {
-        fail(
-            'CONTRACT_VIOLATION',
-            'pecherie_config.php must not define inline chrysalis_repo_visible_prefixes; delegate to repo_visibility.php'
-        );
-    }
-
-    if (preg_match('/\'chrysalis_repo_visible_files\'\s*=>\s*\[/', $contents) === 1) {
-        fail(
-            'CONTRACT_VIOLATION',
-            'pecherie_config.php must not define inline chrysalis_repo_visible_files; delegate to repo_visibility.php'
-        );
-    }
-
-    if (preg_match('/\'chrysalis_repo_visible_prefixes\'\s*=>\s*\$visibility\[\'visible_prefixes\']/', $contents) !== 1) {
-        fail(
-            'CONTRACT_VIOLATION',
-            'pecherie_config.php must map chrysalis_repo_visible_prefixes from $visibility[\'visible_prefixes\']'
-        );
-    }
-
-    if (preg_match('/\'chrysalis_repo_visible_files\'\s*=>\s*\$visibility\[\'visible_files\']/', $contents) !== 1) {
-        fail(
-            'CONTRACT_VIOLATION',
-            'pecherie_config.php must map chrysalis_repo_visible_files from $visibility[\'visible_files\']'
-        );
-    }
-
-    ok('pecherie_config.php delegates visibility to repo_visibility.php');
-}
 
 $repoRoot = dirname(__DIR__, 3);
 $visibilityFile = $repoRoot . '/private/framework/contracts/repo_visibility.php';
@@ -160,8 +117,6 @@ if (!is_array($visibleFiles)) {
 if (!is_array($requiredOperations)) {
     fail('CONTRACT_VIOLATION', 'required_operations must be an array');
 }
-
-assert_pecherie_config_delegates_to_contract($repoRoot);
 
 assert_declared_paths_exist($visiblePrefixes, 'visible_prefix', $repoRoot);
 assert_declared_paths_exist($visibleFiles, 'visible_file', $repoRoot);

@@ -56,6 +56,10 @@ switch ($operation) {
         require __DIR__ . '/query.php';
         break;
 
+    case 'resolveMedleyCore':
+        require __DIR__ . '/choreography/resolve_medley_core.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
