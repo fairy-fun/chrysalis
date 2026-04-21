@@ -93,7 +93,17 @@ function getDatabaseConfig(): array
 
 function getJsonBody(): array
 {
-    if (array_key_exists('_QUERY_BODY', $GLOBALS)) {
+    /*
+     * New canonical shared request body from chill-api/index.php.
+     */
+    if (array_key_exists('_API_BODY', $GLOBALS) && is_array($GLOBALS['_API_BODY'])) {
+        return $GLOBALS['_API_BODY'];
+    }
+
+    /*
+     * Legacy compatibility bridge for callers that still set _QUERY_BODY.
+     */
+    if (array_key_exists('_QUERY_BODY', $GLOBALS) && is_array($GLOBALS['_QUERY_BODY'])) {
         return $GLOBALS['_QUERY_BODY'];
     }
 
@@ -110,8 +120,14 @@ function getJsonBody(): array
         respond(400, ['error' => 'Request body must be valid JSON']);
     }
 
+    /*
+     * Preserve the legacy cache key for compatibility with any existing code,
+     * while also making the parsed body available through the new shared key.
+     */
     $GLOBALS['_QUERY_BODY'] = $decoded;
-    return $GLOBALS['_QUERY_BODY'];
+    $GLOBALS['_API_BODY'] = $decoded;
+
+    return $decoded;
 }
 
 function normaliseSql(string $sql): string
@@ -131,7 +147,7 @@ function isAllowedReadOnlyQuery(string $sql): bool
 function containsForbiddenPatterns(string $sql): bool
 {
     $forbiddenPatterns = [
-        '/;/',                     // reject any remaining semicolon
+        '/;/',
         '/\bINSERT\b/i',
         '/\bUPDATE\b/i',
         '/\bDELETE\b/i',
