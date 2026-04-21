@@ -28,15 +28,7 @@ if (!is_string($operation) || $operation === '') {
     api_error(400, 'Missing operation');
 }
 
-/*
- * Canonical shared parsed request body for internal handlers.
- */
 $GLOBALS['_API_BODY'] = $body;
-
-/*
- * Temporary compatibility bridge for legacy query.php callers/assumptions.
- * Remove later once query.php no longer depends on this shape.
- */
 $GLOBALS['_QUERY_BODY'] = $body;
 
 switch ($operation) {
@@ -52,9 +44,6 @@ switch ($operation) {
         require __DIR__ . '/query.php';
         break;
 
-    /*
-     * Temporary legacy operations during migration.
-     */
     case 'tables':
         require __DIR__ . '/tables.php';
         break;
