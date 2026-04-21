@@ -9,7 +9,8 @@ private/chrysalis-slack.env
 *.live.php
 *.bak
 .idea/
-private/docs/prompts.txt
+private/docs/prompts-private.txt
+private/docs/prompts-public.txt
 hello.txt
 public_html/pecherie/chill-api/error_log
 public_html/pecherie/chill-api/admin/error_log
