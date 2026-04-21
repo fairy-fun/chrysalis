@@ -1,21 +1,40 @@
 /config/local.php
 /storage/
-*.log
-.env
-.env.local
-*.bak
+
+# Environment / secrets
+*.env
+**/*.env
 pecherie_config.php
 private/chrysalis-slack.env
+.env
+.env.local
+
 *.live.php
+
+# Backups
 *.bak
+**/*.bak
+
+# IntelliJ
 .idea/
+*.iml
+
+# Local scratch files
 private/docs/prompts-private.txt
 private/docs/prompts-public.txt
 hello.txt
+
+# Logs
+**/error_log
+*.log
+
 public_html/pecherie/chill-api/error_log
 public_html/pecherie/chill-api/admin/error_log
 public_html/pecherie/chill-api/public/error_log
 public_html/pecherie/chrysalis-db/error_log
-**/error_log
 deploy-manifest.txt
 .deployignore
+
+# OS clutter
+.DS_Store
+Thumbs.db
