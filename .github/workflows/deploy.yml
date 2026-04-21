@@ -7,8 +7,73 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  validate:
+    name: Validate before deploy
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Validate required paths and files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            ".github/workflows/deploy.yml"
+            "private/framework/contracts/repo_contract.php"
+            "private/framework/contracts/chrysalis_hydration_prompt.md"
+            "public_html/pecherie/chill-api/repo/list_repo.php"
+            "public_html/pecherie/chill-api/repo/get_repo_file.php"
+          )
+
+          required_dirs=(
+            "private/framework/contracts"
+            "public_html/pecherie/chill-api/repo"
+          )
+
+          echo "Checking required files..."
+          for path in "${required_files[@]}"; do
+            [[ -f "$path" ]] || { echo "ERROR: Missing required file: $path"; exit 1; }
+            [[ -r "$path" ]] || { echo "ERROR: Required file is not readable: $path"; exit 1; }
+            echo "OK: $path"
+          done
+
+          echo "Checking required directories..."
+          for path in "${required_dirs[@]}"; do
+            [[ -d "$path" ]] || { echo "ERROR: Missing required directory: $path"; exit 1; }
+            [[ -r "$path" ]] || { echo "ERROR: Required directory is not readable: $path"; exit 1; }
+            echo "OK: $path"
+          done
+
+      - name: Lint PHP in public_html/pecherie
+        shell: bash
+        run: |
+          set -euo pipefail
+          find public_html/pecherie -type f -name "*.php" -print0 | while IFS= read -r -d '' file; do
+            echo "Linting $file"
+            php -l "$file"
+          done
+
+      - name: Lint PHP in private
+        shell: bash
+        run: |
+          set -euo pipefail
+          find private -type f -name "*.php" -print0 | while IFS= read -r -d '' file; do
+            echo "Linting $file"
+            php -l "$file"
+          done
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: validate
 
     steps:
       - name: Check out repo
@@ -41,7 +106,7 @@ jobs:
 
       - name: Sync private files
         run: |
-          rsync -rlvtz -e ssh \
+          rsync -rlvtz --delete -e ssh \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude '.idea/' \

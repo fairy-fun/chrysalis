@@ -81,7 +81,7 @@ echo
 echo "Syncing private..."
 rsync "${PRIVATE_FLAGS[@]}" \
   "${COMMON_EXCLUDES[@]}" \
-  "$SRC_PRIVATE" \
+  "$SRC_PRIVATE"
   "${REMOTE_USER}@${REMOTE_HOST}:${DEST_PRIVATE}"
 
 echo
