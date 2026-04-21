@@ -96,6 +96,13 @@ function require_api_key(string $expectedApiKey): void
 
 function read_json_body(): array
 {
+    /*
+     * Canonical shared parsed request body from chill-api/index.php.
+     */
+    if (array_key_exists('_API_BODY', $GLOBALS) && is_array($GLOBALS['_API_BODY'])) {
+        return $GLOBALS['_API_BODY'];
+    }
+
     $raw = file_get_contents('php://input');
     if ($raw === false) {
         fail(400, 'Unable to read request body');
@@ -106,6 +113,7 @@ function read_json_body(): array
         fail(400, 'Invalid JSON body');
     }
 
+    $GLOBALS['_API_BODY'] = $data;
     return $data;
 }
 
