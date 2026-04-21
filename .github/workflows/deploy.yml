@@ -80,6 +80,12 @@ jobs:
           set -euo pipefail
           php private/framework/ci/validate_repo_visibility.php
 
+      - name: Run repo API behaviour tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          php private/framework/ci/run_repo_api_behavior_tests.php
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
