@@ -29,12 +29,16 @@ jobs:
             ".github/workflows/deploy.yml"
             "private/framework/contracts/repo_contract.php"
             "private/framework/contracts/chrysalis_hydration_prompt.md"
+            "private/framework/contracts/repo_visibility.php"
+            "private/framework/ci/validate_repo_visibility.php"
+            "public_html/pecherie/chill-api/index.php"
             "public_html/pecherie/chill-api/repo/list_repo.php"
             "public_html/pecherie/chill-api/repo/get_repo_file.php"
           )
 
           required_dirs=(
             "private/framework/contracts"
+            "private/framework/ci"
             "public_html/pecherie/chill-api/repo"
           )
 
@@ -69,6 +73,12 @@ jobs:
             echo "Linting $file"
             php -l "$file"
           done
+
+      - name: Validate repo visibility contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          php private/framework/ci/validate_repo_visibility.php
 
   deploy:
     name: Deploy
