@@ -1,17 +1,55 @@
-name: Deploy to server
+name: Deploy to pecherie
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Placeholder deploy step
-        run: echo "Deploy step would run here"
+      - name: Start ssh-agent and add deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PECHERIE_SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 108.174.195.142 >> ~/.ssh/known_hosts
+
+      - name: Sync public files
+        run: |
+          rsync -rlvtz --delete -e ssh \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.idea/' \
+            --exclude '*.bak' \
+            --exclude 'error_log' \
+            --exclude '.DS_Store' \
+            --exclude '*.env' \
+            --exclude 'chrysalis-slack.env' \
+            --exclude 'pecherie_config.php' \
+            ./public_html/pecherie/ \
+            sxnzlfun@108.174.195.142:/home/sxnzlfun/public_html/pecherie/
+
+      - name: Sync private files
+        run: |
+          rsync -rlvtz -e ssh \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.idea/' \
+            --exclude '*.bak' \
+            --exclude 'error_log' \
+            --exclude '.DS_Store' \
+            --exclude '*.env' \
+            --exclude 'chrysalis-slack.env' \
+            --exclude 'pecherie_config.php' \
+            ./private/ \
+            sxnzlfun@108.174.195.142:/home/sxnzlfun/private/
