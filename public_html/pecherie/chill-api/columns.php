@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use JetBrains\PhpStorm\NoReturn;
+
 header('Content-Type: application/json; charset=utf-8');
 
+#[NoReturn]
 function respond(int $statusCode, array $payload): void
 {
     http_response_code($statusCode);
@@ -129,7 +132,7 @@ try {
     if ((string) $activeDatabase !== $expectedDatabase) {
         respond(500, [
             'error' => 'Unexpected database selected',
-            'details' => "Expected {$expectedDatabase}, got {$activeDatabase}",
+            'details' => "Expected $expectedDatabase, got $activeDatabase",
         ]);
     }
 } catch (Throwable $e) {
