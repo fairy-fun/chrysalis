@@ -211,6 +211,19 @@ function assert_not_contains_names(array $entries, array $forbiddenNames, string
     ok($label . ' did not leak forbidden names');
 }
 
+function assert_not_contains_paths(array $entries, array $forbiddenPaths, string $label): void
+{
+    $actualPaths = array_column($entries, 'path');
+
+    foreach ($forbiddenPaths as $forbiddenPath) {
+        if (in_array($forbiddenPath, $actualPaths, true)) {
+            fail($label . ' leaked forbidden path: ' . $forbiddenPath);
+        }
+    }
+
+    ok($label . ' did not leak forbidden paths');
+}
+
 $repoRoot = repo_root();
 $runnerPath = '';
 $configPath = $repoRoot . '/pecherie_config.php';
@@ -274,10 +287,92 @@ try {
 
     $frameworkResult = run_endpoint($runnerPath, $listRepoScript, ['path' => 'private/framework']);
     $frameworkJson = assert_ok_result($frameworkResult, 'listRepo private/framework');
+    $frameworkEntries = $frameworkJson['entries'] ?? [];
+    if (!is_array($frameworkEntries)) {
+        fail('listRepo private/framework entries missing or invalid');
+    }
+
     assert_contains_paths(
-        $frameworkJson['entries'] ?? [],
-        ['private/framework/contracts'],
+        $frameworkEntries,
+        [
+            'private/framework/contracts',
+            'private/framework/procedures',
+            'private/framework/directives',
+        ],
         'listRepo private/framework'
+    );
+
+    assert_not_contains_names(
+        $frameworkEntries,
+        ['bootstrap.php'],
+        'listRepo private/framework'
+    );
+
+    /*
+     * listRepo: mixed-directory visibility must include only approved siblings.
+     */
+    $proceduresResult = run_endpoint(
+        $runnerPath,
+        $listRepoScript,
+        ['path' => 'private/framework/procedures']
+    );
+    $proceduresJson = assert_ok_result($proceduresResult, 'listRepo private/framework/procedures');
+    $procedureEntries = $proceduresJson['entries'] ?? [];
+    if (!is_array($procedureEntries)) {
+        fail('listRepo private/framework/procedures entries missing or invalid');
+    }
+
+    assert_contains_paths(
+        $procedureEntries,
+        [
+            'private/framework/procedures/procedure_registry_reader.php',
+            'private/framework/procedures/procedure_source_inspector.php',
+        ],
+        'listRepo private/framework/procedures'
+    );
+
+    assert_not_contains_names(
+        $procedureEntries,
+        ['procedure_registration_service.php'],
+        'listRepo private/framework/procedures'
+    );
+
+    assert_not_contains_paths(
+        $procedureEntries,
+        ['private/framework/procedures/procedure_registration_service.php'],
+        'listRepo private/framework/procedures'
+    );
+
+    $directivesResult = run_endpoint(
+        $runnerPath,
+        $listRepoScript,
+        ['path' => 'private/framework/directives']
+    );
+    $directivesJson = assert_ok_result($directivesResult, 'listRepo private/framework/directives');
+    $directiveEntries = $directivesJson['entries'] ?? [];
+    if (!is_array($directiveEntries)) {
+        fail('listRepo private/framework/directives entries missing or invalid');
+    }
+
+    assert_contains_paths(
+        $directiveEntries,
+        [
+            'private/framework/directives/directive_text.php',
+            'private/framework/directives/directive_validator.php',
+        ],
+        'listRepo private/framework/directives'
+    );
+
+    assert_not_contains_names(
+        $directiveEntries,
+        ['directive_service.php'],
+        'listRepo private/framework/directives'
+    );
+
+    assert_not_contains_paths(
+        $directiveEntries,
+        ['private/framework/directives/directive_service.php'],
+        'listRepo private/framework/directives'
     );
 
     /*
@@ -347,6 +442,30 @@ try {
     );
 
     assert_error_result(
+        run_endpoint($runnerPath, $getRepoFileScript, ['path' => 'private/framework/bootstrap.php']),
+        'Path is not visible',
+        'getRepoFile hidden bootstrap'
+    );
+
+    assert_error_result(
+        run_endpoint($runnerPath, $getRepoFileScript, ['path' => 'private/framework/db/framework_db_calls.php']),
+        'Path is not visible',
+        'getRepoFile hidden db adapter'
+    );
+
+    assert_error_result(
+        run_endpoint($runnerPath, $getRepoFileScript, ['path' => 'private/framework/procedures/procedure_registration_service.php']),
+        'Path is not visible',
+        'getRepoFile hidden procedure service'
+    );
+
+    assert_error_result(
+        run_endpoint($runnerPath, $getRepoFileScript, ['path' => 'private/framework/directives/directive_service.php']),
+        'Path is not visible',
+        'getRepoFile hidden directive service'
+    );
+
+    assert_error_result(
         run_endpoint($runnerPath, $getRepoFileScript, ['path' => '../pecherie_config.php']),
         'Path traversal is not allowed',
         'getRepoFile traversal'
@@ -386,8 +505,8 @@ try {
     );
 
     /*
- * index.php dispatch behaviour
- */
+     * index.php dispatch behaviour
+     */
     $indexScript = $repoRoot . '/public_html/pecherie/chill-api/index.php';
 
     if (!is_file($indexScript)) {
