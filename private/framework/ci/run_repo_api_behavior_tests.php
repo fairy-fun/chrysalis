@@ -385,6 +385,83 @@ try {
         'getRepoFile wrong method'
     );
 
+    /*
+ * index.php dispatch behaviour
+ */
+    $indexScript = $repoRoot . '/public_html/pecherie/chill-api/index.php';
+
+    if (!is_file($indexScript)) {
+        fail('Missing index.php');
+    }
+
+    /*
+     * listRepo via index
+     */
+    $indexListResult = run_endpoint(
+        $runnerPath,
+        $indexScript,
+        [
+            'operation' => 'listRepo',
+            'path' => ''
+        ]
+    );
+
+    $indexListJson = assert_ok_result($indexListResult, 'index listRepo dispatch');
+
+    if (!isset($indexListJson['entries'])) {
+        fail('index listRepo did not return entries');
+    }
+
+    ok('index listRepo dispatch works');
+
+    /*
+     * getRepoFile via index
+     */
+    $indexFileResult = run_endpoint(
+        $runnerPath,
+        $indexScript,
+        [
+            'operation' => 'getRepoFile',
+            'path' => 'public_html/pecherie/chill-api/index.php'
+        ]
+    );
+
+    $indexFileJson = assert_ok_result($indexFileResult, 'index getRepoFile dispatch');
+
+    if (!isset($indexFileJson['contents'])) {
+        fail('index getRepoFile missing contents');
+    }
+
+    ok('index getRepoFile dispatch works');
+
+    /*
+     * unknown operation must fail
+     */
+    assert_error_result(
+        run_endpoint(
+            $runnerPath,
+            $indexScript,
+            [
+                'operation' => 'notARealOperation'
+            ]
+        ),
+        'Unknown operation: notARealOperation',
+        'index unknown operation'
+    );
+
+    /*
+     * missing operation must fail
+     */
+    assert_error_result(
+        run_endpoint(
+            $runnerPath,
+            $indexScript,
+            []
+        ),
+        'Missing operation',
+        'index missing operation'
+    );
+
     ok('Repo API behaviour tests passed');
 } finally {
     delete_file_if_present($runnerPath);
