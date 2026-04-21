@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+cd "$(dirname "$0")"
+
 set -euo pipefail
 
 REMOTE_USER="sxnzlfun"
-REMOTE_HOST="108.174.195.142"
+REMOTE_HOST="pecherie"
 
 SRC_PUBLIC="./public_html/pecherie/"
 DEST_PUBLIC="/home/sxnzlfun/public_html/pecherie/"
@@ -40,6 +42,7 @@ fi
 
 echo
 echo "Syncing public_html/pecherie..."
+echo "DEBUG → ${REMOTE_USER}@${REMOTE_HOST}"
 rsync "${PUBLIC_FLAGS[@]}" \
   "${COMMON_EXCLUDES[@]}" \
   "$SRC_PUBLIC" \
@@ -53,4 +56,5 @@ rsync "${PRIVATE_FLAGS[@]}" \
   "${REMOTE_USER}@${REMOTE_HOST}:${DEST_PRIVATE}"
 
 echo
+echo "Running from: $(pwd)"
 echo "Done."
