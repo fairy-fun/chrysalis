@@ -18,3 +18,4 @@ public_html/pecherie/chill-api/public/error_log
 public_html/pecherie/chrysalis-db/error_log
 **/error_log
 deploy-manifest.txt
+.deployignore
