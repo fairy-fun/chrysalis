@@ -35,6 +35,9 @@ DEST_PUBLIC="/home/sxnzlfun/public_html/pecherie/"
 SRC_PRIVATE="$REPO_ROOT/private/"
 DEST_PRIVATE="/home/sxnzlfun/private/"
 
+SRC_WORKFLOWS="$REPO_ROOT/.github/workflows/"
+DEST_WORKFLOWS="/home/sxnzlfun/.github/workflows/"
+
 COMMON_EXCLUDES=(
   --exclude '.git/'
   --exclude '.github/'
@@ -80,6 +83,13 @@ rsync "${PRIVATE_FLAGS[@]}" \
   "${COMMON_EXCLUDES[@]}" \
   "$SRC_PRIVATE" \
   "${REMOTE_USER}@${REMOTE_HOST}:${DEST_PRIVATE}"
+
+echo
+echo "Syncing .github/workflows..."
+ssh "${REMOTE_USER}@${REMOTE_HOST}" 'mkdir -p ~/.github/workflows'
+rsync "${PRIVATE_FLAGS[@]}" \
+  "$SRC_WORKFLOWS" \
+  "${REMOTE_USER}@${REMOTE_HOST}:${DEST_WORKFLOWS}"
 
 echo
 echo "Done."
