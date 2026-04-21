@@ -1,15 +1,38 @@
 #!/usr/bin/env bash
-cd "$(dirname "$0")"
-
 set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$SCRIPT_DIR"
+EXPECTED_REPO_ROOT="/home/charizai/projects/chrysalis"
+
+case "$REPO_ROOT" in
+  "$EXPECTED_REPO_ROOT")
+    ;;
+  /mnt/*)
+    echo "Refusing to deploy from a Windows-mounted path:"
+    echo "  $REPO_ROOT"
+    echo
+    echo "Open the WSL-native repo instead:"
+    echo "  $EXPECTED_REPO_ROOT"
+    exit 1
+    ;;
+  *)
+    echo "Refusing to deploy from an unexpected location:"
+    echo "  $REPO_ROOT"
+    echo
+    echo "Expected:"
+    echo "  $EXPECTED_REPO_ROOT"
+    exit 1
+    ;;
+esac
 
 REMOTE_USER="sxnzlfun"
 REMOTE_HOST="pecherie"
 
-SRC_PUBLIC="./public_html/pecherie/"
+SRC_PUBLIC="$REPO_ROOT/public_html/pecherie/"
 DEST_PUBLIC="/home/sxnzlfun/public_html/pecherie/"
 
-SRC_PRIVATE="./private/"
+SRC_PRIVATE="$REPO_ROOT/private/"
 DEST_PRIVATE="/home/sxnzlfun/private/"
 
 COMMON_EXCLUDES=(
@@ -41,6 +64,9 @@ else
 fi
 
 echo
+echo "Running from: $REPO_ROOT"
+
+echo
 echo "Syncing public_html/pecherie..."
 echo "DEBUG → ${REMOTE_USER}@${REMOTE_HOST}"
 rsync "${PUBLIC_FLAGS[@]}" \
@@ -56,5 +82,4 @@ rsync "${PRIVATE_FLAGS[@]}" \
   "${REMOTE_USER}@${REMOTE_HOST}:${DEST_PRIVATE}"
 
 echo
-echo "Running from: $(pwd)"
 echo "Done."
