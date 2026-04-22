@@ -306,19 +306,6 @@ function ensure_attribute_domain_map(PDO $pdo, string $attributeTypeId, int $dom
     ]);
 }
 
-function remove_attribute_domain_map(PDO $pdo, string $attributeTypeId, int $domainId): void
-{
-    $stmt = $pdo->prepare(
-        'DELETE FROM attribute_domain_map
-         WHERE attribute_type_id = :attribute_type_id
-           AND domain_id = :domain_id'
-    );
-
-    $stmt->execute([
-        ':attribute_type_id' => $attributeTypeId,
-        ':domain_id' => $domainId,
-    ]);
-}
 
 $medleyCode = 'CI_MEDLEY_1';
 $medleyName = 'CI Test Medley';
@@ -716,10 +703,9 @@ SQL
      * - profile_id winner on layer_limbic
      * - domain-mapped extra voice attribute
      *
-     * Domain behaviour under the fixed resolver:
-     * - mapped attribute is included when domain_id matches
-     * - unmapped attributes remain included even when domain_id is provided
-     * - mapped attributes are excluded only when mappings exist and none match
+     * Live DB rule:
+     * every attribute_type_id used in character_profile_attributes must already
+     * have at least one row in attribute_domain_map before insert.
      */
 
     upsert_profile_type_priority($pdo, 'ci_profile_low', 10);
@@ -741,9 +727,21 @@ SQL
     upsert_character_profile($pdo, 9107, 'ci_profile_mid',  $expressionTestCharacterId, '2026-01-01 12:00:00');
 
     /*
+     * Domain mappings MUST exist before any attribute insert.
+     *
+     * All CI expression attributes are mapped to the same matching test domain
+     * so the domain-filtered resolver path remains valid under strict-mode DB
+     * enforcement.
+     */
+    ensure_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
+    ensure_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
+    ensure_attribute_domain_map($pdo, $attributeLimbicProfile, $expressionDomainMatchId);
+    ensure_attribute_domain_map($pdo, $attributeVoiceDomain, $expressionDomainMatchId);
+
+    /*
      * Priority decides: 9102 beats 9101.
      */
-    upsert_profile_attribute( $pdo, 9101, $attributeVoicePriority, null, 'ci_voice_priority_low');
+    upsert_profile_attribute($pdo, 9101, $attributeVoicePriority, null, 'ci_voice_priority_low');
     upsert_profile_attribute($pdo, 9102, $attributeVoicePriority, null, 'ci_voice_priority_high');
 
     /*
@@ -758,23 +756,10 @@ SQL
     upsert_profile_attribute($pdo, 9105, $attributeLimbicProfile, null, 'ci_limbic_lower_profile');
     upsert_profile_attribute($pdo, 9106, $attributeLimbicProfile, null, 'ci_limbic_higher_profile');
 
-
     /*
- * Domain mappings for CI expression attributes.
- *
- * The live database enforces strict domain metadata, so every attribute_type_id
- * used in this fixture must have at least one domain mapping.
- *
- * For this fixture, all expression attribute types are mapped to the same
- * matching test domain so the resolver can be validated under a domain-filtered
- * request without tripping strict-mode metadata enforcement.
- */
+     * Extra voice attribute included in both default and domain-filtered output.
+     */
     upsert_profile_attribute($pdo, 9107, $attributeVoiceDomain, null, 'ci_voice_domain_visible');
-
-    ensure_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
-    ensure_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
-    ensure_attribute_domain_map($pdo, $attributeLimbicProfile, $expressionDomainMatchId);
-    ensure_attribute_domain_map($pdo, $attributeVoiceDomain, $expressionDomainMatchId);
 
     /*
      * Ensure the other seeded attributes are unmapped for this domain test.
