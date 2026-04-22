@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-function respond(int $statusCode, array $payload): void
+function respond(int $statusCode, array $payload): never
 {
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
@@ -9,7 +9,7 @@ function respond(int $statusCode, array $payload): void
     exit;
 }
 
-function fail(int $statusCode, string $error, array $extra = []): void
+function fail(int $statusCode, string $error, array $extra = []): never
 {
     respond($statusCode, array_merge([
         'status' => 'error',
@@ -96,9 +96,6 @@ function require_api_key(string $expectedApiKey): void
 
 function read_json_body(): array
 {
-    /*
-     * Canonical shared parsed request body from chill-api/index.php.
-     */
     if (array_key_exists('_API_BODY', $GLOBALS) && is_array($GLOBALS['_API_BODY'])) {
         return $GLOBALS['_API_BODY'];
     }
@@ -175,37 +172,25 @@ function ensure_within_repo_root(string $repoRoot, string $resolvedPath): void
 }
 
 /**
- * A path is traversable/visible if it is:
- * - exactly a visible prefix
- * - below a visible prefix
- * - an ancestor of a visible prefix
- * - exactly a visible file
- * - an ancestor of a visible file
+ * A requested directory is listable only if it is:
+ * - the repo root
+ * - exactly a declared visible prefix
+ * - inside a declared visible prefix
  *
- * This ensures that if a directory appears in a listing, a follow-up listRepo()
- * call on that directory will also succeed.
+ * Ancestors of visible paths are not automatically visible.
  */
-function is_visible_or_ancestor_path(string $relativePath, array $visiblePrefixes, array $visibleFiles): bool
+function is_listable_path(string $relativePath, array $visiblePrefixes): bool
 {
     if ($relativePath === '') {
         return true;
     }
 
     foreach ($visiblePrefixes as $prefix) {
-        if (
-            $relativePath === $prefix ||
-            strpos($relativePath, $prefix . '/') === 0 ||
-            strpos($prefix, $relativePath . '/') === 0
-        ) {
+        if ($relativePath === $prefix) {
             return true;
         }
-    }
 
-    foreach ($visibleFiles as $file) {
-        if (
-            $relativePath === $file ||
-            strpos($file, $relativePath . '/') === 0
-        ) {
+        if (strpos($relativePath, $prefix . '/') === 0) {
             return true;
         }
     }
@@ -213,9 +198,25 @@ function is_visible_or_ancestor_path(string $relativePath, array $visiblePrefixe
     return false;
 }
 
+/**
+ * Include child entries only when they are directly declared visible:
+ * - child is a visible prefix
+ * - child is inside a visible prefix
+ * - child is an explicitly visible file
+ */
 function should_include_child(string $childRelativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
-    return is_visible_or_ancestor_path($childRelativePath, $visiblePrefixes, $visibleFiles);
+    foreach ($visiblePrefixes as $prefix) {
+        if ($childRelativePath === $prefix) {
+            return true;
+        }
+
+        if (strpos($childRelativePath, $prefix . '/') === 0) {
+            return true;
+        }
+    }
+
+    return in_array($childRelativePath, $visibleFiles, true);
 }
 
 require_post();
@@ -236,10 +237,9 @@ $relativePath = normalize_relative_path($inputPath);
 
 if (
     $relativePath !== '' &&
-    !is_visible_or_ancestor_path(
+    !is_listable_path(
         $relativePath,
-        $config['visible_prefixes'],
-        $config['visible_files']
+        $config['visible_prefixes']
     )
 ) {
     fail(403, 'Path is not visible', ['path' => $relativePath]);
