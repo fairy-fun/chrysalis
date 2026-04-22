@@ -148,17 +148,19 @@ function run_endpoint(
     exec($command, $output, $exitCode);
 
     $raw = implode("\n", $output);
-
-    if ($exitCode !== 0) {
-        fail('Endpoint execution failed (exit code ' . $exitCode . '): ' . $raw);
-    }
-
     $json = json_decode($raw, true);
+
+    if (!is_array($json)) {
+        fail(
+            'Endpoint execution returned non-JSON output' .
+            ' (exit code ' . $exitCode . '): ' . $raw
+        );
+    }
 
     return [
         'exit_code' => $exitCode,
         'raw' => $raw,
-        'json' => is_array($json) ? $json : null,
+        'json' => $json,
     ];
 }
 
