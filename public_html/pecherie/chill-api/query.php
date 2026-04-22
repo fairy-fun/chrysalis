@@ -79,14 +79,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 requireAuth();
 
 $body = getJsonBody();
+$receivedKeys = array_keys($body);
 
-if (DEBUG_MODE) {
+$debugRequested = isset($body['debug']) && $body['debug'] === true;
+
+if (DEBUG_MODE && $debugRequested) {
     respond(200, [
         'debug' => true,
         'method' => $_SERVER['REQUEST_METHOD'] ?? null,
         'content_type' => $_SERVER['CONTENT_TYPE'] ?? null,
         'has_api_key_header' => isset($_SERVER['HTTP_X_API_KEY']),
-        'received_keys' => array_keys($body),
+        'received_keys' => $receivedKeys,
         'body' => $body,
     ]);
 }
@@ -107,17 +110,22 @@ $sql = is_string($sqlRaw) ? normaliseSql($sqlRaw) : '';
 if ($sql === '') {
     respond(400, [
         'error' => 'Missing required sql/query field',
-        'received_keys' => array_keys($body),
-        'body' => $body,
+        'received_keys' => $receivedKeys,
     ]);
 }
 
 if (!isAllowedReadOnlyQuery($sql)) {
-    respond(400, ['error' => 'Only read-only SELECT, SHOW, DESCRIBE, EXPLAIN, and WITH queries are allowed']);
+    respond(400, [
+        'error' => 'Only read-only SELECT, SHOW, DESCRIBE, EXPLAIN, and WITH queries are allowed',
+        'input_field' => $sqlFieldUsed,
+    ]);
 }
 
 if (containsForbiddenPatterns($sql)) {
-    respond(400, ['error' => 'Query contains forbidden SQL patterns']);
+    respond(400, [
+        'error' => 'Query contains forbidden SQL patterns',
+        'input_field' => $sqlFieldUsed,
+    ]);
 }
 
 $limit = 200;
@@ -140,14 +148,24 @@ $expectedDatabase = verifyExpectedDatabase($pdo);
 try {
     $sqlToRun = applyLimitToSql($sql, $limit);
     $stmt = $pdo->query($sqlToRun);
-    $rows = $stmt->fetchAll();
+
+    if ($stmt === false) {
+        respond(500, [
+            'error' => 'Query failed',
+            'database' => $expectedDatabase,
+            'input_field' => $sqlFieldUsed,
+            'received_keys' => $receivedKeys,
+        ]);
+    }
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     respond(200, [
         'status' => 'ok',
         'source' => 'database',
         'database' => $expectedDatabase,
         'input_field' => $sqlFieldUsed,
-        'received_keys' => array_keys($body),
+        'received_keys' => $receivedKeys,
         'row_count' => count($rows),
         'limit_applied' => $limit,
         'rows' => $rows,
@@ -157,6 +175,6 @@ try {
         'error' => 'Query failed',
         'database' => $expectedDatabase,
         'input_field' => $sqlFieldUsed,
-        'received_keys' => array_keys($body),
+        'received_keys' => $receivedKeys,
     ], $e);
 }
