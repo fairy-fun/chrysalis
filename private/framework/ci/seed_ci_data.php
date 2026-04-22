@@ -46,9 +46,9 @@ try {
     $pdo->beginTransaction();
 
     /*
-     * Enforce canonical classval semantics (event_theme → event_has_theme)
-     * before CI fixture seeding continues.
-     */
+ * Enforce canonical classval semantics (event_theme → event_has_theme)
+ * before CI fixture seeding continues.
+ */
     $checkCanonical = $pdo->prepare(
         'SELECT 1
          FROM classvals
@@ -68,18 +68,32 @@ try {
         );
     }
 
-    $deleteDeprecated = $pdo->prepare(
-        'DELETE FROM classvals
+    $checkDeprecated = $pdo->prepare(
+        'SELECT id, code
+         FROM classvals
          WHERE id = :deprecated_id
-            OR code = :deprecated_code'
+            OR code = :deprecated_code
+         LIMIT 1'
     );
 
-    $deleteDeprecated->execute([
+    $checkDeprecated->execute([
         ':deprecated_id' => 'fact_type_event_theme',
         ':deprecated_code' => 'event_theme',
     ]);
 
-    ok('Normalised classval semantic duplicates (event_theme → event_has_theme)');
+    $deprecatedRow = $checkDeprecated->fetch(PDO::FETCH_ASSOC);
+
+    if ($deprecatedRow !== false) {
+        throw new RuntimeException(
+            'Deprecated classval still present: '
+            . ($deprecatedRow['id'] ?? '[unknown id]')
+            . ' / '
+            . ($deprecatedRow['code'] ?? '[unknown code]')
+            . '. Clean the database outside CI before seeding.'
+        );
+    }
+
+    ok('Verified canonical classval semantics (event_theme → event_has_theme)');
 
     /*
      * Seed figures by business key: figures.classval_id
