@@ -172,15 +172,16 @@ function ensure_within_repo_root(string $repoRoot, string $resolvedPath): void
 }
 
 /**
- * A requested directory is listable only if it is:
+ * A requested directory is listable if it is:
  * - the repo root
  * - exactly a declared visible prefix
  * - inside a declared visible prefix
+ * - an ancestor of any visible prefix or visible file
  *
- * Ancestors of visible paths are not automatically listable.
- * Visible files do not make their parents listable.
+ * Visible files themselves are not listable as directories,
+ * but their ancestor directories are.
  */
-function is_listable_path(string $relativePath, array $visiblePrefixes): bool
+function is_listable_path(string $relativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
     if ($relativePath === '') {
         return true;
@@ -194,6 +195,16 @@ function is_listable_path(string $relativePath, array $visiblePrefixes): bool
         if (strpos($relativePath, $prefix . '/') === 0) {
             return true;
         }
+
+        if (strpos($prefix, $relativePath . '/') === 0) {
+            return true;
+        }
+    }
+
+    foreach ($visibleFiles as $file) {
+        if (strpos($file, $relativePath . '/') === 0) {
+            return true;
+        }
     }
 
     return false;
@@ -205,9 +216,6 @@ function is_listable_path(string $relativePath, array $visiblePrefixes): bool
  * - child is inside a visible prefix
  * - child is an explicitly visible file
  * - child is an ancestor of any visible prefix or visible file
- *
- * This allows root discovery of containers like .github, private, and public_html
- * without making those ancestor paths automatically listable as requested paths.
  */
 function should_include_child(string $childRelativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
@@ -260,7 +268,7 @@ $relativePath = normalize_relative_path($inputPath);
 
 if (
     $relativePath !== '' &&
-    !is_listable_path($relativePath, $config['visible_prefixes'])
+    !is_listable_path($relativePath, $config['visible_prefixes'], $config['visible_files'])
 ) {
     fail(403, 'Path is not visible', ['path' => $relativePath]);
 }
