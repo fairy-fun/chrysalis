@@ -182,7 +182,7 @@ jobs:
             php private/framework/ci/seed_ci_data.php
 
             echo '==> Validating classval semantic canonicalisation'
-            php private/framework/ci/validate_classval_semantic_canonicalisation.php
+            php -d display_errors=1 private/framework/ci/validate_classval_semantic_canonicalisation.php
 
             echo '==> Running behaviour tests'
             php private/framework/ci/run_repo_api_behavior_tests.php

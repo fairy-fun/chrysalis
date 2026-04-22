@@ -1,6 +1,5 @@
 <?php
 
-
 declare(strict_types=1);
 
 function fail(string $message): never
@@ -14,7 +13,7 @@ function ok(string $message): void
     fwrite(STDOUT, 'OK: ' . $message . PHP_EOL);
 }
 
-$repoRoot = dirname(__DIR__, 2);
+$repoRoot = dirname(__DIR__, 3);
 
 require_once $repoRoot . '/private/framework/api/api_bootstrap.php';
 require_once $repoRoot . '/private/framework/classvals/semantic_canonicalisation.php';
