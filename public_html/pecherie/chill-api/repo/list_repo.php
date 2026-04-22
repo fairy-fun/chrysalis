@@ -17,16 +17,27 @@ function fail(int $statusCode, string $error, array $extra = []): never
     ], $extra));
 }
 
+
 function load_repo_config(): array
 {
-    $config = require dirname(__DIR__, 4) . '/pecherie_config.php';
+    $repoRoot = dirname(__DIR__, 4);
+    $ciConfigPath = $repoRoot . '/pecherie_ci_config.php';
+    $runtimeConfigPath = $repoRoot . '/pecherie_config.php';
+
+    if (is_file($ciConfigPath)) {
+        $config = require $ciConfigPath;
+    } elseif (is_file($runtimeConfigPath)) {
+        $config = require $runtimeConfigPath;
+    } else {
+        fail(500, 'No configuration file found');
+    }
 
     if (!is_array($config)) {
         fail(500, 'Invalid configuration');
     }
 
     $apiKey = $config['pecherie_api_key'] ?? null;
-    $repoRoot = $config['chrysalis_repo_root'] ?? null;
+    $repoRootConfig = $config['chrysalis_repo_root'] ?? null;
     $visiblePrefixes = $config['chrysalis_repo_visible_prefixes'] ?? [];
     $visibleFiles = $config['chrysalis_repo_visible_files'] ?? [];
 
@@ -34,7 +45,7 @@ function load_repo_config(): array
         fail(500, 'Missing pecherie_api_key');
     }
 
-    if (!is_string($repoRoot) || $repoRoot === '') {
+    if (!is_string($repoRootConfig) || $repoRootConfig === '') {
         fail(500, 'Missing chrysalis_repo_root');
     }
 
@@ -46,7 +57,7 @@ function load_repo_config(): array
         fail(500, 'Invalid chrysalis_repo_visible_files');
     }
 
-    $repoRootReal = realpath($repoRoot);
+    $repoRootReal = realpath($repoRootConfig);
     if ($repoRootReal === false || !is_dir($repoRootReal)) {
         fail(500, 'Invalid chrysalis_repo_root');
     }
