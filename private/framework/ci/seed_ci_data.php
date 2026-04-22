@@ -172,21 +172,25 @@ SQL
 INSERT INTO medleys (
     code,
     name,
+    search_name,
     created_at
 )
 VALUES (
     :code,
     :name,
+    :search_name,
     NOW()
 )
 ON DUPLICATE KEY UPDATE
-    name = VALUES(name)
+    name = VALUES(name),
+    search_name = VALUES(search_name)
 SQL
     );
 
     $stmt->execute([
         ':code' => $medleyCode,
         ':name' => $medleyName,
+        ':search_name' => $medleyName,
     ]);
 
     $medleyLookup = $pdo->prepare(
