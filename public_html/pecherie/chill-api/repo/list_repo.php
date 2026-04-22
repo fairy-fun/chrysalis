@@ -177,7 +177,8 @@ function ensure_within_repo_root(string $repoRoot, string $resolvedPath): void
  * - exactly a declared visible prefix
  * - inside a declared visible prefix
  *
- * Ancestors of visible paths are not automatically visible.
+ * Ancestors of visible paths are not automatically listable.
+ * Visible files do not make their parents listable.
  */
 function is_listable_path(string $relativePath, array $visiblePrefixes): bool
 {
@@ -199,10 +200,14 @@ function is_listable_path(string $relativePath, array $visiblePrefixes): bool
 }
 
 /**
- * Include child entries only when they are directly declared visible:
- * - child is a visible prefix
+ * Include child entries when:
+ * - child is directly visible as a visible prefix
  * - child is inside a visible prefix
  * - child is an explicitly visible file
+ * - child is an ancestor of any visible prefix or visible file
+ *
+ * This allows root discovery of containers like .github, private, and public_html
+ * without making those ancestor paths automatically listable as requested paths.
  */
 function should_include_child(string $childRelativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
@@ -216,7 +221,25 @@ function should_include_child(string $childRelativePath, array $visiblePrefixes,
         }
     }
 
-    return in_array($childRelativePath, $visibleFiles, true);
+    if (in_array($childRelativePath, $visibleFiles, true)) {
+        return true;
+    }
+
+    $needle = $childRelativePath . '/';
+
+    foreach ($visiblePrefixes as $prefix) {
+        if (strpos($prefix, $needle) === 0) {
+            return true;
+        }
+    }
+
+    foreach ($visibleFiles as $file) {
+        if (strpos($file, $needle) === 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 require_post();
@@ -237,10 +260,7 @@ $relativePath = normalize_relative_path($inputPath);
 
 if (
     $relativePath !== '' &&
-    !is_listable_path(
-        $relativePath,
-        $config['visible_prefixes']
-    )
+    !is_listable_path($relativePath, $config['visible_prefixes'])
 ) {
     fail(403, 'Path is not visible', ['path' => $relativePath]);
 }
