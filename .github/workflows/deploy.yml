@@ -33,6 +33,10 @@ jobs:
             "private/framework/contracts/framework_ingress_policy.php"
             "private/framework/ci/validate_repo_visibility.php"
             "private/framework/ci/validate_framework_ingress.php"
+            "private/framework/ci/validate_repo_api_registration.php"
+            "private/framework/ci/write_ci_config.php"
+            "private/framework/ci/seed_ci_data.php"
+            "private/framework/ci/run_repo_api_behavior_tests.php"
             "public_html/pecherie/chill-api/index.php"
             "public_html/pecherie/chill-api/repo/list_repo.php"
             "public_html/pecherie/chill-api/repo/get_repo_file.php"
@@ -88,43 +92,11 @@ jobs:
           set -euo pipefail
           php private/framework/ci/validate_framework_ingress.php
 
-      - name: Write CI pecherie_config.php
-        env:
-          PECHERIE_DB_HOST: ${{ secrets.PECHERIE_DB_HOST }}
-          PECHERIE_DB_PORT: ${{ secrets.PECHERIE_DB_PORT }}
-          PECHERIE_DB_NAME: ${{ secrets.PECHERIE_DB_NAME }}
-          PECHERIE_DB_USER: ${{ secrets.PECHERIE_DB_USER }}
-          PECHERIE_DB_PASS: ${{ secrets.PECHERIE_DB_PASS }}
-        run: php private/framework/ci/write_ci_config.php
-
-      - name: Seed CI data
-        env:
-          PECHERIE_DB_HOST: ${{ secrets.PECHERIE_DB_HOST }}
-          PECHERIE_DB_PORT: ${{ secrets.PECHERIE_DB_PORT }}
-          PECHERIE_DB_NAME: ${{ secrets.PECHERIE_DB_NAME }}
-          PECHERIE_DB_USER: ${{ secrets.PECHERIE_DB_USER }}
-          PECHERIE_DB_PASS: ${{ secrets.PECHERIE_DB_PASS }}
-        run: php private/framework/ci/seed_ci_data.php
-
-      - name: Verify seeded IDs artefact
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! -f private/framework/ci/.seeded_ids.json ]]; then
-            echo "ERROR: seeded_ids.json not found"
-            exit 1
-          fi
-          echo "OK: seeded_ids.json exists"
-          cat private/framework/ci/.seeded_ids.json
-
-      - name: Run repo API behaviour tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          php private/framework/ci/run_repo_api_behavior_tests.php
-
       - name: Validate API registration invariant
-        run: php private/framework/ci/validate_repo_api_registration.php
+        shell: bash
+        run: |
+          set -euo pipefail
+          php private/framework/ci/validate_repo_api_registration.php
 
   deploy:
     name: Deploy
@@ -174,3 +146,19 @@ jobs:
             --exclude 'pecherie_config.php' \
             ./private/ \
             sxnzlfun@108.174.195.142:/home/sxnzlfun/private/
+
+      - name: Run server-side behaviour checks
+        run: |
+          ssh sxnzlfun@108.174.195.142 '
+          set -euo pipefail
+          cd /home/sxnzlfun
+        
+          echo "==> Resolving config"
+          php private/framework/ci/write_ci_config.php
+        
+          echo "==> Seeding test data"
+          php private/framework/ci/seed_ci_data.php
+        
+          echo "==> Running behaviour tests"
+          php private/framework/ci/run_repo_api_behavior_tests.php
+          '

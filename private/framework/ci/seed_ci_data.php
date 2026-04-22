@@ -18,7 +18,7 @@ $configPath = $repoRoot . '/pecherie_config.php';
 $seedOutputPath = $repoRoot . '/private/framework/ci/.seeded_ids.json';
 
 if (!is_file($configPath)) {
-    fail('Missing pecherie_config.php (CI config must be written before seeding)');
+    fail('Missing pecherie_config.php (run write_ci_config.php or provide an existing server config)');
 }
 
 if (is_file($seedOutputPath) && !unlink($seedOutputPath)) {

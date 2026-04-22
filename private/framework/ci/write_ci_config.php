@@ -13,6 +13,12 @@ function ok(string $message): void
     fwrite(STDOUT, 'OK: ' . $message . PHP_EOL);
 }
 
+function env_present(string $name): bool
+{
+    $value = getenv($name);
+    return $value !== false && trim($value) !== '';
+}
+
 function require_env(string $name): string
 {
     $value = getenv($name);
@@ -29,6 +35,22 @@ $configPath = $repoRoot . '/pecherie_config.php';
 
 if (!is_file($visibilityFile)) {
     fail('Missing repo_visibility.php');
+}
+
+$hasEnv =
+    env_present('PECHERIE_DB_HOST') &&
+    env_present('PECHERIE_DB_PORT') &&
+    env_present('PECHERIE_DB_NAME') &&
+    env_present('PECHERIE_DB_USER') &&
+    env_present('PECHERIE_DB_PASS');
+
+if (!$hasEnv) {
+    if (!is_file($configPath)) {
+        fail('No pecherie_config.php found and no env vars provided');
+    }
+
+    ok('Using existing pecherie_config.php (server mode)');
+    exit(0);
 }
 
 $dbHost = require_env('PECHERIE_DB_HOST');
