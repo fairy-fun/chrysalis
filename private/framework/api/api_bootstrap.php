@@ -2,12 +2,17 @@
 
 declare(strict_types=1);
 
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 function respond(int $statusCode, array $payload): never
 {
     http_response_code($statusCode);
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+
+    if (PHP_SAPI === 'cli') {
+        exit($statusCode >= 400 ? 1 : 0);
+    }
+
     exit;
 }
 
@@ -101,6 +106,7 @@ function getDatabaseConfig(): array
     $db = $config['db'];
 
     $host = trim((string) ($db['host'] ?? ''));
+    $portRaw = $db['port'] ?? null;
     $name = trim((string) ($db['name'] ?? ''));
     $user = trim((string) ($db['user'] ?? ''));
     $pass = (string) ($db['pass'] ?? '');
@@ -110,8 +116,21 @@ function getDatabaseConfig(): array
         respond(500, ['error' => 'Database configuration is incomplete']);
     }
 
+    $port = null;
+    if ($portRaw !== null && $portRaw !== '') {
+        if (!is_numeric($portRaw)) {
+            respond(500, ['error' => 'Database port is invalid']);
+        }
+
+        $port = (int) $portRaw;
+        if ($port < 1) {
+            respond(500, ['error' => 'Database port is invalid']);
+        }
+    }
+
     return [
         'host' => $host,
+        'port' => $port,
         'name' => $name,
         'user' => $user,
         'pass' => $pass,
@@ -123,9 +142,14 @@ function makePdo(): PDO
 {
     $db = getDatabaseConfig();
 
+    $dsn = "mysql:host={$db['host']};dbname={$db['name']};charset={$db['charset']}";
+    if ($db['port'] !== null) {
+        $dsn .= ";port={$db['port']}";
+    }
+
     try {
         return new PDO(
-            "mysql:host={$db['host']};dbname={$db['name']};charset={$db['charset']}",
+            $dsn,
             $db['user'],
             $db['pass'],
             [
