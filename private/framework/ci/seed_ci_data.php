@@ -15,10 +15,11 @@ function ok(string $message): void
 
 $repoRoot = dirname(__DIR__, 3);
 $configPath = $repoRoot . '/pecherie_config.php';
+$ciConfigPath = $repoRoot . '/pecherie_ci_config.php';
 $seedOutputPath = $repoRoot . '/private/framework/ci/.seeded_ids.json';
 
-if (!is_file($configPath)) {
-    fail('Missing pecherie_config.php (run write_ci_config.php or provide an existing server config)');
+if (!is_file($ciConfigPath) && !is_file($configPath)) {
+    fail('Missing config file (run write_ci_config.php or provide an existing server config)');
 }
 
 if (is_file($seedOutputPath) && !unlink($seedOutputPath)) {
@@ -117,17 +118,20 @@ INSERT INTO segments (
     code,
     name,
     dance_id,
+    segment_content_type_id,
     created_at
 )
 VALUES (
     :code,
     :name,
     :dance_id,
+    :segment_content_type_id,
     NOW()
 )
 ON DUPLICATE KEY UPDATE
     name = VALUES(name),
-    dance_id = VALUES(dance_id)
+    dance_id = VALUES(dance_id),
+    segment_content_type_id = VALUES(segment_content_type_id)
 SQL
     );
 
@@ -135,6 +139,7 @@ SQL
         ':code' => 'CI_SEG_1',
         ':name' => 'CI Segment 1',
         ':dance_id' => 1,
+        ':segment_content_type_id' => 'SEGMENT_CONTENT_DANCE',
     ]);
 
     $segmentLookup = $pdo->prepare(
