@@ -88,6 +88,12 @@ jobs:
           set -euo pipefail
           php private/framework/ci/validate_framework_ingress.php
 
+      - name: Write CI pecherie_config.php
+        run: php private/framework/ci/write_ci_config.php
+
+      - name: Seed CI data
+        run: php private/framework/ci/seed_ci_data.php
+
       - name: Run repo API behaviour tests
         shell: bash
         run: |

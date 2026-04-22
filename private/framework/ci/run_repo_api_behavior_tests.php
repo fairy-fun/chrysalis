@@ -18,38 +18,6 @@ function repo_root(): string
     return dirname(__DIR__, 3);
 }
 
-function write_ci_config(string $repoRoot): void
-{
-    $visibilityFile = $repoRoot . '/private/framework/contracts/repo_visibility.php';
-
-    if (!is_file($visibilityFile)) {
-        fail('Missing repo_visibility.php');
-    }
-
-    $configPath = $repoRoot . '/pecherie_config.php';
-
-    $contents = <<<'PHP'
-<?php
-
-declare(strict_types=1);
-
-$visibility = require __DIR__ . '/private/framework/contracts/repo_visibility.php';
-
-return [
-    'pecherie_api_key' => 'ci-test-key',
-    'chrysalis_repo_root' => __DIR__,
-    'chrysalis_repo_visible_prefixes' => $visibility['visible_prefixes'],
-    'chrysalis_repo_visible_files' => $visibility['visible_files'],
-];
-PHP;
-
-    if (file_put_contents($configPath, $contents . PHP_EOL) === false) {
-        fail('Unable to write CI pecherie_config.php');
-    }
-
-    ok('Wrote CI pecherie_config.php');
-}
-
 function make_runner_script(string $repoRoot): string
 {
     $runnerPath = $repoRoot . '/private/framework/ci/.repo_api_request_runner.php';
@@ -71,6 +39,7 @@ $jsonBody = $argv[4] ?? '{}';
 
 $_SERVER['REQUEST_METHOD'] = $method;
 $_SERVER['HTTP_X_API_KEY'] = $apiKey;
+$_SERVER['CONTENT_TYPE'] = 'application/json';
 
 $decoded = json_decode($jsonBody, true);
 if (!is_array($decoded)) {
@@ -80,10 +49,21 @@ if (!is_array($decoded)) {
 
 $GLOBALS['_API_BODY'] = $decoded;
 $GLOBALS['_QUERY_BODY'] = $decoded;
+$GLOBALS['__CI_RAW_REQUEST_BODY'] = $jsonBody;
+
+function ci_get_php_input(): string
+{
+    return $GLOBALS['__CI_RAW_REQUEST_BODY'] ?? '';
+}
 
 ob_start();
 require $scriptPath;
 $output = ob_get_clean();
+
+if (!is_string($output)) {
+    fwrite(STDERR, "Runner captured no output\n");
+    exit(2);
+}
 
 fwrite(STDOUT, $output);
 PHP;
@@ -99,9 +79,52 @@ PHP;
 
 function delete_file_if_present(string $path): void
 {
-    if (is_file($path) && !unlink($path)) {
+    if ($path !== '' && is_file($path) && !unlink($path)) {
         fail("Unable to delete temporary file: $path");
     }
+}
+
+function load_seeded_ids(string $repoRoot): array
+{
+    $path = $repoRoot . '/private/framework/ci/.seeded_ids.json';
+
+    if (!is_file($path)) {
+        fail('Missing seeded IDs file: ' . $path);
+    }
+
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        fail('Unable to read seeded IDs file: ' . $path);
+    }
+
+    $json = json_decode($raw, true);
+    if (!is_array($json)) {
+        fail('Seeded IDs file did not contain valid JSON: ' . $path);
+    }
+
+    foreach (['medley_id', 'medley_name', 'figure_1_id', 'figure_2_id'] as $requiredKey) {
+        if (!array_key_exists($requiredKey, $json)) {
+            fail('Seeded IDs file missing required key: ' . $requiredKey);
+        }
+    }
+
+    if (!is_int($json['medley_id']) || $json['medley_id'] < 1) {
+        fail('Seeded IDs file has invalid medley_id');
+    }
+
+    if (!is_string($json['medley_name']) || trim($json['medley_name']) === '') {
+        fail('Seeded IDs file has invalid medley_name');
+    }
+
+    if (!is_int($json['figure_1_id']) || $json['figure_1_id'] < 1) {
+        fail('Seeded IDs file has invalid figure_1_id');
+    }
+
+    if (!is_int($json['figure_2_id']) || $json['figure_2_id'] < 1) {
+        fail('Seeded IDs file has invalid figure_2_id');
+    }
+
+    return $json;
 }
 
 function run_endpoint(
@@ -213,10 +236,8 @@ function assert_not_contains_names(array $entries, array $forbiddenNames, string
 
 $repoRoot = repo_root();
 $runnerPath = '';
-$configPath = $repoRoot . '/pecherie_config.php';
 
 try {
-    write_ci_config($repoRoot);
     $runnerPath = make_runner_script($repoRoot);
 
     $listRepoScript = $repoRoot . '/public_html/pecherie/chill-api/repo/list_repo.php';
@@ -386,8 +407,8 @@ try {
     );
 
     /*
- * index.php dispatch behaviour
- */
+     * index.php dispatch behaviour
+     */
     $indexScript = $repoRoot . '/public_html/pecherie/chill-api/index.php';
 
     if (!is_file($indexScript)) {
@@ -402,7 +423,7 @@ try {
         $indexScript,
         [
             'operation' => 'listRepo',
-            'path' => ''
+            'path' => '',
         ]
     );
 
@@ -417,18 +438,18 @@ try {
     /*
      * getRepoFile via index
      */
-    $indexFileResult = run_endpoint(
+    $indexGetFileResult = run_endpoint(
         $runnerPath,
         $indexScript,
         [
             'operation' => 'getRepoFile',
-            'path' => 'public_html/pecherie/chill-api/index.php'
+            'path' => 'public_html/pecherie/chill-api/index.php',
         ]
     );
 
-    $indexFileJson = assert_ok_result($indexFileResult, 'index getRepoFile dispatch');
+    $indexGetFileJson = assert_ok_result($indexGetFileResult, 'index getRepoFile dispatch');
 
-    if (!isset($indexFileJson['contents'])) {
+    if (!isset($indexGetFileJson['contents'])) {
         fail('index getRepoFile missing contents');
     }
 
@@ -442,7 +463,7 @@ try {
             $runnerPath,
             $indexScript,
             [
-                'operation' => 'notARealOperation'
+                'operation' => 'notARealOperation',
             ]
         ),
         'Unknown operation: notARealOperation',
@@ -462,8 +483,203 @@ try {
         'index missing operation'
     );
 
+    /*
+     * resolveMedleyCore behaviour
+     *
+     * These tests rely on the fixture seeded by:
+     * private/framework/ci/seed_ci_data.php
+     */
+    $resolveMedleyCoreScript = $repoRoot . '/public_html/pecherie/chill-api/choreography/resolve_medley_core.php';
+
+    if (!is_file($resolveMedleyCoreScript)) {
+        fail('Missing resolve_medley_core.php');
+    }
+
+    $seededIds = load_seeded_ids($repoRoot);
+
+    $knownMedleyId = $seededIds['medley_id'];
+    $knownMedleyName = $seededIds['medley_name'];
+    $figure1Id = $seededIds['figure_1_id'];
+    $figure2Id = $seededIds['figure_2_id'];
+    $unknownMedleyName = '__definitely_missing_medley__';
+
+    /*
+     * resolveMedleyCore by medley_id
+     */
+    $resolveByIdResult = run_endpoint(
+        $runnerPath,
+        $resolveMedleyCoreScript,
+        ['medley_id' => $knownMedleyId]
+    );
+
+    $resolveByIdJson = assert_ok_result($resolveByIdResult, 'resolveMedleyCore by medley_id');
+
+    if (!is_int($resolveByIdJson['medley_id'] ?? null) || $resolveByIdJson['medley_id'] < 1) {
+        fail('resolveMedleyCore by medley_id returned invalid medley_id');
+    }
+
+    if (!array_key_exists('row_count', $resolveByIdJson) || !is_int($resolveByIdJson['row_count'])) {
+        fail('resolveMedleyCore by medley_id missing integer row_count');
+    }
+
+    if ($resolveByIdJson['row_count'] < 2) {
+        fail('resolveMedleyCore by medley_id expected at least 2 rows');
+    }
+
+    if (!array_key_exists('rows', $resolveByIdJson) || !is_array($resolveByIdJson['rows'])) {
+        fail('resolveMedleyCore by medley_id missing rows array');
+    }
+
+    $resolveByIdRows = $resolveByIdJson['rows'];
+
+    if (!isset($resolveByIdRows[0]) || !is_array($resolveByIdRows[0])) {
+        fail('resolveMedleyCore by medley_id missing first row');
+    }
+
+    if (($resolveByIdRows[0]['figure_id'] ?? null) !== $figure1Id) {
+        fail(
+            'resolveMedleyCore by medley_id expected first row figure_id = ' .
+            $figure1Id
+        );
+    }
+
+    if (($resolveByIdRows[0]['next_figure_id'] ?? null) !== $figure2Id) {
+        fail(
+            'resolveMedleyCore by medley_id expected first row next_figure_id = ' .
+            $figure2Id
+        );
+    }
+
+    if (($resolveByIdRows[0]['transition_legality_id'] ?? null) !== 'legal') {
+        fail('resolveMedleyCore by medley_id expected first row transition_legality_id = legal');
+    }
+
+    ok('resolveMedleyCore by medley_id returned expected payload');
+
+    /*
+     * resolveMedleyCore by medley_name
+     */
+    $resolveByNameResult = run_endpoint(
+        $runnerPath,
+        $resolveMedleyCoreScript,
+        ['medley_name' => $knownMedleyName]
+    );
+
+    $resolveByNameJson = assert_ok_result($resolveByNameResult, 'resolveMedleyCore by medley_name');
+
+    if (($resolveByNameJson['medley_id'] ?? null) !== $knownMedleyId) {
+        fail('resolveMedleyCore by medley_name returned unexpected medley_id');
+    }
+
+    if (($resolveByNameJson['requested_medley_name'] ?? null) !== $knownMedleyName) {
+        fail('resolveMedleyCore by medley_name missing requested_medley_name');
+    }
+
+    if (!array_key_exists('row_count', $resolveByNameJson) || !is_int($resolveByNameJson['row_count'])) {
+        fail('resolveMedleyCore by medley_name missing integer row_count');
+    }
+
+    if ($resolveByNameJson['row_count'] < 2) {
+        fail('resolveMedleyCore by medley_name expected at least 2 rows');
+    }
+
+    if (!array_key_exists('rows', $resolveByNameJson) || !is_array($resolveByNameJson['rows'])) {
+        fail('resolveMedleyCore by medley_name missing rows array');
+    }
+
+    $resolveByNameRows = $resolveByNameJson['rows'];
+
+    if (!isset($resolveByNameRows[0]) || !is_array($resolveByNameRows[0])) {
+        fail('resolveMedleyCore by medley_name missing first row');
+    }
+
+    if (($resolveByNameRows[0]['figure_id'] ?? null) !== $figure1Id) {
+        fail(
+            'resolveMedleyCore by medley_name expected first row figure_id = ' .
+            $figure1Id
+        );
+    }
+
+    if (($resolveByNameRows[0]['next_figure_id'] ?? null) !== $figure2Id) {
+        fail(
+            'resolveMedleyCore by medley_name expected first row next_figure_id = ' .
+            $figure2Id
+        );
+    }
+
+    if (($resolveByNameRows[0]['transition_legality_id'] ?? null) !== 'legal') {
+        fail('resolveMedleyCore by medley_name expected first row transition_legality_id = legal');
+    }
+
+    ok('resolveMedleyCore by medley_name returned expected payload');
+
+    /*
+     * resolveMedleyCore rejects both medley_id and medley_name
+     */
+    assert_error_result(
+        run_endpoint(
+            $runnerPath,
+            $resolveMedleyCoreScript,
+            [
+                'medley_id' => $knownMedleyId,
+                'medley_name' => $knownMedleyName,
+            ]
+        ),
+        'Provide exactly one of medley_id or medley_name',
+        'resolveMedleyCore both inputs'
+    );
+
+    /*
+     * resolveMedleyCore rejects missing identifier
+     */
+    assert_error_result(
+        run_endpoint(
+            $runnerPath,
+            $resolveMedleyCoreScript,
+            []
+        ),
+        'Missing medley_id or medley_name',
+        'resolveMedleyCore missing identifier'
+    );
+
+    /*
+     * resolveMedleyCore rejects unknown medley_name
+     */
+    assert_error_result(
+        run_endpoint(
+            $runnerPath,
+            $resolveMedleyCoreScript,
+            ['medley_name' => $unknownMedleyName]
+        ),
+        'Medley not found by name',
+        'resolveMedleyCore unknown medley_name'
+    );
+
+    /*
+     * resolveMedleyCore via index dispatch by medley_name
+     */
+    $indexResolveByNameResult = run_endpoint(
+        $runnerPath,
+        $indexScript,
+        [
+            'operation' => 'resolveMedleyCore',
+            'medley_name' => $knownMedleyName,
+        ]
+    );
+
+    $indexResolveByNameJson = assert_ok_result($indexResolveByNameResult, 'index resolveMedleyCore dispatch by medley_name');
+
+    if (($indexResolveByNameJson['medley_id'] ?? null) !== $knownMedleyId) {
+        fail('index resolveMedleyCore dispatch by medley_name returned unexpected medley_id');
+    }
+
+    if (!array_key_exists('rows', $indexResolveByNameJson) || !is_array($indexResolveByNameJson['rows'])) {
+        fail('index resolveMedleyCore dispatch by medley_name missing rows array');
+    }
+
+    ok('index resolveMedleyCore dispatch by medley_name works');
+
     ok('Repo API behaviour tests passed');
 } finally {
     delete_file_if_present($runnerPath);
-    delete_file_if_present($configPath);
 }

@@ -19,7 +19,10 @@ function read_request_body(): array
         return $GLOBALS['_API_BODY'];
     }
 
-    $raw = file_get_contents('php://input');
+    $raw = function_exists('ci_get_php_input')
+        ? ci_get_php_input()
+        : file_get_contents('php://input');
+
     if ($raw === false) {
         api_error(400, 'Unable to read request body');
     }
