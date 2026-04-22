@@ -31,7 +31,8 @@ function require_env(string $name): string
 
 $repoRoot = dirname(__DIR__, 3);
 $visibilityFile = $repoRoot . '/private/framework/contracts/repo_visibility.php';
-$configPath = $repoRoot . '/pecherie_config.php';
+$ciConfigPath = $repoRoot . '/pecherie_ci_config.php';
+$runtimeConfigPath = $repoRoot . '/pecherie_config.php';
 
 if (!is_file($visibilityFile)) {
     fail('Missing repo_visibility.php');
@@ -45,11 +46,7 @@ $hasEnv =
     env_present('PECHERIE_DB_PASS');
 
 if (!$hasEnv) {
-    if (!is_file($configPath)) {
-        fail('No pecherie_config.php found and no env vars provided');
-    }
-
-    ok('Using existing pecherie_config.php (server mode)');
+    ok('No CI env vars present; leaving runtime config untouched');
     exit(0);
 }
 
@@ -91,8 +88,8 @@ $rendered = sprintf(
     var_export($dbPass, true)
 );
 
-if (file_put_contents($configPath, $rendered . PHP_EOL) === false) {
-    fail('Unable to write CI pecherie_config.php');
+if (file_put_contents($ciConfigPath, $rendered . PHP_EOL) === false) {
+    fail('Unable to write pecherie_ci_config.php');
 }
 
-ok('Wrote CI pecherie_config.php');
+ok('Wrote pecherie_ci_config.php');

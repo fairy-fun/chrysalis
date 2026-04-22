@@ -26,9 +26,26 @@ function debugRespond(int $statusCode, array $payload, ?Throwable $e = null): ne
     respond($statusCode, $payload);
 }
 
+function getConfigPath(): string
+{
+    $repoRoot = dirname(__DIR__, 3);
+    $ciConfigPath = $repoRoot . '/pecherie_ci_config.php';
+    $runtimeConfigPath = $repoRoot . '/pecherie_config.php';
+
+    if (is_file($ciConfigPath)) {
+        return $ciConfigPath;
+    }
+
+    if (is_file($runtimeConfigPath)) {
+        return $runtimeConfigPath;
+    }
+
+    respond(500, ['error' => 'No server configuration file found']);
+}
+
 function getConfig(): array
 {
-    $config = require __DIR__ . '/../../../pecherie_config.php';
+    $config = require getConfigPath();
 
     if (!is_array($config)) {
         respond(500, ['error' => 'Invalid server configuration']);

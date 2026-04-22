@@ -129,6 +129,7 @@ jobs:
             --exclude '*.env' \
             --exclude 'chrysalis-slack.env' \
             --exclude 'pecherie_config.php' \
+            --exclude 'pecherie_ci_config.php' \
             ./public_html/pecherie/ \
             sxnzlfun@108.174.195.142:/home/sxnzlfun/public_html/pecherie/
 
@@ -144,21 +145,36 @@ jobs:
             --exclude '*.env' \
             --exclude 'chrysalis-slack.env' \
             --exclude 'pecherie_config.php' \
+            --exclude 'pecherie_ci_config.php' \
             ./private/ \
             sxnzlfun@108.174.195.142:/home/sxnzlfun/private/
 
       - name: Run server-side behaviour checks
+        env:
+          PECHERIE_DB_HOST: ${{ secrets.PECHERIE_DB_HOST }}
+          PECHERIE_DB_PORT: ${{ secrets.PECHERIE_DB_PORT }}
+          PECHERIE_DB_NAME: ${{ secrets.PECHERIE_DB_NAME }}
+          PECHERIE_DB_USER: ${{ secrets.PECHERIE_CI_DB_USER }}
+          PECHERIE_DB_PASS: ${{ secrets.PECHERIE_CI_DB_PASS }}
         run: |
-          ssh sxnzlfun@108.174.195.142 '
-          set -euo pipefail
-          cd /home/sxnzlfun
-        
-          echo "==> Resolving config"
-          php private/framework/ci/write_ci_config.php
-        
-          echo "==> Seeding test data"
-          php private/framework/ci/seed_ci_data.php
-        
-          echo "==> Running behaviour tests"
-          php private/framework/ci/run_repo_api_behavior_tests.php
-          '
+          ssh sxnzlfun@108.174.195.142 "
+            set -euo pipefail
+            trap 'rm -f /home/sxnzlfun/pecherie_ci_config.php' EXIT
+
+            export PECHERIE_DB_HOST='${PECHERIE_DB_HOST}'
+            export PECHERIE_DB_PORT='${PECHERIE_DB_PORT}'
+            export PECHERIE_DB_NAME='${PECHERIE_DB_NAME}'
+            export PECHERIE_DB_USER='${PECHERIE_DB_USER}'
+            export PECHERIE_DB_PASS='${PECHERIE_DB_PASS}'
+
+            cd /home/sxnzlfun
+
+            echo '==> Writing CI config'
+            php private/framework/ci/write_ci_config.php
+
+            echo '==> Seeding test data'
+            php private/framework/ci/seed_ci_data.php
+
+            echo '==> Running behaviour tests'
+            php private/framework/ci/run_repo_api_behavior_tests.php
+          "
