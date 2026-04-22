@@ -78,6 +78,42 @@ function require_classval(PDO $pdo, string $id, ?string $code = null): void
     }
 }
 
+function upsert_classval(
+    PDO $pdo,
+    string $id,
+    string $classvalTypeId,
+    string $code,
+    string $label
+): void {
+    $stmt = $pdo->prepare(
+        'INSERT INTO classvals (
+            id,
+            classval_type_id,
+            code,
+            label,
+            created_at
+        )
+        VALUES (
+            :id,
+            :classval_type_id,
+            :code,
+            :label,
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            classval_type_id = VALUES(classval_type_id),
+            code = VALUES(code),
+            label = VALUES(label)'
+    );
+
+    $stmt->execute([
+        ':id' => $id,
+        ':classval_type_id' => $classvalTypeId,
+        ':code' => $code,
+        ':label' => $label,
+    ]);
+}
+
 function upsert_attribute_type_layer(PDO $pdo, string $attributeTypeId, string $layerClassvalId): void
 {
     $stmt = $pdo->prepare(
@@ -417,41 +453,7 @@ try {
     require_classval($pdo, 'ci_voice_domain_visible', 'ci_voice_domain_visible');
     require_classval($pdo, 'ci_voice_domain_hidden', 'ci_voice_domain_hidden');
 
-    function upsert_classval(
-        PDO $pdo,
-        string $id,
-        string $classvalTypeId,
-        string $code,
-        string $label
-    ): void {
-        $stmt = $pdo->prepare(
-            'INSERT INTO classvals (
-            id,
-            classval_type_id,
-            code,
-            label,
-            created_at
-        )
-        VALUES (
-            :id,
-            :classval_type_id,
-            :code,
-            :label,
-            NOW()
-        )
-        ON DUPLICATE KEY UPDATE
-            classval_type_id = VALUES(classval_type_id),
-            code = VALUES(code),
-            label = VALUES(label)'
-        );
 
-        $stmt->execute([
-            ':id' => $id,
-            ':classval_type_id' => $classvalTypeId,
-            ':code' => $code,
-            ':label' => $label,
-        ]);
-    }
 
     /*
      * Seed figures by business key: figures.classval_id
