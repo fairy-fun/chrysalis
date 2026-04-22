@@ -397,14 +397,61 @@ try {
     require_attribute_type_layer($pdo, $attributeLimbicProfile, 'layer_limbic');
     require_attribute_type_layer($pdo, $attributeVoiceDomain, 'layer_voice');
 
-    require_classval($pdo, 'ci_voice_priority_low');
-    require_classval($pdo, 'ci_voice_priority_high');
-    require_classval($pdo, 'ci_psych_older');
-    require_classval($pdo, 'ci_psych_newer');
-    require_classval($pdo, 'ci_limbic_lower_profile');
-    require_classval($pdo, 'ci_limbic_higher_profile');
-    require_classval($pdo, 'ci_voice_domain_visible');
-    require_classval($pdo, 'ci_voice_domain_hidden');
+    // Upsert CI classvals (idempotent)
+    upsert_classval($pdo, 'ci_voice_priority_low', 'cvt_scalar_level', 'ci_voice_priority_low', 'CI Voice Priority Low');
+    upsert_classval($pdo, 'ci_voice_priority_high', 'cvt_scalar_level', 'ci_voice_priority_high', 'CI Voice Priority High');
+    upsert_classval($pdo, 'ci_psych_older', 'cvt_scalar_level', 'ci_psych_older', 'CI Psych Older');
+    upsert_classval($pdo, 'ci_psych_newer', 'cvt_scalar_level', 'ci_psych_newer', 'CI Psych Newer');
+    upsert_classval($pdo, 'ci_limbic_lower_profile', 'cvt_scalar_level', 'ci_limbic_lower_profile', 'CI Limbic Lower Profile');
+    upsert_classval($pdo, 'ci_limbic_higher_profile', 'cvt_scalar_level', 'ci_limbic_higher_profile', 'CI Limbic Higher Profile');
+    upsert_classval($pdo, 'ci_voice_domain_visible', 'cvt_scalar_level', 'ci_voice_domain_visible', 'CI Voice Domain Visible');
+    upsert_classval($pdo, 'ci_voice_domain_hidden', 'cvt_scalar_level', 'ci_voice_domain_hidden', 'CI Voice Domain Hidden');
+
+// Then verify (keeps CI strict)
+    require_classval($pdo, 'ci_voice_priority_low', 'ci_voice_priority_low');
+    require_classval($pdo, 'ci_voice_priority_high', 'ci_voice_priority_high');
+    require_classval($pdo, 'ci_psych_older', 'ci_psych_older');
+    require_classval($pdo, 'ci_psych_newer', 'ci_psych_newer');
+    require_classval($pdo, 'ci_limbic_lower_profile', 'ci_limbic_lower_profile');
+    require_classval($pdo, 'ci_limbic_higher_profile', 'ci_limbic_higher_profile');
+    require_classval($pdo, 'ci_voice_domain_visible', 'ci_voice_domain_visible');
+    require_classval($pdo, 'ci_voice_domain_hidden', 'ci_voice_domain_hidden');
+
+    function upsert_classval(
+        PDO $pdo,
+        string $id,
+        string $classvalTypeId,
+        string $code,
+        string $label
+    ): void {
+        $stmt = $pdo->prepare(
+            'INSERT INTO classvals (
+            id,
+            classval_type_id,
+            code,
+            label,
+            created_at
+        )
+        VALUES (
+            :id,
+            :classval_type_id,
+            :code,
+            :label,
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            classval_type_id = VALUES(classval_type_id),
+            code = VALUES(code),
+            label = VALUES(label)'
+        );
+
+        $stmt->execute([
+            ':id' => $id,
+            ':classval_type_id' => $classvalTypeId,
+            ':code' => $code,
+            ':label' => $label,
+        ]);
+    }
 
     /*
      * Seed figures by business key: figures.classval_id
