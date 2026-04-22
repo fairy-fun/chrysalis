@@ -98,6 +98,12 @@ jobs:
         run: php private/framework/ci/write_ci_config.php
 
       - name: Seed CI data
+        env:
+          PECHERIE_DB_HOST: ${{ secrets.PECHERIE_DB_HOST }}
+          PECHERIE_DB_PORT: ${{ secrets.PECHERIE_DB_PORT }}
+          PECHERIE_DB_NAME: ${{ secrets.PECHERIE_DB_NAME }}
+          PECHERIE_DB_USER: ${{ secrets.PECHERIE_DB_USER }}
+          PECHERIE_DB_PASS: ${{ secrets.PECHERIE_DB_PASS }}
         run: php private/framework/ci/seed_ci_data.php
 
       - name: Verify seeded IDs artefact
