@@ -758,14 +758,22 @@ SQL
     upsert_profile_attribute($pdo, 9105, $attributeLimbicProfile, null, 'ci_limbic_lower_profile');
     upsert_profile_attribute($pdo, 9106, $attributeLimbicProfile, null, 'ci_limbic_higher_profile');
 
+
     /*
-     * Domain-mapped attribute:
-     * - present without domain_id
-     * - present with matching domain_id
-     * - excluded only if it has domain mappings and none match
-     */
+ * Domain mappings for CI expression attributes.
+ *
+ * The live database enforces strict domain metadata, so every attribute_type_id
+ * used in this fixture must have at least one domain mapping.
+ *
+ * For this fixture, all expression attribute types are mapped to the same
+ * matching test domain so the resolver can be validated under a domain-filtered
+ * request without tripping strict-mode metadata enforcement.
+ */
     upsert_profile_attribute($pdo, 9107, $attributeVoiceDomain, null, 'ci_voice_domain_visible');
 
+    ensure_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
+    ensure_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
+    ensure_attribute_domain_map($pdo, $attributeLimbicProfile, $expressionDomainMatchId);
     ensure_attribute_domain_map($pdo, $attributeVoiceDomain, $expressionDomainMatchId);
 
     /*
@@ -773,9 +781,7 @@ SQL
      * Under the fixed resolver, unmapped attributes remain eligible when
      * domain_id is provided.
      */
-    remove_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
-    remove_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
-    remove_attribute_domain_map($pdo, $attributeLimbicProfile, $expressionDomainMatchId);
+
 
     $pdo->commit();
     ok('Seeded CI medley data');
