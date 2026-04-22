@@ -180,6 +180,23 @@ jobs:
 
             echo '==> Seeding test data'
             php private/framework/ci/seed_ci_data.php
+          
+            echo '==> Inspecting deprecated event/theme classvals'
+              php -r "
+              require '/home/sxnzlfun/private/framework/api/api_bootstrap.php';
+              \$pdo = makePdo();
+              \$stmt = \$pdo->query(
+              \"SELECT id, code, name
+              FROM classvals
+              WHERE id = 'fact_type_event_theme'
+              OR code = 'event_theme'
+              OR id = 'fact_event_has_theme'
+              OR code = 'event_has_theme'
+              ORDER BY id, code\"
+              );
+              \$rows = \$stmt->fetchAll(PDO::FETCH_ASSOC);
+              echo json_encode(\$rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+              "
 
             echo '==> Validating classval semantic canonicalisation'
             php -d display_errors=1 private/framework/ci/validate_classval_semantic_canonicalisation.php
