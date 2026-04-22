@@ -181,6 +181,59 @@ function ensure_within_repo_root(string $repoRoot, string $resolvedPath): void
  * Visible files themselves are not listable as directories,
  * but their ancestor directories are.
  */
+
+function is_ancestor_of_visible_path(string $relativePath, array $visiblePrefixes, array $visibleFiles): bool
+{
+    $needle = $relativePath === '' ? '' : $relativePath . '/';
+
+    foreach ($visiblePrefixes as $prefix) {
+        if ($relativePath !== '' && strpos($prefix, $needle) === 0) {
+            return true;
+        }
+    }
+
+    foreach ($visibleFiles as $file) {
+        if ($relativePath !== '' && strpos($file, $needle) === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function has_direct_visible_file_child(string $relativePath, array $visibleFiles): bool
+{
+    $needle = $relativePath === '' ? '' : $relativePath . '/';
+
+    foreach ($visibleFiles as $file) {
+        if ($relativePath === '') {
+            if (strpos($file, '/') === false) {
+                return true;
+            }
+            continue;
+        }
+
+        if (strpos($file, $needle) !== 0) {
+            continue;
+        }
+
+        $remainder = substr($file, strlen($needle));
+        if ($remainder !== '' && strpos($remainder, '/') === false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * A requested directory is listable if it is:
+ * - the repo root
+ * - exactly a declared visible prefix
+ * - inside a declared visible prefix
+ * - an ancestor of visible content, but only when it is acting as a bridge
+ *   directory rather than a direct container of explicitly visible files
+ */
 function is_listable_path(string $relativePath, array $visiblePrefixes, array $visibleFiles): bool
 {
     if ($relativePath === '') {
@@ -195,20 +248,18 @@ function is_listable_path(string $relativePath, array $visiblePrefixes, array $v
         if (strpos($relativePath, $prefix . '/') === 0) {
             return true;
         }
-
-        if (strpos($prefix, $relativePath . '/') === 0) {
-            return true;
-        }
     }
 
-    foreach ($visibleFiles as $file) {
-        if (strpos($file, $relativePath . '/') === 0) {
-            return true;
-        }
+    if (
+        is_ancestor_of_visible_path($relativePath, $visiblePrefixes, $visibleFiles) &&
+        !has_direct_visible_file_child($relativePath, $visibleFiles)
+    ) {
+        return true;
     }
 
     return false;
 }
+
 
 /**
  * Include child entries when:
