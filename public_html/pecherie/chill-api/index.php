@@ -77,6 +77,10 @@ switch ($operation) {
         require __DIR__ . '/choreography/resolve_medley_core.php';
         break;
 
+    case 'enforceClassvalSemanticCanonicalisation':
+        require __DIR__ . '/classvals/enforce_semantic_canonicalisation.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }

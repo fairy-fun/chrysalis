@@ -37,15 +37,21 @@ jobs:
             "private/framework/ci/write_ci_config.php"
             "private/framework/ci/seed_ci_data.php"
             "private/framework/ci/run_repo_api_behavior_tests.php"
+            "private/framework/ci/validate_classval_semantic_canonicalisation.php"
+            "private/framework/classvals/semantic_canonical_rules.php"
+            "private/framework/classvals/semantic_canonicalisation.php"
             "public_html/pecherie/chill-api/index.php"
             "public_html/pecherie/chill-api/repo/list_repo.php"
             "public_html/pecherie/chill-api/repo/get_repo_file.php"
+            "public_html/pecherie/chill-api/classvals/enforce_semantic_canonicalisation.php"
           )
 
           required_dirs=(
             "private/framework/contracts"
             "private/framework/ci"
+            "private/framework/classvals"
             "public_html/pecherie/chill-api/repo"
+            "public_html/pecherie/chill-api/classvals"
           )
 
           echo "Checking required files..."
@@ -174,6 +180,9 @@ jobs:
 
             echo '==> Seeding test data'
             php private/framework/ci/seed_ci_data.php
+
+            echo '==> Validating classval semantic canonicalisation'
+            php private/framework/ci/validate_classval_semantic_canonicalisation.php
 
             echo '==> Running behaviour tests'
             php private/framework/ci/run_repo_api_behavior_tests.php
