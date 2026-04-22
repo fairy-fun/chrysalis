@@ -78,6 +78,27 @@ function require_classval(PDO $pdo, string $id, ?string $code = null): void
     }
 }
 
+function upsert_attribute_type_layer(PDO $pdo, string $attributeTypeId, string $layerClassvalId): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO attribute_type_layer_map (
+            attribute_type_id,
+            layer_classval_id
+        )
+        VALUES (
+            :attribute_type_id,
+            :layer_classval_id
+        )
+        ON DUPLICATE KEY UPDATE
+            layer_classval_id = VALUES(layer_classval_id)'
+    );
+
+    $stmt->execute([
+        ':attribute_type_id' => $attributeTypeId,
+        ':layer_classval_id' => $layerClassvalId,
+    ]);
+}
+
 function require_attribute_type_layer(PDO $pdo, string $attributeTypeId, string $expectedLayerId): void
 {
     $stmt = $pdo->prepare(
@@ -138,17 +159,23 @@ function upsert_character_profile(
             profile_id,
             profile_type_id,
             character_id,
+            entity_id,
+            profile_json,
             updated_at
         )
         VALUES (
             :profile_id,
             :profile_type_id,
             :character_id,
+            :entity_id,
+            :profile_json,
             :updated_at
         )
         ON DUPLICATE KEY UPDATE
             profile_type_id = VALUES(profile_type_id),
             character_id = VALUES(character_id),
+            entity_id = VALUES(entity_id),
+            profile_json = VALUES(profile_json),
             updated_at = VALUES(updated_at)'
     );
 
@@ -156,6 +183,11 @@ function upsert_character_profile(
         ':profile_id' => $profileId,
         ':profile_type_id' => $profileTypeId,
         ':character_id' => $characterId,
+
+        // ✅ safe CI defaults
+        ':entity_id' => null,
+        ':profile_json' => '{}',
+
         ':updated_at' => $updatedAt,
     ]);
 }
@@ -346,13 +378,19 @@ try {
     /*
      * Expression output fixture prerequisites.
      *
-     * These IDs are expected to already exist in the database as stable semantic IDs.
-     * Keep them aligned with your framework metadata.
+     * These attribute type IDs are stable semantic IDs used by CI.
+     * CI owns the layer-map rows required for this fixture and upserts them
+     * idempotently before validating them.
      */
     $attributeVoicePriority = 'attr_ci_voice_priority';
     $attributePsychUpdated = 'attr_ci_psych_updated';
     $attributeLimbicProfile = 'attr_ci_limbic_profile_id';
     $attributeVoiceDomain = 'attr_ci_voice_domain';
+
+    upsert_attribute_type_layer($pdo, $attributeVoicePriority, 'layer_voice');
+    upsert_attribute_type_layer($pdo, $attributePsychUpdated, 'layer_psych');
+    upsert_attribute_type_layer($pdo, $attributeLimbicProfile, 'layer_limbic');
+    upsert_attribute_type_layer($pdo, $attributeVoiceDomain, 'layer_voice');
 
     require_attribute_type_layer($pdo, $attributeVoicePriority, 'layer_voice');
     require_attribute_type_layer($pdo, $attributePsychUpdated, 'layer_psych');
@@ -641,7 +679,12 @@ SQL
      * - priority winner on layer_voice
      * - updated_at winner on layer_psych
      * - profile_id winner on layer_limbic
-     * - domain-filtered extra voice attribute
+     * - domain-mapped extra voice attribute
+     *
+     * Domain behaviour under the fixed resolver:
+     * - mapped attribute is included when domain_id matches
+     * - unmapped attributes remain included even when domain_id is provided
+     * - mapped attributes are excluded only when mappings exist and none match
      */
 
     upsert_profile_type_priority($pdo, 'ci_profile_low', 10);
@@ -681,18 +724,19 @@ SQL
     insert_profile_attribute($pdo, 9106, $attributeLimbicProfile, null, 'ci_limbic_higher_profile');
 
     /*
-     * Domain-filtered attribute:
-     * present without domain_id,
-     * present with matching domain_id,
-     * excluded if the map is removed or changed later.
+     * Domain-mapped attribute:
+     * - present without domain_id
+     * - present with matching domain_id
+     * - excluded only if it has domain mappings and none match
      */
     insert_profile_attribute($pdo, 9107, $attributeVoiceDomain, null, 'ci_voice_domain_visible');
 
     ensure_attribute_domain_map($pdo, $attributeVoiceDomain, $expressionDomainMatchId);
 
     /*
-     * Make sure the other seeded attributes are not accidentally restricted
-     * by this test domain.
+     * Ensure the other seeded attributes are unmapped for this domain test.
+     * Under the fixed resolver, unmapped attributes remain eligible when
+     * domain_id is provided.
      */
     remove_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
     remove_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
@@ -759,9 +803,29 @@ $data = [
                 'value_text' => null,
                 'value_classval_id' => 'ci_voice_domain_visible',
             ],
+            [
+                'attribute_type_id' => 'attr_ci_voice_priority',
+                'profile_id' => 9102,
+                'value_text' => null,
+                'value_classval_id' => 'ci_voice_priority_high',
+            ],
         ],
-        'layer_psych' => [],
-        'layer_limbic' => [],
+        'layer_psych' => [
+            [
+                'attribute_type_id' => 'attr_ci_psych_updated',
+                'profile_id' => 9104,
+                'value_text' => null,
+                'value_classval_id' => 'ci_psych_newer',
+            ],
+        ],
+        'layer_limbic' => [
+            [
+                'attribute_type_id' => 'attr_ci_limbic_profile_id',
+                'profile_id' => 9106,
+                'value_text' => null,
+                'value_classval_id' => 'ci_limbic_higher_profile',
+            ],
+        ],
     ],
 ];
 
