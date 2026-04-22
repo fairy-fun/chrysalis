@@ -40,5 +40,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'resolveMedleyCore' => [
+            'handler' => 'public_html/pecherie/chill-api/choreography/resolve_medley_core.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
