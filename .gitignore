@@ -38,3 +38,7 @@ deploy-manifest.txt
 # OS clutter
 .DS_Store
 Thumbs.db
+
+#API stuff
+private/framework/ci/.seeded_ids.json
+private/framework/ci/.repo_api_request_runner.php
