@@ -20,7 +20,7 @@ function require_env(string $name): string
         fail('Missing required environment variable: ' . $name);
     }
 
-    return $value;
+    return trim($value);
 }
 
 $repoRoot = dirname(__DIR__, 3);
@@ -49,12 +49,14 @@ return [
     'chrysalis_repo_root' => __DIR__,
     'chrysalis_repo_visible_prefixes' => \$visibility['visible_prefixes'],
     'chrysalis_repo_visible_files' => \$visibility['visible_files'],
-
-    'db_host' => %s,
-    'db_port' => %s,
-    'db_name' => %s,
-    'db_user' => %s,
-    'db_pass' => %s,
+    'db' => [
+        'host' => %s,
+        'port' => %s,
+        'name' => %s,
+        'user' => %s,
+        'pass' => %s,
+        'charset' => 'utf8mb4',
+    ],
 ];
 PHP;
 
