@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-function api_error(int $statusCode, string $message): void
+function api_error(int $statusCode, string $message): never
 {
     http_response_code($statusCode);
     echo json_encode([
@@ -13,15 +13,29 @@ function api_error(int $statusCode, string $message): void
     exit;
 }
 
-$raw = file_get_contents('php://input');
-if ($raw === false) {
-    api_error(400, 'Unable to read request body');
+function read_request_body(): array
+{
+    if (array_key_exists('_API_BODY', $GLOBALS) && is_array($GLOBALS['_API_BODY'])) {
+        return $GLOBALS['_API_BODY'];
+    }
+
+    $raw = file_get_contents('php://input');
+    if ($raw === false) {
+        api_error(400, 'Unable to read request body');
+    }
+
+    $body = json_decode($raw, true);
+    if (!is_array($body)) {
+        api_error(400, 'Invalid JSON body');
+    }
+
+    $GLOBALS['_API_BODY'] = $body;
+    $GLOBALS['_QUERY_BODY'] = $body;
+
+    return $body;
 }
 
-$body = json_decode($raw, true);
-if (!is_array($body)) {
-    api_error(400, 'Invalid JSON body');
-}
+$body = read_request_body();
 
 $operation = $body['operation'] ?? $body['endpoint'] ?? '';
 if (!is_string($operation) || $operation === '') {
