@@ -89,10 +89,27 @@ jobs:
           php private/framework/ci/validate_framework_ingress.php
 
       - name: Write CI pecherie_config.php
+        env:
+          PECHERIE_DB_HOST: ${{ secrets.PECHERIE_DB_HOST }}
+          PECHERIE_DB_PORT: ${{ secrets.PECHERIE_DB_PORT }}
+          PECHERIE_DB_NAME: ${{ secrets.PECHERIE_DB_NAME }}
+          PECHERIE_DB_USER: ${{ secrets.PECHERIE_DB_USER }}
+          PECHERIE_DB_PASS: ${{ secrets.PECHERIE_DB_PASS }}
         run: php private/framework/ci/write_ci_config.php
 
       - name: Seed CI data
         run: php private/framework/ci/seed_ci_data.php
+
+      - name: Verify seeded IDs artefact
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f private/framework/ci/.seeded_ids.json ]]; then
+            echo "ERROR: seeded_ids.json not found"
+            exit 1
+          fi
+          echo "OK: seeded_ids.json exists"
+          cat private/framework/ci/.seeded_ids.json
 
       - name: Run repo API behaviour tests
         shell: bash

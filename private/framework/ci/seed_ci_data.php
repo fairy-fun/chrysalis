@@ -21,6 +21,10 @@ if (!is_file($configPath)) {
     fail('Missing pecherie_config.php (CI config must be written before seeding)');
 }
 
+if (is_file($seedOutputPath) && !unlink($seedOutputPath)) {
+    fail('Unable to remove stale seeded_ids.json before seeding');
+}
+
 require_once $repoRoot . '/private/framework/api/api_bootstrap.php';
 
 try {
