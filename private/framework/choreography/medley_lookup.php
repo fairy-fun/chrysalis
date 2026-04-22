@@ -33,14 +33,14 @@ function resolve_medley_id(PDO $pdo, mixed $rawMedleyId, mixed $rawMedleyName): 
     }
 
     $sql = <<<'SQL'
-SELECT id
-FROM medleys
-WHERE name = :name
-LIMIT 1
-SQL;
+    SELECT id
+    FROM medleys
+    WHERE search_name = :search_name
+    LIMIT 1
+    SQL;
 
     $stmt = $pdo->prepare($sql);
-    $stmt->bindValue(':name', $medleyName, PDO::PARAM_STR);
+    $stmt->bindValue(':search_name', $medleyName, PDO::PARAM_STR);
     $stmt->execute();
 
     $resolvedId = $stmt->fetchColumn();
