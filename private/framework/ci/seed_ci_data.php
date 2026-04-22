@@ -219,11 +219,8 @@ function upsert_character_profile(
         ':profile_id' => $profileId,
         ':profile_type_id' => $profileTypeId,
         ':character_id' => $characterId,
-
-        // ✅ safe CI defaults
-        ':entity_id' => null,
+        ':entity_id' => $profileId,
         ':profile_json' => '{}',
-
         ':updated_at' => $updatedAt,
     ]);
 }
