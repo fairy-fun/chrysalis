@@ -227,29 +227,13 @@ function upsert_character_profile(
     ]);
 }
 
-function delete_profile_attribute(PDO $pdo, int $profileId, string $attributeTypeId): void
-{
-    $stmt = $pdo->prepare(
-        'DELETE FROM character_profile_attributes
-         WHERE profile_id = :profile_id
-           AND attribute_type_id = :attribute_type_id'
-    );
-
-    $stmt->execute([
-        ':profile_id' => $profileId,
-        ':attribute_type_id' => $attributeTypeId,
-    ]);
-}
-
-function insert_profile_attribute(
+function upsert_profile_attribute(
     PDO $pdo,
     int $profileId,
     string $attributeTypeId,
     ?string $valueText,
     ?string $valueClassvalId
 ): void {
-    delete_profile_attribute($pdo, $profileId, $attributeTypeId);
-
     $stmt = $pdo->prepare(
         'INSERT INTO character_profile_attributes (
             profile_id,
@@ -262,7 +246,10 @@ function insert_profile_attribute(
             :attribute_type_id,
             :value_text,
             :value_classval_id
-        )'
+        )
+        ON DUPLICATE KEY UPDATE
+            value_text = VALUES(value_text),
+            value_classval_id = VALUES(value_classval_id)'
     );
 
     $stmt->bindValue(':profile_id', $profileId, PDO::PARAM_INT);
@@ -756,20 +743,20 @@ SQL
     /*
      * Priority decides: 9102 beats 9101.
      */
-    insert_profile_attribute($pdo, 9101, $attributeVoicePriority, null, 'ci_voice_priority_low');
-    insert_profile_attribute($pdo, 9102, $attributeVoicePriority, null, 'ci_voice_priority_high');
+    upsert_profile_attribute( $pdo, 9101, $attributeVoicePriority, null, 'ci_voice_priority_low');
+    upsert_profile_attribute($pdo, 9102, $attributeVoicePriority, null, 'ci_voice_priority_high');
 
     /*
      * updated_at decides: 9104 beats 9103.
      */
-    insert_profile_attribute($pdo, 9103, $attributePsychUpdated, null, 'ci_psych_older');
-    insert_profile_attribute($pdo, 9104, $attributePsychUpdated, null, 'ci_psych_newer');
+    upsert_profile_attribute($pdo, 9103, $attributePsychUpdated, null, 'ci_psych_older');
+    upsert_profile_attribute($pdo, 9104, $attributePsychUpdated, null, 'ci_psych_newer');
 
     /*
      * profile_id decides: 9106 beats 9105.
      */
-    insert_profile_attribute($pdo, 9105, $attributeLimbicProfile, null, 'ci_limbic_lower_profile');
-    insert_profile_attribute($pdo, 9106, $attributeLimbicProfile, null, 'ci_limbic_higher_profile');
+    upsert_profile_attribute($pdo, 9105, $attributeLimbicProfile, null, 'ci_limbic_lower_profile');
+    upsert_profile_attribute($pdo, 9106, $attributeLimbicProfile, null, 'ci_limbic_higher_profile');
 
     /*
      * Domain-mapped attribute:
@@ -777,7 +764,7 @@ SQL
      * - present with matching domain_id
      * - excluded only if it has domain mappings and none match
      */
-    insert_profile_attribute($pdo, 9107, $attributeVoiceDomain, null, 'ci_voice_domain_visible');
+    upsert_profile_attribute($pdo, 9107, $attributeVoiceDomain, null, 'ci_voice_domain_visible');
 
     ensure_attribute_domain_map($pdo, $attributeVoiceDomain, $expressionDomainMatchId);
 
