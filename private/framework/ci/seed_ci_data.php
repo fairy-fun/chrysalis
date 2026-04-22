@@ -34,6 +34,40 @@ try {
     fail('Unable to create PDO: ' . $e->getMessage());
 }
 
+/*
+ * Enforce canonical classval semantics (event_theme → event_has_theme)
+ * This normalises legacy DB state before CI validation runs.
+ */
+$checkCanonical = $pdo->prepare(
+    'SELECT 1
+     FROM classvals
+     WHERE id = :canonical_id
+       AND code = :canonical_code
+     LIMIT 1'
+);
+
+$checkCanonical->execute([
+    ':canonical_id' => 'fact_event_has_theme',
+    ':canonical_code' => 'event_has_theme',
+]);
+
+if ($checkCanonical->fetchColumn() === false) {
+    fail('Missing canonical classval fact_event_has_theme / event_has_theme');
+}
+
+$deleteDeprecated = $pdo->prepare(
+    'DELETE FROM classvals
+     WHERE id = :deprecated_id
+        OR code = :deprecated_code'
+);
+
+$deleteDeprecated->execute([
+    ':deprecated_id' => 'fact_type_event_theme',
+    ':deprecated_code' => 'event_theme',
+]);
+
+ok('Normalised classval semantic duplicates (event_theme → event_has_theme)');
+
 $medleyCode = 'CI_MEDLEY_1';
 $medleyName = 'CI Test Medley';
 
