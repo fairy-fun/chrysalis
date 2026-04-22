@@ -8,4 +8,37 @@ const FW_REPO_CONTRACT = [
     'doctrine_owner' => 'php',
     'db_role' => 'transport_only',
     'ci_role' => 'enforcement_authority',
+
+    'api_operations' => [
+        'listRepo' => [
+            'handler' => 'public_html/pecherie/chill-api/repo/list_repo.php',
+            'behaviour_tested' => true,
+            'audit_visibility_required' => true,
+        ],
+        'getRepoFile' => [
+            'handler' => 'public_html/pecherie/chill-api/repo/get_repo_file.php',
+            'behaviour_tested' => true,
+            'audit_visibility_required' => true,
+        ],
+        'query' => [
+            'handler' => 'public_html/pecherie/chill-api/query.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'executeSqlRead' => [
+            'handler' => 'public_html/pecherie/chill-api/query.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'tables' => [
+            'handler' => 'public_html/pecherie/chill-api/tables.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'columns' => [
+            'handler' => 'public_html/pecherie/chill-api/columns.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+    ],
 ];

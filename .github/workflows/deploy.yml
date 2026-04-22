@@ -94,6 +94,9 @@ jobs:
           set -euo pipefail
           php private/framework/ci/run_repo_api_behavior_tests.php
 
+      - name: Validate API registration invariant
+        run: php private/framework/ci/validate_repo_api_registration.php
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
