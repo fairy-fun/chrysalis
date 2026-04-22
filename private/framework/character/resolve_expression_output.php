@@ -104,11 +104,16 @@ INNER JOIN sxnzlfun_chrysalis.attribute_type_layer_map atlm
 WHERE cp.character_id = :character_id
   AND (
         :domain_id IS NULL
+        OR NOT EXISTS (
+            SELECT 1
+            FROM sxnzlfun_chrysalis.attribute_domain_map adm_any
+            WHERE adm_any.attribute_type_id = cpa.attribute_type_id
+        )
         OR EXISTS (
             SELECT 1
-            FROM sxnzlfun_chrysalis.attribute_domain_map adm
-            WHERE adm.attribute_type_id = cpa.attribute_type_id
-              AND adm.domain_id = :domain_id
+            FROM sxnzlfun_chrysalis.attribute_domain_map adm_match
+            WHERE adm_match.attribute_type_id = cpa.attribute_type_id
+              AND adm_match.domain_id = :domain_id
         )
       )
 ORDER BY

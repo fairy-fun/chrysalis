@@ -34,6 +34,238 @@ try {
     fail('Unable to create PDO: ' . $e->getMessage());
 }
 
+function require_table(PDO $pdo, string $tableName): void
+{
+    $stmt = $pdo->prepare(
+        'SELECT 1
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name
+         LIMIT 1'
+    );
+
+    $stmt->execute([':table_name' => $tableName]);
+
+    if ($stmt->fetchColumn() === false) {
+        throw new RuntimeException('Required table missing: ' . $tableName);
+    }
+}
+
+function require_classval(PDO $pdo, string $id, ?string $code = null): void
+{
+    $sql = 'SELECT id, code
+            FROM classvals
+            WHERE id = :id';
+
+    $params = [':id' => $id];
+
+    if ($code !== null) {
+        $sql .= ' AND code = :code';
+        $params[':code'] = $code;
+    }
+
+    $sql .= ' LIMIT 1';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row === false) {
+        throw new RuntimeException(
+            'Missing required classval: ' . $id . ($code !== null ? ' / ' . $code : '')
+        );
+    }
+}
+
+function require_attribute_type_layer(PDO $pdo, string $attributeTypeId, string $expectedLayerId): void
+{
+    $stmt = $pdo->prepare(
+        'SELECT layer_classval_id
+         FROM attribute_type_layer_map
+         WHERE attribute_type_id = :attribute_type_id
+         LIMIT 1'
+    );
+
+    $stmt->execute([':attribute_type_id' => $attributeTypeId]);
+    $actual = $stmt->fetchColumn();
+
+    if ($actual === false) {
+        throw new RuntimeException(
+            'Missing attribute_type_layer_map row for attribute_type_id: ' . $attributeTypeId
+        );
+    }
+
+    if ((string) $actual !== $expectedLayerId) {
+        throw new RuntimeException(
+            'attribute_type_layer_map mismatch for ' . $attributeTypeId .
+            '; expected ' . $expectedLayerId .
+            ', got ' . (string) $actual
+        );
+    }
+}
+
+function upsert_profile_type_priority(PDO $pdo, string $profileTypeId, int $priority): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO profile_type_priority (
+            profile_type_id,
+            priority
+        )
+        VALUES (
+            :profile_type_id,
+            :priority
+        )
+        ON DUPLICATE KEY UPDATE
+            priority = VALUES(priority)'
+    );
+
+    $stmt->execute([
+        ':profile_type_id' => $profileTypeId,
+        ':priority' => $priority,
+    ]);
+}
+
+function upsert_character_profile(
+    PDO $pdo,
+    int $profileId,
+    string $profileTypeId,
+    string $characterId,
+    string $updatedAt
+): void {
+    $stmt = $pdo->prepare(
+        'INSERT INTO character_profiles (
+            profile_id,
+            profile_type_id,
+            character_id,
+            updated_at
+        )
+        VALUES (
+            :profile_id,
+            :profile_type_id,
+            :character_id,
+            :updated_at
+        )
+        ON DUPLICATE KEY UPDATE
+            profile_type_id = VALUES(profile_type_id),
+            character_id = VALUES(character_id),
+            updated_at = VALUES(updated_at)'
+    );
+
+    $stmt->execute([
+        ':profile_id' => $profileId,
+        ':profile_type_id' => $profileTypeId,
+        ':character_id' => $characterId,
+        ':updated_at' => $updatedAt,
+    ]);
+}
+
+function delete_profile_attribute(PDO $pdo, int $profileId, string $attributeTypeId): void
+{
+    $stmt = $pdo->prepare(
+        'DELETE FROM character_profile_attributes
+         WHERE profile_id = :profile_id
+           AND attribute_type_id = :attribute_type_id'
+    );
+
+    $stmt->execute([
+        ':profile_id' => $profileId,
+        ':attribute_type_id' => $attributeTypeId,
+    ]);
+}
+
+function insert_profile_attribute(
+    PDO $pdo,
+    int $profileId,
+    string $attributeTypeId,
+    ?string $valueText,
+    ?string $valueClassvalId
+): void {
+    delete_profile_attribute($pdo, $profileId, $attributeTypeId);
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO character_profile_attributes (
+            profile_id,
+            attribute_type_id,
+            value_text,
+            value_classval_id
+        )
+        VALUES (
+            :profile_id,
+            :attribute_type_id,
+            :value_text,
+            :value_classval_id
+        )'
+    );
+
+    $stmt->bindValue(':profile_id', $profileId, PDO::PARAM_INT);
+    $stmt->bindValue(':attribute_type_id', $attributeTypeId, PDO::PARAM_STR);
+
+    if ($valueText === null) {
+        $stmt->bindValue(':value_text', null, PDO::PARAM_NULL);
+    } else {
+        $stmt->bindValue(':value_text', $valueText, PDO::PARAM_STR);
+    }
+
+    if ($valueClassvalId === null) {
+        $stmt->bindValue(':value_classval_id', null, PDO::PARAM_NULL);
+    } else {
+        $stmt->bindValue(':value_classval_id', $valueClassvalId, PDO::PARAM_STR);
+    }
+
+    $stmt->execute();
+}
+
+function ensure_attribute_domain_map(PDO $pdo, string $attributeTypeId, int $domainId): void
+{
+    $stmt = $pdo->prepare(
+        'SELECT 1
+         FROM attribute_domain_map
+         WHERE attribute_type_id = :attribute_type_id
+           AND domain_id = :domain_id
+         LIMIT 1'
+    );
+
+    $stmt->execute([
+        ':attribute_type_id' => $attributeTypeId,
+        ':domain_id' => $domainId,
+    ]);
+
+    if ($stmt->fetchColumn() !== false) {
+        return;
+    }
+
+    $insert = $pdo->prepare(
+        'INSERT INTO attribute_domain_map (
+            attribute_type_id,
+            domain_id
+        )
+        VALUES (
+            :attribute_type_id,
+            :domain_id
+        )'
+    );
+
+    $insert->execute([
+        ':attribute_type_id' => $attributeTypeId,
+        ':domain_id' => $domainId,
+    ]);
+}
+
+function remove_attribute_domain_map(PDO $pdo, string $attributeTypeId, int $domainId): void
+{
+    $stmt = $pdo->prepare(
+        'DELETE FROM attribute_domain_map
+         WHERE attribute_type_id = :attribute_type_id
+           AND domain_id = :domain_id'
+    );
+
+    $stmt->execute([
+        ':attribute_type_id' => $attributeTypeId,
+        ':domain_id' => $domainId,
+    ]);
+}
+
 $medleyCode = 'CI_MEDLEY_1';
 $medleyName = 'CI Test Medley';
 
@@ -42,13 +274,29 @@ $figure2Id = null;
 $segmentId = null;
 $medleyId = null;
 
+$expressionTestCharacterId = 'CI_CHAR_EXPR_1';
+$expressionDomainMatchId = 101;
+
 try {
     $pdo->beginTransaction();
 
+    require_table($pdo, 'classvals');
+    require_table($pdo, 'figures');
+    require_table($pdo, 'segments');
+    require_table($pdo, 'medleys');
+    require_table($pdo, 'medley_segments');
+    require_table($pdo, 'segment_figures');
+    require_table($pdo, 'figure_transitions');
+    require_table($pdo, 'character_profiles');
+    require_table($pdo, 'character_profile_attributes');
+    require_table($pdo, 'profile_type_priority');
+    require_table($pdo, 'attribute_type_layer_map');
+    require_table($pdo, 'attribute_domain_map');
+
     /*
- * Enforce canonical classval semantics (event_theme → event_has_theme)
- * before CI fixture seeding continues.
- */
+     * Enforce canonical classval semantics (event_theme → event_has_theme)
+     * before CI fixture seeding continues.
+     */
     $checkCanonical = $pdo->prepare(
         'SELECT 1
          FROM classvals
@@ -85,15 +333,40 @@ try {
 
     if ($deprecatedRow !== false) {
         throw new RuntimeException(
-            'Deprecated classval still present: '
-            . ($deprecatedRow['id'] ?? '[unknown id]')
-            . ' / '
-            . ($deprecatedRow['code'] ?? '[unknown code]')
-            . '. Clean the database outside CI before seeding.'
+            'Deprecated classval still present: ' .
+            ($deprecatedRow['id'] ?? '[unknown id]') .
+            ' / ' .
+            ($deprecatedRow['code'] ?? '[unknown code]') .
+            '. Clean the database outside CI before seeding.'
         );
     }
 
     ok('Verified canonical classval semantics (event_theme → event_has_theme)');
+
+    /*
+     * Expression output fixture prerequisites.
+     *
+     * These IDs are expected to already exist in the database as stable semantic IDs.
+     * Keep them aligned with your framework metadata.
+     */
+    $attributeVoicePriority = 'attr_ci_voice_priority';
+    $attributePsychUpdated = 'attr_ci_psych_updated';
+    $attributeLimbicProfile = 'attr_ci_limbic_profile_id';
+    $attributeVoiceDomain = 'attr_ci_voice_domain';
+
+    require_attribute_type_layer($pdo, $attributeVoicePriority, 'layer_voice');
+    require_attribute_type_layer($pdo, $attributePsychUpdated, 'layer_psych');
+    require_attribute_type_layer($pdo, $attributeLimbicProfile, 'layer_limbic');
+    require_attribute_type_layer($pdo, $attributeVoiceDomain, 'layer_voice');
+
+    require_classval($pdo, 'ci_voice_priority_low');
+    require_classval($pdo, 'ci_voice_priority_high');
+    require_classval($pdo, 'ci_psych_older');
+    require_classval($pdo, 'ci_psych_newer');
+    require_classval($pdo, 'ci_limbic_lower_profile');
+    require_classval($pdo, 'ci_limbic_higher_profile');
+    require_classval($pdo, 'ci_voice_domain_visible');
+    require_classval($pdo, 'ci_voice_domain_hidden');
 
     /*
      * Seed figures by business key: figures.classval_id
@@ -361,8 +634,73 @@ SQL
         ':dance_id' => 1,
     ]);
 
+    /*
+     * Expression-output fixture.
+     *
+     * We seed:
+     * - priority winner on layer_voice
+     * - updated_at winner on layer_psych
+     * - profile_id winner on layer_limbic
+     * - domain-filtered extra voice attribute
+     */
+
+    upsert_profile_type_priority($pdo, 'ci_profile_low', 10);
+    upsert_profile_type_priority($pdo, 'ci_profile_mid', 20);
+    upsert_profile_type_priority($pdo, 'ci_profile_high', 30);
+
+    /*
+     * Profile IDs are fixed and explicit so CI can assert actual winners.
+     */
+    upsert_character_profile($pdo, 9101, 'ci_profile_low',  $expressionTestCharacterId, '2026-01-01 09:00:00');
+    upsert_character_profile($pdo, 9102, 'ci_profile_high', $expressionTestCharacterId, '2026-01-01 09:00:00');
+
+    upsert_character_profile($pdo, 9103, 'ci_profile_mid',  $expressionTestCharacterId, '2026-01-01 08:00:00');
+    upsert_character_profile($pdo, 9104, 'ci_profile_mid',  $expressionTestCharacterId, '2026-01-01 10:00:00');
+
+    upsert_character_profile($pdo, 9105, 'ci_profile_mid',  $expressionTestCharacterId, '2026-01-01 11:00:00');
+    upsert_character_profile($pdo, 9106, 'ci_profile_mid',  $expressionTestCharacterId, '2026-01-01 11:00:00');
+
+    upsert_character_profile($pdo, 9107, 'ci_profile_mid',  $expressionTestCharacterId, '2026-01-01 12:00:00');
+
+    /*
+     * Priority decides: 9102 beats 9101.
+     */
+    insert_profile_attribute($pdo, 9101, $attributeVoicePriority, null, 'ci_voice_priority_low');
+    insert_profile_attribute($pdo, 9102, $attributeVoicePriority, null, 'ci_voice_priority_high');
+
+    /*
+     * updated_at decides: 9104 beats 9103.
+     */
+    insert_profile_attribute($pdo, 9103, $attributePsychUpdated, null, 'ci_psych_older');
+    insert_profile_attribute($pdo, 9104, $attributePsychUpdated, null, 'ci_psych_newer');
+
+    /*
+     * profile_id decides: 9106 beats 9105.
+     */
+    insert_profile_attribute($pdo, 9105, $attributeLimbicProfile, null, 'ci_limbic_lower_profile');
+    insert_profile_attribute($pdo, 9106, $attributeLimbicProfile, null, 'ci_limbic_higher_profile');
+
+    /*
+     * Domain-filtered attribute:
+     * present without domain_id,
+     * present with matching domain_id,
+     * excluded if the map is removed or changed later.
+     */
+    insert_profile_attribute($pdo, 9107, $attributeVoiceDomain, null, 'ci_voice_domain_visible');
+
+    ensure_attribute_domain_map($pdo, $attributeVoiceDomain, $expressionDomainMatchId);
+
+    /*
+     * Make sure the other seeded attributes are not accidentally restricted
+     * by this test domain.
+     */
+    remove_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
+    remove_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
+    remove_attribute_domain_map($pdo, $attributeLimbicProfile, $expressionDomainMatchId);
+
     $pdo->commit();
     ok('Seeded CI medley data');
+    ok('Seeded CI expression output data');
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
@@ -376,6 +714,55 @@ $data = [
     'medley_name' => $medleyName,
     'figure_1_id' => $figure1Id,
     'figure_2_id' => $figure2Id,
+
+    'expression_test_character_id' => $expressionTestCharacterId,
+    'expression_test_domain_match_id' => $expressionDomainMatchId,
+
+    'expression_expected_default' => [
+        'layer_voice' => [
+            [
+                'attribute_type_id' => 'attr_ci_voice_domain',
+                'profile_id' => 9107,
+                'value_text' => null,
+                'value_classval_id' => 'ci_voice_domain_visible',
+            ],
+            [
+                'attribute_type_id' => 'attr_ci_voice_priority',
+                'profile_id' => 9102,
+                'value_text' => null,
+                'value_classval_id' => 'ci_voice_priority_high',
+            ],
+        ],
+        'layer_psych' => [
+            [
+                'attribute_type_id' => 'attr_ci_psych_updated',
+                'profile_id' => 9104,
+                'value_text' => null,
+                'value_classval_id' => 'ci_psych_newer',
+            ],
+        ],
+        'layer_limbic' => [
+            [
+                'attribute_type_id' => 'attr_ci_limbic_profile_id',
+                'profile_id' => 9106,
+                'value_text' => null,
+                'value_classval_id' => 'ci_limbic_higher_profile',
+            ],
+        ],
+    ],
+
+    'expression_expected_domain_filtered' => [
+        'layer_voice' => [
+            [
+                'attribute_type_id' => 'attr_ci_voice_domain',
+                'profile_id' => 9107,
+                'value_text' => null,
+                'value_classval_id' => 'ci_voice_domain_visible',
+            ],
+        ],
+        'layer_psych' => [],
+        'layer_limbic' => [],
+    ],
 ];
 
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

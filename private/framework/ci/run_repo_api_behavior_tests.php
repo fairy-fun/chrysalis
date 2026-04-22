@@ -28,7 +28,10 @@ function make_runner_script(string $repoRoot): string
 declare(strict_types=1);
 
 if ($argc < 4) {
-    fwrite(STDERR, "Usage: php runner.php <script> <method> <apiKey> [jsonBody]\n");
+    fwrite(
+        STDERR,
+        "Usage: php runner.php <script> <method> <apiKey> [jsonBody] [jsonQuery]\n"
+    );
     exit(2);
 }
 
@@ -36,19 +39,30 @@ $scriptPath = $argv[1];
 $method = $argv[2];
 $apiKey = $argv[3];
 $jsonBody = $argv[4] ?? '{}';
+$jsonQuery = $argv[5] ?? '{}';
 
 $_SERVER['REQUEST_METHOD'] = $method;
 $_SERVER['HTTP_X_API_KEY'] = $apiKey;
 $_SERVER['CONTENT_TYPE'] = 'application/json';
 
-$decoded = json_decode($jsonBody, true);
-if (!is_array($decoded)) {
-    fwrite(STDERR, "Invalid JSON passed to runner\n");
+$decodedBody = json_decode($jsonBody, true);
+if (!is_array($decodedBody)) {
+    fwrite(STDERR, "Invalid JSON body passed to runner\n");
     exit(2);
 }
 
-$GLOBALS['_API_BODY'] = $decoded;
-$GLOBALS['_QUERY_BODY'] = $decoded;
+$decodedQuery = json_decode($jsonQuery, true);
+if (!is_array($decodedQuery)) {
+    fwrite(STDERR, "Invalid JSON query passed to runner\n");
+    exit(2);
+}
+
+$_GET = $decodedQuery;
+$_POST = [];
+$_REQUEST = array_merge($_GET, $decodedBody);
+
+$GLOBALS['_API_BODY'] = $decodedBody;
+$GLOBALS['_QUERY_BODY'] = $decodedBody;
 $GLOBALS['__CI_RAW_REQUEST_BODY'] = $jsonBody;
 
 function ci_get_php_input(): string
@@ -102,7 +116,18 @@ function load_seeded_ids(string $repoRoot): array
         fail('Seeded IDs file did not contain valid JSON: ' . $path);
     }
 
-    foreach (['medley_id', 'medley_name', 'figure_1_id', 'figure_2_id'] as $requiredKey) {
+    foreach (
+        [
+            'medley_id',
+            'medley_name',
+            'figure_1_id',
+            'figure_2_id',
+            'expression_test_character_id',
+            'expression_test_domain_match_id',
+            'expression_expected_default',
+            'expression_expected_domain_filtered',
+        ] as $requiredKey
+    ) {
         if (!array_key_exists($requiredKey, $json)) {
             fail('Seeded IDs file missing required key: ' . $requiredKey);
         }
@@ -124,6 +149,28 @@ function load_seeded_ids(string $repoRoot): array
         fail('Seeded IDs file has invalid figure_2_id');
     }
 
+    if (
+        !is_string($json['expression_test_character_id']) ||
+        trim($json['expression_test_character_id']) === ''
+    ) {
+        fail('Seeded IDs file has invalid expression_test_character_id');
+    }
+
+    if (
+        !is_int($json['expression_test_domain_match_id']) ||
+        $json['expression_test_domain_match_id'] < 1
+    ) {
+        fail('Seeded IDs file has invalid expression_test_domain_match_id');
+    }
+
+    if (!is_array($json['expression_expected_default'])) {
+        fail('Seeded IDs file has invalid expression_expected_default');
+    }
+
+    if (!is_array($json['expression_expected_domain_filtered'])) {
+        fail('Seeded IDs file has invalid expression_expected_domain_filtered');
+    }
+
     return $json;
 }
 
@@ -132,15 +179,27 @@ function run_endpoint(
     string $targetScript,
     array $body,
     string $apiKey = 'ci-test-key',
-    string $method = 'POST'
+    string $method = 'POST',
+    array $query = []
 ): array {
+    $encodedBody = json_encode($body, JSON_UNESCAPED_SLASHES);
+    if ($encodedBody === false) {
+        fail('Unable to encode request body JSON');
+    }
+
+    $encodedQuery = json_encode($query, JSON_UNESCAPED_SLASHES);
+    if ($encodedQuery === false) {
+        fail('Unable to encode request query JSON');
+    }
+
     $command = sprintf(
-        'php %s %s %s %s %s',
+        'php %s %s %s %s %s %s',
         escapeshellarg($runner),
         escapeshellarg($targetScript),
         escapeshellarg($method),
         escapeshellarg($apiKey),
-        escapeshellarg(json_encode($body, JSON_UNESCAPED_SLASHES))
+        escapeshellarg($encodedBody),
+        escapeshellarg($encodedQuery)
     );
 
     $output = [];
@@ -162,6 +221,22 @@ function run_endpoint(
         'raw' => $raw,
         'json' => $json,
     ];
+}
+
+function run_get_endpoint(
+    string $runner,
+    string $targetScript,
+    array $query,
+    string $apiKey = 'ci-test-key'
+): array {
+    return run_endpoint(
+        $runner,
+        $targetScript,
+        [],
+        $apiKey,
+        'GET',
+        $query
+    );
 }
 
 function assert_json_result(array $result, string $label): array
@@ -215,6 +290,55 @@ function assert_error_result(array $result, string $expectedError, string $label
     return $json;
 }
 
+function assert_expression_success_result(array $result, string $label): array
+{
+    $json = assert_json_result($result, $label);
+
+    if (($json['ok'] ?? null) !== true) {
+        fail(
+            $label . ' expected ok=true, got ' .
+            var_export($json['ok'] ?? null, true) .
+            ' raw=' . $result['raw']
+        );
+    }
+
+    if (!isset($json['data']) || !is_array($json['data'])) {
+        fail($label . ' missing data object');
+    }
+
+    ok($label . ' returned ok=true');
+
+    return $json;
+}
+
+function assert_expression_error_result(
+    array $result,
+    string $expectedError,
+    string $label
+): array {
+    $json = assert_json_result($result, $label);
+
+    if (($json['ok'] ?? null) !== false) {
+        fail(
+            $label . ' expected ok=false, got ' .
+            var_export($json['ok'] ?? null, true) .
+            ' raw=' . $result['raw']
+        );
+    }
+
+    if (($json['error'] ?? null) !== $expectedError) {
+        fail(
+            $label . " expected error '$expectedError', got " .
+            var_export($json['error'] ?? null, true) .
+            ' raw=' . $result['raw']
+        );
+    }
+
+    ok($label . ' returned expected error: ' . $expectedError);
+
+    return $json;
+}
+
 function assert_contains_paths(array $entries, array $expectedPaths, string $label): void
 {
     $actualPaths = array_column($entries, 'path');
@@ -239,6 +363,76 @@ function assert_not_contains_names(array $entries, array $forbiddenNames, string
     }
 
     ok($label . ' did not leak forbidden names');
+}
+
+function normalise_expression_output(array $resolvedOutput): array
+{
+    $normalised = [];
+
+    foreach (['layer_voice', 'layer_psych', 'layer_limbic'] as $layerKey) {
+        if (!array_key_exists($layerKey, $resolvedOutput) || !is_array($resolvedOutput[$layerKey])) {
+            fail('Resolved output missing layer: ' . $layerKey);
+        }
+
+        $rows = [];
+
+        foreach ($resolvedOutput[$layerKey] as $row) {
+            if (!is_array($row)) {
+                fail('Resolved output row was not an array');
+            }
+
+            $attributeTypeId = $row['attribute_type_id'] ?? null;
+            if (!is_string($attributeTypeId) || $attributeTypeId === '') {
+                fail('Resolved output row missing attribute_type_id');
+            }
+
+            $profileId = $row['profile_id'] ?? null;
+            if (!is_int($profileId) || $profileId < 1) {
+                fail('Resolved output row missing valid profile_id');
+            }
+
+            $valueText = $row['value_text'] ?? null;
+            if (!is_string($valueText) && $valueText !== null) {
+                fail('Resolved output row has invalid value_text');
+            }
+
+            $valueClassvalId = $row['value_classval_id'] ?? null;
+            if (!is_string($valueClassvalId) && $valueClassvalId !== null) {
+                fail('Resolved output row has invalid value_classval_id');
+            }
+
+            $rows[$attributeTypeId] = [
+                'profile_id' => $profileId,
+                'value_text' => $valueText,
+                'value_classval_id' => $valueClassvalId,
+            ];
+        }
+
+        ksort($rows);
+        $normalised[$layerKey] = $rows;
+    }
+
+    return $normalised;
+}
+
+function assert_expression_output_matches(
+    array $resolvedOutput,
+    array $expected,
+    string $label
+): void {
+    $actual = normalise_expression_output($resolvedOutput);
+    $expectedNormalised = normalise_expression_output($expected);
+
+    if ($actual !== $expectedNormalised) {
+        fail(
+            $label . ' mismatch expected=' .
+            json_encode($expectedNormalised, JSON_UNESCAPED_SLASHES) .
+            ' actual=' .
+            json_encode($actual, JSON_UNESCAPED_SLASHES)
+        );
+    }
+
+    ok($label . ' matched expected resolved_output');
 }
 
 $repoRoot = repo_root();
@@ -686,6 +880,196 @@ try {
 
     ok('index resolveMedleyCore dispatch by medley_name works');
 
+    /*
+     * resolveExpressionOutput behaviour
+     *
+     * These tests rely on the fixture seeded by:
+     * private/framework/ci/seed_ci_data.php
+     */
+    $resolveExpressionOutputScript =
+        $repoRoot . '/public_html/pecherie/chill-api/character/resolve_expression_output.php';
+
+    if (!is_file($resolveExpressionOutputScript)) {
+        fail('Missing character/resolve_expression_output.php');
+    }
+
+    $expressionTestCharacterId = $seededIds['expression_test_character_id'];
+    $expressionDomainMatchId = $seededIds['expression_test_domain_match_id'];
+    $expressionExpectedDefault = $seededIds['expression_expected_default'];
+    $expressionExpectedDomainFiltered = $seededIds['expression_expected_domain_filtered'];
+
+    /*
+     * resolveExpressionOutput success path
+     */
+    $expressionSuccessResult = run_get_endpoint(
+        $runnerPath,
+        $resolveExpressionOutputScript,
+        [
+            'character_id' => $expressionTestCharacterId,
+        ]
+    );
+
+    $expressionSuccessJson = assert_expression_success_result(
+        $expressionSuccessResult,
+        'resolveExpressionOutput success'
+    );
+
+    $expressionData = $expressionSuccessJson['data'];
+
+    if (!isset($expressionData['context']) || !is_array($expressionData['context'])) {
+        fail('resolveExpressionOutput success missing context');
+    }
+
+    if (($expressionData['context']['character_id'] ?? null) !== $expressionTestCharacterId) {
+        fail('resolveExpressionOutput success returned unexpected context.character_id');
+    }
+
+    if (!isset($expressionData['resolved_output']) || !is_array($expressionData['resolved_output'])) {
+        fail('resolveExpressionOutput success missing resolved_output');
+    }
+
+    foreach (['layer_voice', 'layer_psych', 'layer_limbic'] as $layerKey) {
+        if (!array_key_exists($layerKey, $expressionData['resolved_output'])) {
+            fail('resolveExpressionOutput success missing ' . $layerKey);
+        }
+
+        if (!is_array($expressionData['resolved_output'][$layerKey])) {
+            fail('resolveExpressionOutput success expected ' . $layerKey . ' to be an array');
+        }
+    }
+
+    if (!array_key_exists('override_rules', $expressionData) || !is_array($expressionData['override_rules'])) {
+        fail('resolveExpressionOutput success missing override_rules array');
+    }
+
+    if (!array_key_exists('surface_directives', $expressionData) || !is_array($expressionData['surface_directives'])) {
+        fail('resolveExpressionOutput success missing surface_directives array');
+    }
+
+    assert_expression_output_matches(
+        $expressionData['resolved_output'],
+        $expressionExpectedDefault,
+        'resolveExpressionOutput success'
+    );
+
+    /*
+     * resolveExpressionOutput missing character_id
+     */
+    assert_expression_error_result(
+        run_get_endpoint(
+            $runnerPath,
+            $resolveExpressionOutputScript,
+            []
+        ),
+        'character_id must be a non-empty string',
+        'resolveExpressionOutput missing character_id'
+    );
+
+    /*
+     * resolveExpressionOutput wrong method
+     */
+    assert_expression_error_result(
+        run_endpoint(
+            $runnerPath,
+            $resolveExpressionOutputScript,
+            [],
+            'ci-test-key',
+            'POST',
+            [
+                'character_id' => $expressionTestCharacterId,
+            ]
+        ),
+        'Method not allowed',
+        'resolveExpressionOutput wrong method'
+    );
+
+    /*
+     * resolveExpressionOutput invalid integer parameter
+     */
+    assert_expression_error_result(
+        run_get_endpoint(
+            $runnerPath,
+            $resolveExpressionOutputScript,
+            [
+                'character_id' => $expressionTestCharacterId,
+                'domain_id' => 'abc',
+            ]
+        ),
+        'Invalid integer parameter',
+        'resolveExpressionOutput invalid domain_id'
+    );
+
+    /*
+     * resolveExpressionOutput optional context parameters round-trip
+     */
+    $expressionContextResult = run_get_endpoint(
+        $runnerPath,
+        $resolveExpressionOutputScript,
+        [
+            'character_id' => $expressionTestCharacterId,
+            'character_entity_id' => '101',
+            'interlocutor_entity_id' => '202',
+            'social_context_id' => '303',
+        ]
+    );
+
+    $expressionContextJson = assert_expression_success_result(
+        $expressionContextResult,
+        'resolveExpressionOutput context round-trip'
+    );
+
+    $expressionContext = $expressionContextJson['data']['context'] ?? null;
+    if (!is_array($expressionContext)) {
+        fail('resolveExpressionOutput context round-trip missing context');
+    }
+
+    if (($expressionContext['character_entity_id'] ?? null) !== 101) {
+        fail('resolveExpressionOutput context round-trip returned unexpected character_entity_id');
+    }
+
+    if (($expressionContext['interlocutor_entity_id'] ?? null) !== 202) {
+        fail('resolveExpressionOutput context round-trip returned unexpected interlocutor_entity_id');
+    }
+
+    if (($expressionContext['social_context_id'] ?? null) !== 303) {
+        fail('resolveExpressionOutput context round-trip returned unexpected social_context_id');
+    }
+
+    ok('resolveExpressionOutput context round-trip works');
+
+    /*
+     * resolveExpressionOutput domain filtering
+     */
+    $expressionDomainResult = run_get_endpoint(
+        $runnerPath,
+        $resolveExpressionOutputScript,
+        [
+            'character_id' => $expressionTestCharacterId,
+            'domain_id' => (string) $expressionDomainMatchId,
+        ]
+    );
+
+    $expressionDomainJson = assert_expression_success_result(
+        $expressionDomainResult,
+        'resolveExpressionOutput with domain'
+    );
+
+    $expressionDomainContext = $expressionDomainJson['data']['context'] ?? null;
+    if (!is_array($expressionDomainContext)) {
+        fail('resolveExpressionOutput with domain missing context');
+    }
+
+    if (($expressionDomainContext['domain_id'] ?? null) !== $expressionDomainMatchId) {
+        fail('resolveExpressionOutput with domain returned unexpected context.domain_id');
+    }
+
+    assert_expression_output_matches(
+        $expressionDomainJson['data']['resolved_output'],
+        $expressionExpectedDomainFiltered,
+        'resolveExpressionOutput with domain'
+    );
+
+    ok('Expression output API behaviour tests passed');
     ok('Repo API behaviour tests passed');
 } finally {
     delete_file_if_present($runnerPath);
