@@ -712,6 +712,10 @@ SQL
     upsert_profile_type_priority($pdo, 'ci_profile_mid', 20);
     upsert_profile_type_priority($pdo, 'ci_profile_high', 30);
 
+    ensure_profile_type_domain_map($pdo, 'ci_profile_low', $expressionDomainMatchId);
+    ensure_profile_type_domain_map($pdo, 'ci_profile_mid', $expressionDomainMatchId);
+    ensure_profile_type_domain_map($pdo, 'ci_profile_high', $expressionDomainMatchId);
+
     /*
      * Profile IDs are fixed and explicit so CI can assert actual winners.
      */
@@ -733,6 +737,44 @@ SQL
      * so the domain-filtered resolver path remains valid under strict-mode DB
      * enforcement.
      */
+
+    function ensure_profile_type_domain_map(PDO $pdo, string $profileTypeId, int $domainId): void
+    {
+        $stmt = $pdo->prepare(
+            'SELECT 1
+         FROM profile_type_domain_map
+         WHERE profile_type_id = :profile_type_id
+           AND domain_id = :domain_id
+         LIMIT 1'
+        );
+
+        $stmt->execute([
+            ':profile_type_id' => $profileTypeId,
+            ':domain_id' => $domainId,
+        ]);
+
+        if ($stmt->fetchColumn() !== false) {
+            return;
+        }
+
+        $insert = $pdo->prepare(
+            'INSERT INTO profile_type_domain_map (
+            profile_type_id,
+            domain_id
+        )
+        VALUES (
+            :profile_type_id,
+            :domain_id
+        )'
+        );
+
+        $insert->execute([
+            ':profile_type_id' => $profileTypeId,
+            ':domain_id' => $domainId,
+        ]);
+    }
+
+
     ensure_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
     ensure_attribute_domain_map($pdo, $attributePsychUpdated, $expressionDomainMatchId);
     ensure_attribute_domain_map($pdo, $attributeLimbicProfile, $expressionDomainMatchId);
