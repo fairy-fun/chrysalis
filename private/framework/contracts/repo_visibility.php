@@ -8,6 +8,7 @@ return [
         'private/framework/contracts',
         'private/framework/support',
         'public_html/pecherie/chill-api/repo',
+        'public_html/pecherie/chill-api/choreography',
     ],
 
     'visible_files' => [
@@ -28,5 +29,6 @@ return [
         'tables' => 'public_html/pecherie/chill-api/tables.php',
         'columns' => 'public_html/pecherie/chill-api/columns.php',
         'query' => 'public_html/pecherie/chill-api/query.php',
+        'resolveMedleyCore' => 'public_html/pecherie/chill-api/choreography/resolve_medley_core.php',
     ],
 ];
