@@ -153,11 +153,13 @@ function require_attribute_type_layer(PDO $pdo, string $attributeTypeId, string 
         );
     }
 
-    if ((string) $actual !== $expectedLayerId) {
+    $actualLayer = (string) $actual;
+
+    if ($actualLayer !== $expectedLayerId) {
         throw new RuntimeException(
             'attribute_type_layer_map mismatch for ' . $attributeTypeId .
             '; expected ' . $expectedLayerId .
-            ', got ' . (string) $actual
+            ', got ' . $actualLayer
         );
     }
 }
