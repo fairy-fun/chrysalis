@@ -1186,7 +1186,6 @@ $data = [
 
     'entity_test_existing_target_entity_id' => 'ci_entity_theme_betrayal',
     'entity_test_existing_target_entity_type_id' => $entityTypeTheme,
-    'entity_test_existing_target_label' => 'Betrayal',
 
     'entity_test_ambiguous_entity_id_1' => 'ci_entity_theme_betrayal',
     'entity_test_ambiguous_entity_type_id_1' => $entityTypeTheme,
@@ -1200,6 +1199,17 @@ $data = [
 
     'entity_test_no_match_entity_type_id' => $entityTypeTheme,
     'entity_test_no_match_canonical_label' => 'CI Missing Entity',
+
+    'entity_test_existing_target_label' => 'Betrayal',
+    'entity_test_existing_target_type_id' => $entityTypeTheme,
+
+    'entity_test_fact_type_id' => 'fact_event_has_theme',
+
+    'entity_test_duplicate_link_target_label' => 'Betrayal',
+    'entity_test_duplicate_link_target_type_id' => $entityTypeTheme,
+
+    'entity_test_ambiguous_target_label' => 'Betrayal',
+    'entity_test_ambiguous_target_type_id' => $entityTypeSong,
 ];
 
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
