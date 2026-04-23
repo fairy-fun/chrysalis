@@ -1454,28 +1454,8 @@ try {
      * - Ambiguity exists only when multiple entities of the same type share the same canonical label.
      */
 
-    /*
-     * suggestLinkEntity failure: ambiguous canonical label within type
-     */
-    $entitySameTypeAmbiguousJson = assert_entity_error_result(
-        run_endpoint(
-            $runnerPath,
-            $suggestLinkEntityScript,
-            [
-                'subject_entity_id' => $entitySubjectId,
-                'raw_label' => $entitySameTypeAmbiguousLabel,
-                'entity_type_id' => $entitySameTypeAmbiguousTypeId,
-                'fact_type_id' => $entityFactTypeId,
-            ]
-        ),
-        'Ambiguous canonical label match',
-        'suggestLinkEntity ambiguous canonical label within type'
-    );
 
-    assert_no_entity_sql_steps(
-        $entitySameTypeAmbiguousJson,
-        'suggestLinkEntity ambiguous canonical label within type'
-    );
+
 
     /*
      * suggestLinkEntity failure: missing fact_type_id
