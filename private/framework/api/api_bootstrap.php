@@ -6,6 +6,10 @@ const DEBUG_MODE = true;
 
 function respond(int $statusCode, array $payload): never
 {
+    if ($statusCode >= 400 && !isset($payload['status'])) {
+        $payload['status'] = 'error';
+    }
+
     http_response_code($statusCode);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
 
@@ -40,7 +44,10 @@ function getConfigPath(): string
         return $runtimeConfigPath;
     }
 
-    respond(500, ['error' => 'No server configuration file found']);
+    respond(500, [
+        'status' => 'error',
+        'error' => 'No server configuration file found',
+    ]);
 }
 
 function getConfig(): array
@@ -48,7 +55,10 @@ function getConfig(): array
     $config = require getConfigPath();
 
     if (!is_array($config)) {
-        respond(500, ['error' => 'Invalid server configuration']);
+        respond(500, [
+            'status' => 'error',
+            'error' => 'Invalid server configuration',
+        ]);
     }
 
     return $config;
@@ -60,7 +70,10 @@ function requireAuth(): void
     $expected = trim((string) ($config['pecherie_api_key'] ?? ''));
 
     if ($expected === '') {
-        respond(500, ['error' => 'Server auth is not configured']);
+        respond(500, [
+            'status' => 'error',
+            'error' => 'Server auth is not configured',
+        ]);
     }
 
     $headers = function_exists('getallheaders') ? getallheaders() : [];
@@ -78,7 +91,10 @@ function requireAuth(): void
     }
 
     if ($provided === null || !hash_equals($expected, $provided)) {
-        respond(401, ['error' => 'Unauthorized']);
+        respond(401, [
+            'status' => 'error',
+            'error' => 'Unauthorized',
+        ]);
     }
 }
 
@@ -103,7 +119,10 @@ function getJsonBody(): array
     $decoded = json_decode($raw, true);
 
     if (!is_array($decoded)) {
-        respond(400, ['error' => 'Request body must be valid JSON']);
+        respond(400, [
+            'status' => 'error',
+            'error' => 'Request body must be valid JSON',
+        ]);
     }
 
     $GLOBALS['_API_BODY'] = $decoded;
@@ -117,7 +136,10 @@ function getDatabaseConfig(): array
     $config = getConfig();
 
     if (!isset($config['db']) || !is_array($config['db'])) {
-        respond(500, ['error' => 'Database configuration is missing']);
+        respond(500, [
+            'status' => 'error',
+            'error' => 'Database configuration is missing',
+        ]);
     }
 
     $db = $config['db'];
@@ -130,18 +152,27 @@ function getDatabaseConfig(): array
     $charset = trim((string) ($db['charset'] ?? 'utf8mb4'));
 
     if ($host === '' || $name === '' || $user === '') {
-        respond(500, ['error' => 'Database configuration is incomplete']);
+        respond(500, [
+            'status' => 'error',
+            'error' => 'Database configuration is incomplete',
+        ]);
     }
 
     $port = null;
     if ($portRaw !== null && $portRaw !== '') {
         if (!is_numeric($portRaw)) {
-            respond(500, ['error' => 'Database port is invalid']);
+            respond(500, [
+                'status' => 'error',
+                'error' => 'Database port is invalid',
+            ]);
         }
 
         $port = (int) $portRaw;
         if ($port < 1) {
-            respond(500, ['error' => 'Database port is invalid']);
+            debugRespond(500, [
+                'status' => 'error',
+                'error' => 'Database connection failed',
+            ], $e);
         }
     }
 
@@ -188,11 +219,15 @@ function verifyExpectedDatabase(PDO $pdo): string
     try {
         $activeDatabase = $pdo->query('SELECT DATABASE()')->fetchColumn();
     } catch (Throwable $e) {
-        debugRespond(500, ['error' => 'Failed to verify active database'], $e);
+        debugRespond(500, [
+            'status' => 'error',
+            'error' => 'Failed to verify active database',
+        ], $e);
     }
 
     if ((string) $activeDatabase !== $expectedDatabase) {
         respond(500, [
+            'status' => 'error',
             'error' => 'Unexpected database selected',
             'details' => 'Expected ' . $expectedDatabase . ', got ' . (string) $activeDatabase,
         ]);
