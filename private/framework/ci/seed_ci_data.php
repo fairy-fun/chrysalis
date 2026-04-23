@@ -1210,6 +1210,9 @@ $data = [
 
     'entity_test_ambiguous_target_label' => 'Betrayal',
     'entity_test_ambiguous_target_type_id' => $entityTypeSong,
+
+    'entity_test_same_type_ambiguous_label' => 'Duplicated Song Label',
+    'entity_test_same_type_ambiguous_type_id' => $entityTypeSong,
 ];
 
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
