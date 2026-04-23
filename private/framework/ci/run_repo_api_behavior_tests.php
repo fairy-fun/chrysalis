@@ -138,6 +138,8 @@ function load_seeded_ids(string $repoRoot): array
             'entity_test_duplicate_link_target_type_id',
             'entity_test_ambiguous_target_label',
             'entity_test_ambiguous_target_type_id',
+            'entity_test_same_type_ambiguous_label',
+            'entity_test_same_type_ambiguous_type_id',
         ] as $requiredKey
     ) {
         if (!array_key_exists($requiredKey, $json)) {
@@ -1256,6 +1258,9 @@ try {
     $entityDuplicateTargetTypeId = $seededIds['entity_test_duplicate_link_target_type_id'];
     $entityAmbiguousTargetLabel = $seededIds['entity_test_ambiguous_target_label'];
     $entityAmbiguousTargetTypeId = $seededIds['entity_test_ambiguous_target_type_id'];
+    $entitySameTypeAmbiguousLabel = $seededIds['entity_test_same_type_ambiguous_label'];
+    $entitySameTypeAmbiguousTypeId = $seededIds['entity_test_same_type_ambiguous_type_id'];
+
 
     /*
      * suggestLinkEntity success path: existing entity + explicit subject
@@ -1442,6 +1447,37 @@ try {
     );
 
     /*
+     * Canonical label resolution rules:
+     *
+     * - Resolution is scoped by entity_type_id.
+     * - Cross-type duplicate labels are valid when entity_type_id is provided.
+     * - Ambiguity exists only when multiple entities of the same type share the same canonical label.
+     */
+
+    /*
+     * suggestLinkEntity failure: ambiguous canonical label within type
+     */
+    $entitySameTypeAmbiguousJson = assert_entity_error_result(
+        run_endpoint(
+            $runnerPath,
+            $suggestLinkEntityScript,
+            [
+                'subject_entity_id' => $entitySubjectId,
+                'raw_label' => $entitySameTypeAmbiguousLabel,
+                'entity_type_id' => $entitySameTypeAmbiguousTypeId,
+                'fact_type_id' => $entityFactTypeId,
+            ]
+        ),
+        'Ambiguous canonical label match',
+        'suggestLinkEntity ambiguous canonical label within type'
+    );
+
+    assert_no_entity_sql_steps(
+        $entitySameTypeAmbiguousJson,
+        'suggestLinkEntity ambiguous canonical label within type'
+    );
+
+    /*
      * suggestLinkEntity failure: missing fact_type_id
      */
     $entityMissingFactTypeJson = assert_entity_error_result(
@@ -1463,10 +1499,11 @@ try {
         'suggestLinkEntity missing fact_type_id'
     );
 
+
     /*
-     * suggestLinkEntity failure: ambiguous canonical label
-     */
-    $entityAmbiguousJson = assert_entity_error_result(
+ * suggestLinkEntity success: cross-type duplicate label resolved by type
+ */
+    $entityCrossTypeJson = assert_entity_success_result(
         run_endpoint(
             $runnerPath,
             $suggestLinkEntityScript,
@@ -1477,14 +1514,34 @@ try {
                 'fact_type_id' => $entityFactTypeId,
             ]
         ),
-        'Ambiguous canonical label match',
-        'suggestLinkEntity ambiguous canonical label'
+        'suggestLinkEntity resolves cross-type duplicate when type specified'
     );
 
-    assert_no_entity_sql_steps(
-        $entityAmbiguousJson,
-        'suggestLinkEntity ambiguous canonical label'
+    $entityCrossTypeData = assert_entity_action(
+        $entityCrossTypeJson,
+        'link_entity_generic',
+        'suggestLinkEntity resolves cross-type duplicate when type specified'
     );
+
+    $entityCrossTypeStepMap = extract_entity_step_map(
+        $entityCrossTypeJson,
+        'suggestLinkEntity resolves cross-type duplicate when type specified'
+    );
+
+    assert_step_names(
+        $entityCrossTypeStepMap,
+        ['link_entity'],
+        'suggestLinkEntity resolves cross-type duplicate when type specified'
+    );
+
+    assert_sql_contains_fragment(
+        $entityCrossTypeStepMap['link_entity'],
+        'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts',
+        'suggestLinkEntity resolves cross-type duplicate when type specified'
+    );
+
+    ok('suggestLinkEntity cross-type duplicate resolved correctly');
+
 
     $expressionContextJson = assert_expression_success_result(
         $expressionContextResult,
