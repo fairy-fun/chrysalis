@@ -136,10 +136,10 @@ function load_seeded_ids(string $repoRoot): array
             'entity_test_fact_type_id',
             'entity_test_duplicate_link_target_label',
             'entity_test_duplicate_link_target_type_id',
-            'entity_test_ambiguous_target_label',
-            'entity_test_ambiguous_target_type_id',
-            'entity_test_same_type_ambiguous_label',
-            'entity_test_same_type_ambiguous_type_id',
+            'entity_test_cross_type_duplicate_target_label',
+            'entity_test_cross_type_duplicate_target_type_id',
+            'entity_test_no_match_target_label',
+            'entity_test_no_match_target_type_id',
         ] as $requiredKey
     ) {
         if (!array_key_exists($requiredKey, $json)) {
@@ -197,8 +197,10 @@ function load_seeded_ids(string $repoRoot): array
                  'entity_test_fact_type_id',
                  'entity_test_duplicate_link_target_label',
                  'entity_test_duplicate_link_target_type_id',
-                 'entity_test_ambiguous_target_label',
-                 'entity_test_ambiguous_target_type_id',
+                 'entity_test_cross_type_duplicate_target_label',
+                 'entity_test_cross_type_duplicate_target_type_id',
+                 'entity_test_no_match_target_label',
+                 'entity_test_no_match_target_type_id',
              ] as $requiredStringKey) {
         if (
             !is_string($json[$requiredStringKey]) ||
@@ -1237,86 +1239,154 @@ try {
         ]
     );
 
-    /*
- * suggestLinkEntity behaviour
- *
- * These tests rely on the fixture seeded by:
- * private/framework/ci/seed_ci_data.php
- */
-    $suggestLinkEntityScript =
-        $repoRoot . '/public_html/pecherie/chill-api/entity/suggest_link_entity.php';
+    $expressionContextJson = assert_expression_success_result(
+        $expressionContextResult,
+        'resolveExpressionOutput context round-trip'
+    );
 
-    if (!is_file($suggestLinkEntityScript)) {
-        fail('Missing entity/suggest_link_entity.php');
+    $expressionContext = $expressionContextJson['data']['context'] ?? null;
+    if (!is_array($expressionContext)) {
+        fail('resolveExpressionOutput context round-trip missing context');
     }
 
-    $entitySubjectId = $seededIds['entity_test_subject_entity_id'];
-    $entityExistingTargetLabel = $seededIds['entity_test_existing_target_label'];
-    $entityExistingTargetTypeId = $seededIds['entity_test_existing_target_type_id'];
-    $entityFactTypeId = $seededIds['entity_test_fact_type_id'];
-    $entityDuplicateTargetLabel = $seededIds['entity_test_duplicate_link_target_label'];
-    $entityDuplicateTargetTypeId = $seededIds['entity_test_duplicate_link_target_type_id'];
-    $entityAmbiguousTargetLabel = $seededIds['entity_test_ambiguous_target_label'];
-    $entityAmbiguousTargetTypeId = $seededIds['entity_test_ambiguous_target_type_id'];
-    $entitySameTypeAmbiguousLabel = $seededIds['entity_test_same_type_ambiguous_label'];
-    $entitySameTypeAmbiguousTypeId = $seededIds['entity_test_same_type_ambiguous_type_id'];
+    if (($expressionContext['character_entity_id'] ?? null) !== 101) {
+        fail('resolveExpressionOutput context round-trip returned unexpected character_entity_id');
+    }
 
+    if (($expressionContext['interlocutor_entity_id'] ?? null) !== 202) {
+        fail('resolveExpressionOutput context round-trip returned unexpected interlocutor_entity_id');
+    }
+
+    if (($expressionContext['social_context_id'] ?? null) !== 303) {
+        fail('resolveExpressionOutput context round-trip returned unexpected social_context_id');
+    }
+
+    ok('resolveExpressionOutput context round-trip works');
 
     /*
-     * suggestLinkEntity success path: existing entity + explicit subject
+     * resolveExpressionOutput domain filtering
      */
-    $entityExistingExplicitResult = run_endpoint(
+    $expressionDomainResult = run_get_endpoint(
         $runnerPath,
-        $suggestLinkEntityScript,
+        $resolveExpressionOutputScript,
         [
-            'subject_entity_id' => $entitySubjectId,
-            'raw_label' => $entityExistingTargetLabel,
-            'entity_type_id' => $entityExistingTargetTypeId,
-            'fact_type_id' => $entityFactTypeId,
+            'character_id' => $expressionTestCharacterId,
+            'domain_id' => (string) $expressionDomainMatchId,
         ]
     );
 
-    $entityExistingExplicitJson = assert_entity_success_result(
-        $entityExistingExplicitResult,
-        'suggestLinkEntity existing entity explicit subject'
+    $expressionDomainJson = assert_expression_success_result(
+        $expressionDomainResult,
+        'resolveExpressionOutput with domain'
     );
 
-    $entityExistingExplicitData = assert_entity_action(
-        $entityExistingExplicitJson,
-        'link_entity_generic',
-        'suggestLinkEntity existing entity explicit subject'
-    );
-
-    if (($entityExistingExplicitData['subject_entity_id'] ?? null) !== $entitySubjectId) {
-        fail('suggestLinkEntity existing entity explicit subject returned unexpected subject_entity_id');
+    $expressionDomainContext = $expressionDomainJson['data']['context'] ?? null;
+    if (!is_array($expressionDomainContext)) {
+        fail('resolveExpressionOutput with domain missing context');
     }
 
-    $entityExistingExplicitStepMap = extract_entity_step_map(
-        $entityExistingExplicitJson,
-        'suggestLinkEntity existing entity explicit subject'
+    if (($expressionDomainContext['domain_id'] ?? null) !== $expressionDomainMatchId) {
+        fail('resolveExpressionOutput with domain returned unexpected context.domain_id');
+    }
+
+    assert_expression_output_matches(
+        $expressionDomainJson['data']['resolved_output'],
+        $expressionExpectedDomainFiltered,
+        'resolveExpressionOutput with domain'
     );
 
-    assert_step_names(
-        $entityExistingExplicitStepMap,
-        ['link_entity'],
-        'suggestLinkEntity existing entity explicit subject'
-    );
+    ok('Expression output API behaviour tests passed');
 
-    $expectedInsertFragment = 'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts';
+    /*
+     * suggestLinkEntity behaviour
+     *
+     * These tests rely on the fixture seeded by:
+     * private/framework/ci/seed_ci_data.php
+     */
+        $suggestLinkEntityScript =
+            $repoRoot . '/public_html/pecherie/chill-api/entity/suggest_link_entity.php';
 
-    assert_sql_contains_fragment(
-        $entityExistingExplicitStepMap['link_entity'],
-        $expectedInsertFragment,
-        'suggestLinkEntity existing entity explicit subject'
-    );
+        if (!is_file($suggestLinkEntityScript)) {
+            fail('Missing entity/suggest_link_entity.php');
+        }
 
-    assert_sql_contains_fragment(
-        $entityExistingExplicitStepMap['link_entity'],
-        'WHERE NOT EXISTS',
-        'suggestLinkEntity existing entity explicit subject'
-    );
+        $entitySubjectId = $seededIds['entity_test_subject_entity_id'];
+        $entityExistingTargetLabel = $seededIds['entity_test_existing_target_label'];
+        $entityExistingTargetTypeId = $seededIds['entity_test_existing_target_type_id'];
+        $entityFactTypeId = $seededIds['entity_test_fact_type_id'];
+        $entityDuplicateTargetLabel = $seededIds['entity_test_duplicate_link_target_label'];
+        $entityDuplicateTargetTypeId = $seededIds['entity_test_duplicate_link_target_type_id'];
+        $entityCrossTypeDuplicateTargetLabel =
+            $seededIds['entity_test_cross_type_duplicate_target_label'];
+        $entityCrossTypeDuplicateTargetTypeId =
+            $seededIds['entity_test_cross_type_duplicate_target_type_id'];
 
-    ok('suggestLinkEntity existing entity explicit subject returned link-only SQL');
+    /*
+     * suggestLinkEntity contract
+     *
+     * - entity_type_id is required for exact entity resolution
+     * - exact label resolution is scoped by entity_type_id
+     * - cross-type duplicate canonical labels are valid
+     * - same-type duplicate canonical labels are impossible under schema uniqueness
+     * - therefore there is no same-type ambiguity runtime path here
+     */
+
+
+        /*
+         * suggestLinkEntity success path: existing entity + explicit subject
+         */
+        $entityExistingExplicitResult = run_endpoint(
+            $runnerPath,
+            $suggestLinkEntityScript,
+            [
+                'subject_entity_id' => $entitySubjectId,
+                'raw_label' => $entityExistingTargetLabel,
+                'entity_type_id' => $entityExistingTargetTypeId,
+                'fact_type_id' => $entityFactTypeId,
+            ]
+        );
+
+        $entityExistingExplicitJson = assert_entity_success_result(
+            $entityExistingExplicitResult,
+            'suggestLinkEntity existing entity explicit subject'
+        );
+
+        $entityExistingExplicitData = assert_entity_action(
+            $entityExistingExplicitJson,
+            'link_entity_generic',
+            'suggestLinkEntity existing entity explicit subject'
+        );
+
+        if (($entityExistingExplicitData['subject_entity_id'] ?? null) !== $entitySubjectId) {
+            fail('suggestLinkEntity existing entity explicit subject returned unexpected subject_entity_id');
+        }
+
+        $entityExistingExplicitStepMap = extract_entity_step_map(
+            $entityExistingExplicitJson,
+            'suggestLinkEntity existing entity explicit subject'
+        );
+
+        assert_step_names(
+            $entityExistingExplicitStepMap,
+            ['link_entity'],
+            'suggestLinkEntity existing entity explicit subject'
+        );
+
+        $expectedInsertFragment = 'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts';
+
+        assert_sql_contains_fragment(
+            $entityExistingExplicitStepMap['link_entity'],
+            $expectedInsertFragment,
+            'suggestLinkEntity existing entity explicit subject'
+        );
+
+        assert_sql_contains_fragment(
+            $entityExistingExplicitStepMap['link_entity'],
+            'WHERE NOT EXISTS',
+            'suggestLinkEntity existing entity explicit subject'
+        );
+
+        ok('suggestLinkEntity existing entity explicit subject returned link-only SQL');
 
     /*
      * suggestLinkEntity success path: new entity + explicit subject
@@ -1446,16 +1516,6 @@ try {
         'suggestLinkEntity missing explicit subject'
     );
 
-    /*
-     * Canonical label resolution rules:
-     *
-     * - Resolution is scoped by entity_type_id.
-     * - Cross-type duplicate labels are valid when entity_type_id is provided.
-     * - Ambiguity exists only when multiple entities of the same type share the same canonical label.
-     */
-
-
-
 
     /*
      * suggestLinkEntity failure: missing fact_type_id
@@ -1479,107 +1539,50 @@ try {
         'suggestLinkEntity missing fact_type_id'
     );
 
-
     /*
- * suggestLinkEntity success: cross-type duplicate label resolved by type
+ * suggestLinkEntity success: cross-type duplicate label resolves by explicit type
  */
-    $entityCrossTypeJson = assert_entity_success_result(
-        run_endpoint(
-            $runnerPath,
-            $suggestLinkEntityScript,
-            [
-                'subject_entity_id' => $entitySubjectId,
-                'raw_label' => $entityAmbiguousTargetLabel,
-                'entity_type_id' => $entityAmbiguousTargetTypeId,
-                'fact_type_id' => $entityFactTypeId,
-            ]
-        ),
-        'suggestLinkEntity resolves cross-type duplicate when type specified'
-    );
-
-    $entityCrossTypeData = assert_entity_action(
-        $entityCrossTypeJson,
-        'link_entity_generic',
-        'suggestLinkEntity resolves cross-type duplicate when type specified'
-    );
-
-    $entityCrossTypeStepMap = extract_entity_step_map(
-        $entityCrossTypeJson,
-        'suggestLinkEntity resolves cross-type duplicate when type specified'
-    );
-
-    assert_step_names(
-        $entityCrossTypeStepMap,
-        ['link_entity'],
-        'suggestLinkEntity resolves cross-type duplicate when type specified'
-    );
-
-    assert_sql_contains_fragment(
-        $entityCrossTypeStepMap['link_entity'],
-        'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts',
-        'suggestLinkEntity resolves cross-type duplicate when type specified'
-    );
-
-    ok('suggestLinkEntity cross-type duplicate resolved correctly');
-
-
-    $expressionContextJson = assert_expression_success_result(
-        $expressionContextResult,
-        'resolveExpressionOutput context round-trip'
-    );
-
-    $expressionContext = $expressionContextJson['data']['context'] ?? null;
-    if (!is_array($expressionContext)) {
-        fail('resolveExpressionOutput context round-trip missing context');
-    }
-
-    if (($expressionContext['character_entity_id'] ?? null) !== 101) {
-        fail('resolveExpressionOutput context round-trip returned unexpected character_entity_id');
-    }
-
-    if (($expressionContext['interlocutor_entity_id'] ?? null) !== 202) {
-        fail('resolveExpressionOutput context round-trip returned unexpected interlocutor_entity_id');
-    }
-
-    if (($expressionContext['social_context_id'] ?? null) !== 303) {
-        fail('resolveExpressionOutput context round-trip returned unexpected social_context_id');
-    }
-
-    ok('resolveExpressionOutput context round-trip works');
-
-    /*
-     * resolveExpressionOutput domain filtering
-     */
-    $expressionDomainResult = run_get_endpoint(
+    $entityCrossTypeDuplicateResult = run_endpoint(
         $runnerPath,
-        $resolveExpressionOutputScript,
+        $suggestLinkEntityScript,
         [
-            'character_id' => $expressionTestCharacterId,
-            'domain_id' => (string) $expressionDomainMatchId,
+            'subject_entity_id' => $entitySubjectId,
+            'raw_label' => $entityCrossTypeDuplicateTargetLabel,
+            'entity_type_id' => $entityCrossTypeDuplicateTargetTypeId,
+            'fact_type_id' => $entityFactTypeId,
         ]
     );
 
-    $expressionDomainJson = assert_expression_success_result(
-        $expressionDomainResult,
-        'resolveExpressionOutput with domain'
+    $entityCrossTypeDuplicateJson = assert_entity_success_result(
+        $entityCrossTypeDuplicateResult,
+        'suggestLinkEntity cross-type duplicate label explicit type'
     );
 
-    $expressionDomainContext = $expressionDomainJson['data']['context'] ?? null;
-    if (!is_array($expressionDomainContext)) {
-        fail('resolveExpressionOutput with domain missing context');
-    }
-
-    if (($expressionDomainContext['domain_id'] ?? null) !== $expressionDomainMatchId) {
-        fail('resolveExpressionOutput with domain returned unexpected context.domain_id');
-    }
-
-    assert_expression_output_matches(
-        $expressionDomainJson['data']['resolved_output'],
-        $expressionExpectedDomainFiltered,
-        'resolveExpressionOutput with domain'
+    assert_entity_action(
+        $entityCrossTypeDuplicateJson,
+        'link_entity_generic',
+        'suggestLinkEntity cross-type duplicate label explicit type'
     );
 
-    ok('Expression output API behaviour tests passed');
+    $entityCrossTypeDuplicateStepMap = extract_entity_step_map(
+        $entityCrossTypeDuplicateJson,
+        'suggestLinkEntity cross-type duplicate label explicit type'
+    );
+
+    assert_step_names(
+        $entityCrossTypeDuplicateStepMap,
+        ['link_entity'],
+        'suggestLinkEntity cross-type duplicate label explicit type'
+    );
+
+    assert_sql_contains_fragment(
+        $entityCrossTypeDuplicateStepMap['link_entity'],
+        'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts',
+        'suggestLinkEntity cross-type duplicate label explicit type'
+    );
+
+    ok('suggestLinkEntity cross-type duplicate label resolved by explicit type');
+
     ok('Repo API behaviour tests passed');
 } finally {
     delete_file_if_present($runnerPath);

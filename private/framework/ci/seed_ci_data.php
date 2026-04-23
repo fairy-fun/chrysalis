@@ -660,7 +660,6 @@ try {
     require_entity_type($pdo, $entityTypeIdea,  'idea');
 
 
-
     /*
      * Entity label-resolution fixture.
      *
@@ -671,15 +670,20 @@ try {
      * - uniqueness is enforced on (entity_type_id, canonical_label_normalized)
      *
      * Therefore:
-     * - exact match must be type-scoped
-     * - ambiguity can only be tested across different entity types
+     * - resolution is scoped by entity_type_id
+     * - cross-type duplicate canonical labels are valid
+     * - same-type duplicate canonical labels are not a supported runtime case
+     * - exact-match lookup must be type-scoped
+     *
+     * CI coverage here intentionally seeds:
+     * - one type-scoped existing-label fixture
+     * - one cross-type duplicate-label fixture
+     * - one globally unique label fixture
+     * - one no-match probe label (referenced only by tests, not seeded)
      */
-
     $entityExactThemeId = 'ci_entity_theme_betrayal';
-    $entityAmbiguousSongId = 'ci_entity_song_betrayal';
+    $entityCrossTypeSongId = 'ci_entity_song_betrayal';
     $entityUniqueIdeaId = 'ci_entity_idea_truth_over_comfort';
-
-
 
     upsert_entity($pdo, $entityExactThemeId, $entityTypeTheme);
     upsert_entity_text(
@@ -693,10 +697,10 @@ try {
         0
     );
 
-    upsert_entity($pdo, $entityAmbiguousSongId, $entityTypeSong);
+    upsert_entity($pdo, $entityCrossTypeSongId, $entityTypeSong);
     upsert_entity_text(
         $pdo,
-        $entityAmbiguousSongId,
+        $entityCrossTypeSongId,
         $entityTypeSong,
         'Betrayal',
         null,
@@ -719,29 +723,30 @@ try {
 
     ok('Seeded CI entity label-resolution data');
 
+
     /*
      * Seed figures by business key: figures.classval_id
      */
     $stmt = $pdo->prepare(
-        <<<'SQL'
-INSERT INTO figures (
-    classval_id,
-    dance_id,
-    canonical_name,
-    figure_type_id,
-    created_at
-)
-VALUES (
-    :classval_id,
-    :dance_id,
-    :canonical_name,
-    :figure_type_id,
-    NOW()
-)
-ON DUPLICATE KEY UPDATE
-    canonical_name = VALUES(canonical_name)
-SQL
-    );
+            <<<'SQL'
+    INSERT INTO figures (
+        classval_id,
+        dance_id,
+        canonical_name,
+        figure_type_id,
+        created_at
+    )
+    VALUES (
+        :classval_id,
+        :dance_id,
+        :canonical_name,
+        :figure_type_id,
+        NOW()
+    )
+    ON DUPLICATE KEY UPDATE
+        canonical_name = VALUES(canonical_name)
+    SQL
+        );
 
     $stmt->execute([
         ':classval_id' => 'CI_FIG_1',
@@ -1180,39 +1185,17 @@ $data = [
     ],
 
     // Legacy compatibility keys expected by current CI tests
-    'entity_test_subject_entity_id' => 'ci_entity_theme_betrayal',
-    'entity_test_subject_entity_type_id' => $entityTypeTheme,
-    'entity_test_subject_canonical_label' => 'Betrayal',
-
-    'entity_test_existing_target_entity_id' => 'ci_entity_theme_betrayal',
-    'entity_test_existing_target_entity_type_id' => $entityTypeTheme,
-
-    'entity_test_ambiguous_entity_id_1' => 'ci_entity_theme_betrayal',
-    'entity_test_ambiguous_entity_type_id_1' => $entityTypeTheme,
-    'entity_test_ambiguous_entity_id_2' => 'ci_entity_song_betrayal',
-    'entity_test_ambiguous_entity_type_id_2' => $entityTypeSong,
-    'entity_test_ambiguous_canonical_label' => 'Betrayal',
-
-    'entity_test_unique_entity_id' => 'ci_entity_idea_truth_over_comfort',
-    'entity_test_unique_entity_type_id' => $entityTypeIdea,
-    'entity_test_unique_canonical_label' => 'Truth Over Comfort',
-
-    'entity_test_no_match_entity_type_id' => $entityTypeTheme,
-    'entity_test_no_match_canonical_label' => 'CI Missing Entity',
-
-    'entity_test_existing_target_label' => 'Betrayal',
-    'entity_test_existing_target_type_id' => $entityTypeTheme,
-
+    'entity_test_subject_entity_id' => 'ci_subject_song_anchor',
+    'entity_test_existing_target_label' => 'Truth Over Comfort',
+    'entity_test_existing_target_type_id' => $entityTypeIdea,
     'entity_test_fact_type_id' => 'fact_event_has_theme',
-
     'entity_test_duplicate_link_target_label' => 'Betrayal',
     'entity_test_duplicate_link_target_type_id' => $entityTypeTheme,
+    'entity_test_cross_type_duplicate_target_label' => 'Betrayal',
+    'entity_test_cross_type_duplicate_target_type_id' => $entityTypeSong,
+    'entity_test_no_match_target_label' => 'Label That Does Not Exist In CI',
+    'entity_test_no_match_target_type_id' => $entityTypeIdea,
 
-    'entity_test_ambiguous_target_label' => 'Betrayal',
-    'entity_test_ambiguous_target_type_id' => $entityTypeSong,
-
-    'entity_test_same_type_ambiguous_label' => 'Duplicated Song Label',
-    'entity_test_same_type_ambiguous_type_id' => $entityTypeSong,
 ];
 
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
