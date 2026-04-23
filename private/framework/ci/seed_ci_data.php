@@ -78,7 +78,32 @@ function require_classval(PDO $pdo, string $id, ?string $code = null): void
     }
 }
 
+function require_entity_type(PDO $pdo, string $id, ?string $code = null): void
+{
+    $sql = 'SELECT id, code
+            FROM entity_type_classvals
+            WHERE id = :id';
 
+    $params = [':id' => $id];
+
+    if ($code !== null) {
+        $sql .= ' AND code = :code';
+        $params[':code'] = $code;
+    }
+
+    $sql .= ' LIMIT 1';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row === false) {
+        throw new RuntimeException(
+            'Missing required entity type: ' . $id . ($code !== null ? ' / ' . $code : '')
+        );
+    }
+}
 
 
 function upsert_entity(PDO $pdo, string $entityId, string $entityTypeId): void
@@ -406,6 +431,27 @@ function resolve_classval_id(PDO $pdo, string $code): string
     return (string)$id;
 }
 
+function resolve_entity_type_id(PDO $pdo, string $code): string
+{
+    $stmt = $pdo->prepare(
+        'SELECT id
+         FROM entity_type_classvals
+         WHERE code = :code
+         LIMIT 1'
+    );
+
+    $stmt->execute([':code' => $code]);
+
+    $id = $stmt->fetchColumn();
+
+    if ($id === false) {
+        throw new RuntimeException('Missing required entity type for code: ' . $code);
+    }
+
+    return (string)$id;
+}
+
+
 function ensure_attribute_domain_map(PDO $pdo, string $attributeTypeId, int $domainId): void
 {
     $stmt = $pdo->prepare(
@@ -605,13 +651,13 @@ try {
  * Resolve entity type IDs for entity label-resolution fixtures.
  * These must be resolved from live classvals, not hardcoded.
  */
-    $entityTypeTheme = resolve_classval_id($pdo, 'entity_type_theme');
-    $entityTypeSong  = resolve_classval_id($pdo, 'entity_type_song');
-    $entityTypeIdea  = resolve_classval_id($pdo, 'entity_type_idea');
+    $entityTypeTheme = resolve_entity_type_id($pdo, 'entity_type_theme');
+    $entityTypeSong  = resolve_entity_type_id($pdo, 'entity_type_song');
+    $entityTypeIdea  = resolve_entity_type_id($pdo, 'entity_type_idea');
 
-    require_classval($pdo, $entityTypeTheme, 'entity_type_theme');
-    require_classval($pdo, $entityTypeSong,  'entity_type_song');
-    require_classval($pdo, $entityTypeIdea,  'entity_type_idea');
+    require_entity_type($pdo, $entityTypeTheme, 'entity_type_theme');
+    require_entity_type($pdo, $entityTypeSong,  'entity_type_song');
+    require_entity_type($pdo, $entityTypeIdea,  'entity_type_idea');
 
 
 
