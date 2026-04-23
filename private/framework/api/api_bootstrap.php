@@ -207,7 +207,9 @@ function makePdo(): PDO
             ]
         );
     } catch (Throwable $e) {
-        debugRespond(500, ['error' => 'Database connection failed'], $e);
+        debugRespond(500, [
+            'error' => 'Database connection failed',
+        ], $e);
     }
 }
 
