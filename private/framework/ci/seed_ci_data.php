@@ -684,6 +684,19 @@ try {
     $entityExactThemeId = 'ci_entity_theme_betrayal';
     $entityCrossTypeSongId = 'ci_entity_song_betrayal';
     $entityUniqueIdeaId = 'ci_entity_idea_truth_over_comfort';
+    $entitySubjectSongId = 'ci_subject_song_anchor';
+
+    upsert_entity($pdo, $entitySubjectSongId, $entityTypeSong);
+    upsert_entity_text(
+        $pdo,
+        $entitySubjectSongId,
+        $entityTypeSong,
+        'CI Subject Song Anchor',
+        null,
+        null,
+        'CI Subject Song Anchor',
+        0
+    );
 
     upsert_entity($pdo, $entityExactThemeId, $entityTypeTheme);
     upsert_entity_text(
@@ -1162,7 +1175,7 @@ $data = [
             'entity_type_id' => $entityTypeTheme,
             'canonical_label' => 'Betrayal',
         ],
-        'cross_type_ambiguous_label' => [
+        'cross_type_duplicate_label' => [
             'canonical_label' => 'Betrayal',
             'entity_ids' => [
                 'ci_entity_theme_betrayal',
@@ -1184,8 +1197,7 @@ $data = [
         ],
     ],
 
-    // Legacy compatibility keys expected by current CI tests
-    'entity_test_subject_entity_id' => 'ci_subject_song_anchor',
+    // Entity suggestion behaviour-test keys
     'entity_test_existing_target_label' => 'Truth Over Comfort',
     'entity_test_existing_target_type_id' => $entityTypeIdea,
     'entity_test_fact_type_id' => 'fact_event_has_theme',
@@ -1195,6 +1207,7 @@ $data = [
     'entity_test_cross_type_duplicate_target_type_id' => $entityTypeSong,
     'entity_test_no_match_target_label' => 'Label That Does Not Exist In CI',
     'entity_test_no_match_target_type_id' => $entityTypeIdea,
+    'entity_test_subject_entity_id' => $entitySubjectSongId,
 
 ];
 
