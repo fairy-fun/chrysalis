@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-function respond(int $statusCode, array $payload): never
+function repo_respond(int $statusCode, array $payload): never
 {
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
@@ -9,66 +9,16 @@ function respond(int $statusCode, array $payload): never
     exit;
 }
 
-function fail(int $statusCode, string $error, array $extra = []): never
+function repo_fail(int $statusCode, string $error, array $extra = []): never
 {
-    respond($statusCode, array_merge([
+    repo_respond($statusCode, array_merge([
         'status' => 'error',
         'error' => $error,
     ], $extra));
 }
 
+require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 
-function load_repo_config(): array
-{
-    $repoRoot = dirname(__DIR__, 4);
-    $ciConfigPath = $repoRoot . '/pecherie_ci_config.php';
-    $runtimeConfigPath = $repoRoot . '/pecherie_config.php';
-
-    if (is_file($ciConfigPath)) {
-        $config = require $ciConfigPath;
-    } elseif (is_file($runtimeConfigPath)) {
-        $config = require $runtimeConfigPath;
-    } else {
-        fail(500, 'No configuration file found');
-    }
-
-    if (!is_array($config)) {
-        fail(500, 'Invalid configuration');
-    }
-
-    $apiKey = $config['pecherie_api_key'] ?? null;
-    $repoRootConfig = $config['chrysalis_repo_root'] ?? null;
-    $visiblePrefixes = $config['chrysalis_repo_visible_prefixes'] ?? [];
-    $visibleFiles = $config['chrysalis_repo_visible_files'] ?? [];
-
-    if (!is_string($apiKey) || $apiKey === '') {
-        fail(500, 'Missing pecherie_api_key');
-    }
-
-    if (!is_string($repoRootConfig) || $repoRootConfig === '') {
-        fail(500, 'Missing chrysalis_repo_root');
-    }
-
-    if (!is_array($visiblePrefixes)) {
-        fail(500, 'Invalid chrysalis_repo_visible_prefixes');
-    }
-
-    if (!is_array($visibleFiles)) {
-        fail(500, 'Invalid chrysalis_repo_visible_files');
-    }
-
-    $repoRootReal = realpath($repoRootConfig);
-    if ($repoRootReal === false || !is_dir($repoRootReal)) {
-        fail(500, 'Invalid chrysalis_repo_root');
-    }
-
-    return [
-        'api_key' => $apiKey,
-        'repo_root' => rtrim(str_replace('\\', '/', $repoRootReal), '/'),
-        'visible_prefixes' => normalize_visibility_list($visiblePrefixes),
-        'visible_files' => normalize_visibility_list($visibleFiles),
-    ];
-}
 
 function normalize_visibility_list(array $items): array
 {
@@ -88,41 +38,6 @@ function normalize_visibility_list(array $items): array
     }
 
     return array_keys($normalized);
-}
-
-function require_post(): void
-{
-    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        fail(405, 'Method not allowed', ['allowed_method' => 'POST']);
-    }
-}
-
-function require_api_key(string $expectedApiKey): void
-{
-    $provided = $_SERVER['HTTP_X_API_KEY'] ?? '';
-    if (!is_string($provided) || $provided === '' || !hash_equals($expectedApiKey, $provided)) {
-        fail(401, 'Unauthorized');
-    }
-}
-
-function read_json_body(): array
-{
-    if (array_key_exists('_API_BODY', $GLOBALS) && is_array($GLOBALS['_API_BODY'])) {
-        return $GLOBALS['_API_BODY'];
-    }
-
-    $raw = file_get_contents('php://input');
-    if ($raw === false) {
-        fail(400, 'Unable to read request body');
-    }
-
-    $data = json_decode($raw, true);
-    if (!is_array($data)) {
-        fail(400, 'Invalid JSON body');
-    }
-
-    $GLOBALS['_API_BODY'] = $data;
-    return $data;
 }
 
 function normalize_relative_path(string $path): string
@@ -155,13 +70,13 @@ function normalize_relative_path(string $path): string
 function reject_dangerous_input(string $path): void
 {
     if (strpos($path, "\0") !== false) {
-        fail(403, 'Invalid path');
+        repo_fail(403, 'Invalid path');
     }
 
     $rawParts = explode('/', str_replace('\\', '/', $path));
     foreach ($rawParts as $part) {
         if ($part === '..') {
-            fail(403, 'Path traversal is not allowed');
+            repo_fail(403, 'Path traversal is not allowed');
         }
     }
 }
@@ -178,7 +93,7 @@ function build_absolute_path(string $repoRoot, string $relativePath): string
 function ensure_within_repo_root(string $repoRoot, string $resolvedPath): void
 {
     if ($resolvedPath !== $repoRoot && strpos($resolvedPath, $repoRoot . '/') !== 0) {
-        fail(403, 'Resolved path is outside repo root');
+        repo_fail(403, 'Resolved path is outside repo root');
     }
 }
 
@@ -312,16 +227,50 @@ function should_include_child(string $childRelativePath, array $visiblePrefixes,
     return false;
 }
 
-require_post();
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    repo_fail(405, 'Method not allowed', ['allowed_method' => 'POST']);
+}
 
-$config = load_repo_config();
-require_api_key($config['api_key']);
+function get_repo_runtime_config(): array
+{
+    $config = getConfig();
 
-$body = read_json_body();
+    $repoRootConfig = $config['chrysalis_repo_root'] ?? null;
+    $visiblePrefixes = $config['chrysalis_repo_visible_prefixes'] ?? [];
+    $visibleFiles = $config['chrysalis_repo_visible_files'] ?? [];
+
+    if (!is_string($repoRootConfig) || $repoRootConfig === '') {
+        repo_fail(500, 'Missing chrysalis_repo_root');
+    }
+
+    if (!is_array($visiblePrefixes)) {
+        repo_fail(500, 'Invalid chrysalis_repo_visible_prefixes');
+    }
+
+    if (!is_array($visibleFiles)) {
+        repo_fail(500, 'Invalid chrysalis_repo_visible_files');
+    }
+
+    $repoRootReal = realpath($repoRootConfig);
+    if ($repoRootReal === false || !is_dir($repoRootReal)) {
+        repo_fail(500, 'Invalid chrysalis_repo_root');
+    }
+
+    return [
+        'repo_root' => rtrim(str_replace('\\', '/', $repoRootReal), '/'),
+        'visible_prefixes' => normalize_visibility_list($visiblePrefixes),
+        'visible_files' => normalize_visibility_list($visibleFiles),
+    ];
+}
+
+requireAuth();
+$config = get_repo_runtime_config();
+$body = getJsonBody();
+
 $inputPath = $body['path'] ?? '';
 
 if (!is_string($inputPath)) {
-    fail(400, 'Missing or invalid path');
+    repo_fail(400, 'Missing or invalid path');
 }
 
 reject_dangerous_input($inputPath);
@@ -332,14 +281,14 @@ if (
     $relativePath !== '' &&
     !is_listable_path($relativePath, $config['visible_prefixes'], $config['visible_files'])
 ) {
-    fail(403, 'Path is not visible', ['path' => $relativePath]);
+    repo_fail(403, 'Path is not visible', ['path' => $relativePath]);
 }
 
 $absolutePath = build_absolute_path($config['repo_root'], $relativePath);
 $resolvedPath = realpath($absolutePath);
 
 if ($resolvedPath === false || !is_dir($resolvedPath)) {
-    fail(404, 'Directory not found', ['path' => $relativePath]);
+    repo_fail(404, 'Directory not found', ['path' => $relativePath]);
 }
 
 $resolvedPath = str_replace('\\', '/', $resolvedPath);
@@ -347,7 +296,7 @@ ensure_within_repo_root($config['repo_root'], $resolvedPath);
 
 $items = scandir($resolvedPath);
 if ($items === false) {
-    fail(500, 'Unable to read directory', ['path' => $relativePath]);
+    repo_fail(500, 'Unable to read directory', ['path' => $relativePath]);
 }
 
 $entries = [];
@@ -399,7 +348,7 @@ usort($entries, static function (array $a, array $b): int {
     return strcmp($a['name'], $b['name']);
 });
 
-respond(200, [
+repo_respond(200, [
     'status' => 'ok',
     'path' => $relativePath,
     'entries' => $entries,
