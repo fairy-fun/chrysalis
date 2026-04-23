@@ -441,6 +441,29 @@ $runnerPath = '';
 try {
     $runnerPath = make_runner_script($repoRoot);
 
+    /*
+ * Graph invariants must pass before any API behaviour tests.
+ */
+    $graphInvariantScript = $repoRoot . '/private/framework/ci/run_graph_invariants.php';
+
+    if (!is_file($graphInvariantScript)) {
+        fail('Missing run_graph_invariants.php');
+    }
+
+    $command = sprintf('php %s', escapeshellarg($graphInvariantScript));
+    $output = [];
+    $exitCode = 0;
+
+    exec($command, $output, $exitCode);
+
+    $raw = implode("\n", $output);
+
+    if ($exitCode !== 0) {
+        fail('Graph invariants failed: ' . $raw);
+    }
+
+    ok('Graph invariants passed');
+
     $listRepoScript = $repoRoot . '/public_html/pecherie/chill-api/repo/list_repo.php';
     $getRepoFileScript = $repoRoot . '/public_html/pecherie/chill-api/repo/get_repo_file.php';
 
