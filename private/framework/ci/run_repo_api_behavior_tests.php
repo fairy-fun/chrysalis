@@ -1432,7 +1432,7 @@ try {
                 'fact_type_id' => $entityFactTypeId,
             ]
         ),
-        'No subject entity found in request context',
+        'subject_entity_id must be a non-empty string',
         'suggestLinkEntity missing explicit subject'
     );
 
