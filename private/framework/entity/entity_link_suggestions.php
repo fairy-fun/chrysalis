@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/entity_id_resolution.php';
 require_once __DIR__ . '/entity_lookup.php';
+require_once __DIR__ . '/entity_text_guards.php';
 require_once __DIR__ . '/request_context.php';
 
 function quote_sql_string(PDO $pdo, string $value): string
@@ -63,6 +64,7 @@ function build_create_label_sql(
     string $entityTypeId,
     string $rawLabel
 ): string {
+    $entityId = trim($entityId);
     $label = trim($rawLabel);
     $entityTypeId = trim($entityTypeId);
 
@@ -92,7 +94,9 @@ function build_create_label_sql(
         'WHERE NOT EXISTS (' .
         'SELECT 1 ' .
         'FROM sxnzlfun_chrysalis.entity_texts et ' .
-        'WHERE et.entity_id = ' . quote_sql_string($pdo, $entityId) .
+        'WHERE et.entity_id = ' . quote_sql_string($pdo, $entityId) . ' ' .
+        'AND et.entity_type_id = ' . quote_sql_string($pdo, $entityTypeId) . ' ' .
+        'AND et.canonical_label = ' . quote_sql_string($pdo, $label) .
         ');';
 }
 
@@ -153,6 +157,13 @@ function suggest_link_entity_explicit_subject(
     $resolution = resolve_or_suggest_entity_id($pdo, $rawLabel, $entityTypeId);
     $newEntityId = (string) $resolution['entity_id'];
     $resolutionCode = (string) $resolution['resolution_code'];
+
+    assert_entity_can_accept_canonical_label(
+        $pdo,
+        $newEntityId,
+        $entityTypeId,
+        $rawLabel
+    );
 
     return [
         'type' => 'sql_suggestion_bundle',
