@@ -57,15 +57,33 @@ function build_create_entity_sql(PDO $pdo, string $entityId, string $entityTypeI
         ');';
 }
 
-function build_create_label_sql(PDO $pdo, string $entityId, string $rawLabel): string
-{
+function build_create_label_sql(
+    PDO $pdo,
+    string $entityId,
+    string $entityTypeId,
+    string $rawLabel
+): string {
     $label = trim($rawLabel);
+    $entityTypeId = trim($entityTypeId);
+
+    if ($entityId === '') {
+        throw new RuntimeException('entity_id must not be empty when creating entity_texts row');
+    }
+
+    if ($entityTypeId === '') {
+        throw new RuntimeException('entity_type_id must not be empty when creating entity_texts row');
+    }
+
+    if ($label === '') {
+        throw new RuntimeException('canonical_label must not be empty when creating entity_texts row');
+    }
 
     return
         'INSERT INTO sxnzlfun_chrysalis.entity_texts ' .
-        '(entity_id, canonical_label, summary, description, search_text, created_at, updated_at, nl_priority) ' .
+        '(entity_id, entity_type_id, canonical_label, summary, description, search_text, created_at, updated_at, nl_priority) ' .
         'SELECT ' .
         quote_sql_string($pdo, $entityId) . ', ' .
+        quote_sql_string($pdo, $entityTypeId) . ', ' .
         quote_sql_string($pdo, $label) . ', ' .
         'NULL, NULL, ' .
         quote_sql_string($pdo, mb_strtolower($label, 'UTF-8')) . ', ' .
@@ -151,7 +169,7 @@ function suggest_link_entity_explicit_subject(
             ],
             [
                 'step' => 'create_label',
-                'sql' => build_create_label_sql($pdo, $newEntityId, $rawLabel),
+                'sql' => build_create_label_sql($pdo, $newEntityId, $entityTypeId, $rawLabel),
             ],
             [
                 'step' => 'link_entity',
