@@ -85,7 +85,34 @@ function upsert_classval(
     string $code,
     string $label
 ): void {
-    $stmt = $pdo->prepare(
+    $select = $pdo->prepare(
+        'SELECT id
+         FROM classvals
+         WHERE id = :id
+            OR code = :code
+         LIMIT 1'
+    );
+
+    $select->execute([
+        ':id' => $id,
+        ':code' => $code,
+    ]);
+
+    $existingId = $select->fetchColumn();
+
+    if ($existingId !== false) {
+        if ((string)$existingId !== $id) {
+            throw new RuntimeException(
+                'Classval canonical mismatch for code ' . $code .
+                '; expected id ' . $id .
+                ', found canonical id ' . (string)$existingId
+            );
+        }
+
+        return;
+    }
+
+    $insert = $pdo->prepare(
         'INSERT INTO classvals (
             id,
             classval_type_id,
@@ -99,14 +126,10 @@ function upsert_classval(
             :code,
             :label,
             NOW()
-        )
-        ON DUPLICATE KEY UPDATE
-            classval_type_id = VALUES(classval_type_id),
-            code = VALUES(code),
-            label = VALUES(label)'
+        )'
     );
 
-    $stmt->execute([
+    $insert->execute([
         ':id' => $id,
         ':classval_type_id' => $classvalTypeId,
         ':code' => $code,
