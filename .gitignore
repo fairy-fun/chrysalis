@@ -8,6 +8,7 @@ pecherie_config.php
 private/chrysalis-slack.env
 .env
 .env.local
+private/framework/local/local_db_config.php
 
 *.live.php
 
