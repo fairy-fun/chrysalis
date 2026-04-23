@@ -22,15 +22,17 @@ if (!is_file($ciConfigPath) && !is_file($configPath)) {
 }
 
 require_once $repoRoot . '/private/framework/api/api_bootstrap.php';
-require_once $repoRoot . '/private/framework/entity/validate_event_graph_identity_contract.php';
+require_once $repoRoot . '/private/framework/invariants/invariant_runner.php';
+
+$registry = require $repoRoot . '/private/framework/invariants/invariant_registry.php';
 
 try {
     $pdo = makePdo();
     verifyExpectedDatabase($pdo);
 
-    validate_event_graph_identity_contract($pdo);
+    run_all_invariants($pdo, $registry);
 
-    ok('Validated event graph identity contract');
+    ok('All graph invariants passed');
 } catch (Throwable $e) {
     fail('Graph invariant failed: ' . $e->getMessage());
 }
