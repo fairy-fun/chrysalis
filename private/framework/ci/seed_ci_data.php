@@ -651,13 +651,13 @@ try {
  * Resolve entity type IDs for entity label-resolution fixtures.
  * These must be resolved from live classvals, not hardcoded.
  */
-    $entityTypeTheme = resolve_entity_type_id($pdo, 'entity_type_theme');
-    $entityTypeSong  = resolve_entity_type_id($pdo, 'entity_type_song');
-    $entityTypeIdea  = resolve_entity_type_id($pdo, 'entity_type_idea');
+    $entityTypeTheme = resolve_entity_type_id($pdo, 'theme');
+    $entityTypeSong  = resolve_entity_type_id($pdo, 'song');
+    $entityTypeIdea  = resolve_entity_type_id($pdo, 'idea');
 
-    require_entity_type($pdo, $entityTypeTheme, 'entity_type_theme');
-    require_entity_type($pdo, $entityTypeSong,  'entity_type_song');
-    require_entity_type($pdo, $entityTypeIdea,  'entity_type_idea');
+    require_entity_type($pdo, $entityTypeTheme, 'theme');
+    require_entity_type($pdo, $entityTypeSong,  'song');
+    require_entity_type($pdo, $entityTypeIdea,  'idea');
 
 
 
@@ -1158,24 +1158,24 @@ $data = [
         ],
         'cross_type_ambiguous_label' => [
             'canonical_label' => 'Betrayal',
-                'entity_ids' => [
-                    'ci_entity_theme_betrayal',
-                    'ci_entity_song_betrayal',
-                ],
-                'entity_type_ids' => [
-                    'entity_type_theme',
-                    'entity_type_song',
-                    ],
+            'entity_ids' => [
+                'ci_entity_theme_betrayal',
+                'ci_entity_song_betrayal',
             ],
-            'globally_unique_label' => [
-                'entity_id' => 'ci_entity_idea_truth_over_comfort',
-                'entity_type_id' => 'idea',
-                'canonical_label' => 'Truth Over Comfort',
+            'entity_type_ids' => [
+                $entityTypeTheme,
+                $entityTypeSong,
             ],
-            'no_match_probe' => [
-                'entity_type_id' => 'entity_type_theme',
-                'canonical_label' => 'CI Missing Entity',
-            ],
+        ],
+        'globally_unique_label' => [
+            'entity_id' => 'ci_entity_idea_truth_over_comfort',
+            'entity_type_id' => $entityTypeIdea,
+            'canonical_label' => 'Truth Over Comfort',
+        ],
+        'no_match_probe' => [
+            'entity_type_id' => $entityTypeTheme,
+            'canonical_label' => 'CI Missing Entity',
+        ],
     ],
 ];
 
