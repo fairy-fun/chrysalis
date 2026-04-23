@@ -54,20 +54,17 @@ try {
 
     $pdo = makePdo();
 
-    $suggestion = $subjectEntityId !== null
-        ? suggest_link_entity_explicit_subject(
-            $pdo,
-            $subjectEntityId,
-            $rawLabel,
-            $entityTypeId,
-            $factTypeId
-        )
-        : suggest_link_entity_from_request_context(
-            $pdo,
-            $rawLabel,
-            $entityTypeId,
-            $factTypeId
-        );
+    if ($subjectEntityId === null) {
+        throw new InvalidArgumentException('subject_entity_id must be a non-empty string');
+    }
+
+    $suggestion = suggest_link_entity_explicit_subject(
+        $pdo,
+        $subjectEntityId,
+        $rawLabel,
+        $entityTypeId,
+        $factTypeId
+    );
 
     echo json_encode(
         [
