@@ -85,6 +85,10 @@ switch ($operation) {
         require __DIR__ . '/audit/traversal_trigger_integrity.php';
         break;
 
+    case 'resolveEntityTraversal':
+        require __DIR__ . '/entity/resolve_entity_traversal.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
