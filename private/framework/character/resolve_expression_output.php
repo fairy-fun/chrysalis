@@ -103,7 +103,7 @@ INNER JOIN sxnzlfun_chrysalis.attribute_type_layer_map atlm
     ON atlm.attribute_type_id = cpa.attribute_type_id
 WHERE cp.character_id = :character_id
   AND (
-        :domain_id IS NULL
+        :domain_id_null IS NULL
         OR NOT EXISTS (
             SELECT 1
             FROM sxnzlfun_chrysalis.attribute_domain_map adm_any
@@ -113,7 +113,7 @@ WHERE cp.character_id = :character_id
             SELECT 1
             FROM sxnzlfun_chrysalis.attribute_domain_map adm_match
             WHERE adm_match.attribute_type_id = cpa.attribute_type_id
-              AND adm_match.domain_id = :domain_id
+              AND adm_match.domain_id = :domain_id_match
         )
       )
 ORDER BY
@@ -127,14 +127,18 @@ SQL;
     $stmt->bindValue(':character_id', $characterId, PDO::PARAM_STR);
 
     if ($domainId === null) {
-        $stmt->bindValue(':domain_id', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':domain_id_null', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':domain_id_match', null, PDO::PARAM_NULL);
     } else {
-        $stmt->bindValue(':domain_id', $domainId, PDO::PARAM_INT);
+        $stmt->bindValue(':domain_id_null', $domainId, PDO::PARAM_INT);
+        $stmt->bindValue(':domain_id_match', $domainId, PDO::PARAM_INT);
     }
 
     $stmt->execute();
+
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
+
 
 function pick_expression_winners(array $candidates): array
 {
