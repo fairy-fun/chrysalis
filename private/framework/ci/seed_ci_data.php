@@ -1184,6 +1184,10 @@ $data = [
     'entity_test_subject_entity_type_id' => $entityTypeTheme,
     'entity_test_subject_canonical_label' => 'Betrayal',
 
+    'entity_test_existing_target_entity_id' => 'ci_entity_theme_betrayal',
+    'entity_test_existing_target_entity_type_id' => $entityTypeTheme,
+    'entity_test_existing_target_label' => 'Betrayal',
+
     'entity_test_ambiguous_entity_id_1' => 'ci_entity_theme_betrayal',
     'entity_test_ambiguous_entity_type_id_1' => $entityTypeTheme,
     'entity_test_ambiguous_entity_id_2' => 'ci_entity_song_betrayal',
