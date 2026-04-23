@@ -1150,6 +1150,7 @@ $data = [
             ],
         ],
     ],
+
     'entity_resolution' => [
         'typed_exact_match' => [
             'entity_id' => 'ci_entity_theme_betrayal',
@@ -1177,6 +1178,24 @@ $data = [
             'canonical_label' => 'CI Missing Entity',
         ],
     ],
+
+    // Legacy compatibility keys expected by current CI tests
+    'entity_test_subject_entity_id' => 'ci_entity_theme_betrayal',
+    'entity_test_subject_entity_type_id' => $entityTypeTheme,
+    'entity_test_subject_canonical_label' => 'Betrayal',
+
+    'entity_test_ambiguous_entity_id_1' => 'ci_entity_theme_betrayal',
+    'entity_test_ambiguous_entity_type_id_1' => $entityTypeTheme,
+    'entity_test_ambiguous_entity_id_2' => 'ci_entity_song_betrayal',
+    'entity_test_ambiguous_entity_type_id_2' => $entityTypeSong,
+    'entity_test_ambiguous_canonical_label' => 'Betrayal',
+
+    'entity_test_unique_entity_id' => 'ci_entity_idea_truth_over_comfort',
+    'entity_test_unique_entity_type_id' => $entityTypeIdea,
+    'entity_test_unique_canonical_label' => 'Truth Over Comfort',
+
+    'entity_test_no_match_entity_type_id' => $entityTypeTheme,
+    'entity_test_no_match_canonical_label' => 'CI Missing Entity',
 ];
 
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
