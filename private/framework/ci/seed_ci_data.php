@@ -78,6 +78,99 @@ function require_classval(PDO $pdo, string $id, ?string $code = null): void
     }
 }
 
+
+
+
+function upsert_entity(PDO $pdo, string $entityId, string $entityTypeId): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO entities (
+            id,
+            entity_type_id
+        )
+        VALUES (
+            :id,
+            :entity_type_id
+        )
+        ON DUPLICATE KEY UPDATE
+            entity_type_id = VALUES(entity_type_id)'
+    );
+
+    $stmt->execute([
+        ':id' => $entityId,
+        ':entity_type_id' => $entityTypeId,
+    ]);
+}
+
+function upsert_entity_text(
+    PDO $pdo,
+    string $entityId,
+    string $entityTypeId,
+    string $canonicalLabel,
+    ?string $summary = null,
+    ?string $description = null,
+    ?string $searchText = null,
+    int $nlPriority = 0
+): void {
+    $stmt = $pdo->prepare(
+        'INSERT INTO entity_texts (
+            entity_id,
+            canonical_label,
+            summary,
+            description,
+            search_text,
+            created_at,
+            updated_at,
+            nl_priority,
+            entity_type_id
+        )
+        VALUES (
+            :entity_id,
+            :canonical_label,
+            :summary,
+            :description,
+            :search_text,
+            NOW(),
+            NOW(),
+            :nl_priority,
+            :entity_type_id
+        )
+        ON DUPLICATE KEY UPDATE
+            canonical_label = VALUES(canonical_label),
+            summary = VALUES(summary),
+            description = VALUES(description),
+            search_text = VALUES(search_text),
+            updated_at = NOW(),
+            nl_priority = VALUES(nl_priority),
+            entity_type_id = VALUES(entity_type_id)'
+    );
+
+    $stmt->bindValue(':entity_id', $entityId, PDO::PARAM_STR);
+    $stmt->bindValue(':canonical_label', $canonicalLabel, PDO::PARAM_STR);
+    $stmt->bindValue(':entity_type_id', $entityTypeId, PDO::PARAM_STR);
+    $stmt->bindValue(':nl_priority', $nlPriority, PDO::PARAM_INT);
+
+    if ($summary === null) {
+        $stmt->bindValue(':summary', null, PDO::PARAM_NULL);
+    } else {
+        $stmt->bindValue(':summary', $summary, PDO::PARAM_STR);
+    }
+
+    if ($description === null) {
+        $stmt->bindValue(':description', null, PDO::PARAM_NULL);
+    } else {
+        $stmt->bindValue(':description', $description, PDO::PARAM_STR);
+    }
+
+    if ($searchText === null) {
+        $stmt->bindValue(':search_text', null, PDO::PARAM_NULL);
+    } else {
+        $stmt->bindValue(':search_text', $searchText, PDO::PARAM_STR);
+    }
+
+    $stmt->execute();
+}
+
 function upsert_classval(
     PDO $pdo,
     string $id,
@@ -293,6 +386,26 @@ function upsert_profile_attribute(
     $stmt->execute();
 }
 
+function resolve_classval_id(PDO $pdo, string $code): string
+{
+    $stmt = $pdo->prepare(
+        'SELECT id
+         FROM classvals
+         WHERE code = :code
+         LIMIT 1'
+    );
+
+    $stmt->execute([':code' => $code]);
+
+    $id = $stmt->fetchColumn();
+
+    if ($id === false) {
+        throw new RuntimeException('Missing required classval for code: ' . $code);
+    }
+
+    return (string)$id;
+}
+
 function ensure_attribute_domain_map(PDO $pdo, string $attributeTypeId, int $domainId): void
 {
     $stmt = $pdo->prepare(
@@ -392,6 +505,8 @@ try {
     require_table($pdo, 'profile_type_domain_map');
     require_table($pdo, 'attribute_type_layer_map');
     require_table($pdo, 'attribute_domain_map');
+    require_table($pdo, 'entities');
+    require_table($pdo, 'entity_texts');
 
     /*
      * Enforce canonical classval semantics (event_theme → event_has_theme)
@@ -486,6 +601,77 @@ try {
     require_classval($pdo, 'ci_voice_domain_hidden', 'ci_voice_domain_hidden');
 
 
+    /*
+ * Resolve entity type IDs for entity label-resolution fixtures.
+ * These must be resolved from live classvals, not hardcoded.
+ */
+    $entityTypeTheme = resolve_classval_id($pdo, 'entity_type_theme');
+    $entityTypeSong  = resolve_classval_id($pdo, 'entity_type_song');
+    $entityTypeIdea  = resolve_classval_id($pdo, 'entity_type_idea');
+
+    require_classval($pdo, $entityTypeTheme, 'entity_type_theme');
+    require_classval($pdo, $entityTypeSong,  'entity_type_song');
+    require_classval($pdo, $entityTypeIdea,  'entity_type_idea');
+
+
+
+    /*
+     * Entity label-resolution fixture.
+     *
+     * Live DB contract:
+     * - entities.id is the entity identity anchor
+     * - entity_texts.entity_id is the canonical text row for that entity
+     * - canonical_label_normalized is a generated column
+     * - uniqueness is enforced on (entity_type_id, canonical_label_normalized)
+     *
+     * Therefore:
+     * - exact match must be type-scoped
+     * - ambiguity can only be tested across different entity types
+     */
+
+    $entityExactThemeId = 'ci_entity_theme_betrayal';
+    $entityAmbiguousSongId = 'ci_entity_song_betrayal';
+    $entityUniqueIdeaId = 'ci_entity_idea_truth_over_comfort';
+
+
+
+    upsert_entity($pdo, $entityExactThemeId, $entityTypeTheme);
+    upsert_entity_text(
+        $pdo,
+        $entityExactThemeId,
+        $entityTypeTheme,
+        'Betrayal',
+        null,
+        null,
+        'Betrayal',
+        0
+    );
+
+    upsert_entity($pdo, $entityAmbiguousSongId, $entityTypeSong);
+    upsert_entity_text(
+        $pdo,
+        $entityAmbiguousSongId,
+        $entityTypeSong,
+        'Betrayal',
+        null,
+        null,
+        'Betrayal',
+        0
+    );
+
+    upsert_entity($pdo, $entityUniqueIdeaId, $entityTypeIdea);
+    upsert_entity_text(
+        $pdo,
+        $entityUniqueIdeaId,
+        $entityTypeIdea,
+        'Truth Over Comfort',
+        null,
+        null,
+        'Truth Over Comfort',
+        0
+    );
+
+    ok('Seeded CI entity label-resolution data');
 
     /*
      * Seed figures by business key: figures.classval_id
@@ -917,6 +1103,33 @@ $data = [
                 'value_classval_id' => 'ci_limbic_higher_profile',
             ],
         ],
+    ],
+    'entity_resolution' => [
+        'typed_exact_match' => [
+            'entity_id' => 'ci_entity_theme_betrayal',
+            'entity_type_id' => $entityTypeTheme,
+            'canonical_label' => 'Betrayal',
+        ],
+        'cross_type_ambiguous_label' => [
+            'canonical_label' => 'Betrayal',
+                'entity_ids' => [
+                    'ci_entity_theme_betrayal',
+                    'ci_entity_song_betrayal',
+                ],
+                'entity_type_ids' => [
+                    'entity_type_theme',
+                    'entity_type_song',
+                    ],
+            ],
+            'globally_unique_label' => [
+                'entity_id' => 'ci_entity_idea_truth_over_comfort',
+                'entity_type_id' => 'idea',
+                'canonical_label' => 'Truth Over Comfort',
+            ],
+            'no_match_probe' => [
+                'entity_type_id' => 'entity_type_theme',
+                'canonical_label' => 'CI Missing Entity',
+            ],
     ],
 ];
 
