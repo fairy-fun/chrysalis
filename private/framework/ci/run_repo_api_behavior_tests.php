@@ -130,6 +130,14 @@ function load_seeded_ids(string $repoRoot): array
             'expression_test_domain_match_id',
             'expression_expected_default',
             'expression_expected_domain_filtered',
+            'entity_test_subject_entity_id',
+            'entity_test_existing_target_label',
+            'entity_test_existing_target_type_id',
+            'entity_test_fact_type_id',
+            'entity_test_duplicate_link_target_label',
+            'entity_test_duplicate_link_target_type_id',
+            'entity_test_ambiguous_target_label',
+            'entity_test_ambiguous_target_type_id',
         ] as $requiredKey
     ) {
         if (!array_key_exists($requiredKey, $json)) {
@@ -173,6 +181,29 @@ function load_seeded_ids(string $repoRoot): array
 
     if (!is_array($json['expression_expected_domain_filtered'])) {
         fail('Seeded IDs file has invalid expression_expected_domain_filtered');
+    }
+    if (
+        !is_string($json['entity_test_subject_entity_id']) ||
+        trim($json['entity_test_subject_entity_id']) === ''
+    ) {
+        fail('Seeded IDs file has invalid entity_test_subject_entity_id');
+    }
+
+    foreach ([
+                 'entity_test_existing_target_label',
+                 'entity_test_existing_target_type_id',
+                 'entity_test_fact_type_id',
+                 'entity_test_duplicate_link_target_label',
+                 'entity_test_duplicate_link_target_type_id',
+                 'entity_test_ambiguous_target_label',
+                 'entity_test_ambiguous_target_type_id',
+             ] as $requiredStringKey) {
+        if (
+            !is_string($json[$requiredStringKey]) ||
+            trim($json[$requiredStringKey]) === ''
+        ) {
+            fail('Seeded IDs file has invalid ' . $requiredStringKey);
+        }
     }
 
     return $json;
@@ -438,6 +469,170 @@ function assert_expression_output_matches(
 
     ok($label . ' matched expected resolved_output');
 }
+
+function assert_entity_success_result(array $result, string $label): array
+{
+    $json = assert_json_result($result, $label);
+
+    if (($json['ok'] ?? null) !== true) {
+        fail(
+            $label . ' expected ok=true, got ' .
+            var_export($json['ok'] ?? null, true) .
+            ' raw=' . $result['raw']
+        );
+    }
+
+    if (!isset($json['data']) || !is_array($json['data'])) {
+        fail($label . ' missing data object');
+    }
+
+    ok($label . ' returned ok=true');
+
+    return $json;
+}
+
+function assert_entity_error_result(
+    array $result,
+    string $expectedError,
+    string $label
+): array {
+    $json = assert_json_result($result, $label);
+
+    if (($json['ok'] ?? null) !== false) {
+        fail(
+            $label . ' expected ok=false, got ' .
+            var_export($json['ok'] ?? null, true) .
+            ' raw=' . $result['raw']
+        );
+    }
+
+    if (($json['error'] ?? null) !== $expectedError) {
+        fail(
+            $label . " expected error '$expectedError', got " .
+            var_export($json['error'] ?? null, true) .
+            ' raw=' . $result['raw']
+        );
+    }
+
+    ok($label . ' returned expected error: ' . $expectedError);
+
+    return $json;
+}
+
+function extract_entity_steps(array $entityJson, string $label): array
+{
+    $data = $entityJson['data'] ?? null;
+
+    if (!is_array($data)) {
+        fail($label . ' missing data array');
+    }
+
+    $steps = $data['steps'] ?? null;
+
+    if (!is_array($steps)) {
+        fail($label . ' missing steps array');
+    }
+
+    return $steps;
+}
+
+function extract_entity_step_map(array $entityJson, string $label): array
+{
+    $steps = extract_entity_steps($entityJson, $label);
+    $map = [];
+
+    foreach ($steps as $step) {
+        if (!is_array($step)) {
+            fail($label . ' contained non-array step');
+        }
+
+        $stepName = $step['step'] ?? null;
+        $sql = $step['sql'] ?? null;
+
+        if (!is_string($stepName) || $stepName === '') {
+            fail($label . ' contained step with invalid step name');
+        }
+
+        if (!is_string($sql) || trim($sql) === '') {
+            fail($label . ' contained step with missing sql');
+        }
+
+        $map[$stepName] = $sql;
+    }
+
+    return $map;
+}
+
+function assert_entity_action(array $entityJson, string $expectedAction, string $label): array
+{
+    $data = $entityJson['data'] ?? null;
+
+    if (!is_array($data)) {
+        fail($label . ' missing data array');
+    }
+
+    if (($data['action'] ?? null) !== $expectedAction) {
+        fail(
+            $label . " expected action '$expectedAction', got " .
+            var_export($data['action'] ?? null, true)
+        );
+    }
+
+    ok($label . ' returned expected action: ' . $expectedAction);
+
+    return $data;
+}
+
+function assert_step_names(array $stepMap, array $expectedStepNames, string $label): void
+{
+    $actualStepNames = array_keys($stepMap);
+
+    if ($actualStepNames !== $expectedStepNames) {
+        fail(
+            $label . ' expected step names ' .
+            json_encode($expectedStepNames, JSON_UNESCAPED_SLASHES) .
+            ' got ' .
+            json_encode($actualStepNames, JSON_UNESCAPED_SLASHES)
+        );
+    }
+
+    ok($label . ' returned expected step names');
+}
+
+function assert_sql_contains_fragment(string $sql, string $fragment, string $label): void
+{
+    if (strpos($sql, $fragment) === false) {
+        fail($label . ' missing SQL fragment: ' . $fragment . ' sql=' . $sql);
+    }
+}
+
+function assert_no_entity_sql_steps(array $entityJson, string $label): void
+{
+    $data = $entityJson['data'] ?? null;
+
+    if (!is_array($data)) {
+        return;
+    }
+
+    if (array_key_exists('steps', $data)) {
+        $steps = $data['steps'];
+
+        if (is_array($steps) && count($steps) > 0) {
+            fail($label . ' unexpectedly returned actionable SQL steps');
+        }
+    }
+
+    ok($label . ' returned no actionable SQL steps');
+}
+
+function normalise_sql_string(string $sql): string
+{
+    $sql = trim($sql);
+    $sql = preg_replace('/\s+/', ' ', $sql) ?? $sql;
+
+    return strtolower($sql);
+}
+
 
 $repoRoot = repo_root();
 $runnerPath = '';
@@ -1038,6 +1233,257 @@ try {
             'interlocutor_entity_id' => '202',
             'social_context_id' => '303',
         ]
+    );
+
+    /*
+ * suggestLinkEntity behaviour
+ *
+ * These tests rely on the fixture seeded by:
+ * private/framework/ci/seed_ci_data.php
+ */
+    $suggestLinkEntityScript =
+        $repoRoot . '/public_html/pecherie/chill-api/entity/suggest_link_entity.php';
+
+    if (!is_file($suggestLinkEntityScript)) {
+        fail('Missing entity/suggest_link_entity.php');
+    }
+
+    $entitySubjectId = $seededIds['entity_test_subject_entity_id'];
+    $entityExistingTargetLabel = $seededIds['entity_test_existing_target_label'];
+    $entityExistingTargetTypeId = $seededIds['entity_test_existing_target_type_id'];
+    $entityFactTypeId = $seededIds['entity_test_fact_type_id'];
+    $entityDuplicateTargetLabel = $seededIds['entity_test_duplicate_link_target_label'];
+    $entityDuplicateTargetTypeId = $seededIds['entity_test_duplicate_link_target_type_id'];
+    $entityAmbiguousTargetLabel = $seededIds['entity_test_ambiguous_target_label'];
+    $entityAmbiguousTargetTypeId = $seededIds['entity_test_ambiguous_target_type_id'];
+
+    /*
+     * suggestLinkEntity success path: existing entity + explicit subject
+     */
+    $entityExistingExplicitResult = run_endpoint(
+        $runnerPath,
+        $suggestLinkEntityScript,
+        [
+            'subject_entity_id' => $entitySubjectId,
+            'raw_label' => $entityExistingTargetLabel,
+            'entity_type_id' => $entityExistingTargetTypeId,
+            'fact_type_id' => $entityFactTypeId,
+        ]
+    );
+
+    $entityExistingExplicitJson = assert_entity_success_result(
+        $entityExistingExplicitResult,
+        'suggestLinkEntity existing entity explicit subject'
+    );
+
+    $entityExistingExplicitData = assert_entity_action(
+        $entityExistingExplicitJson,
+        'link_entity_generic',
+        'suggestLinkEntity existing entity explicit subject'
+    );
+
+    if (($entityExistingExplicitData['subject_entity_id'] ?? null) !== $entitySubjectId) {
+        fail('suggestLinkEntity existing entity explicit subject returned unexpected subject_entity_id');
+    }
+
+    $entityExistingExplicitStepMap = extract_entity_step_map(
+        $entityExistingExplicitJson,
+        'suggestLinkEntity existing entity explicit subject'
+    );
+
+    assert_step_names(
+        $entityExistingExplicitStepMap,
+        ['link_entity'],
+        'suggestLinkEntity existing entity explicit subject'
+    );
+
+    $expectedInsertFragment = 'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts';
+
+    assert_sql_contains_fragment(
+        $entityExistingExplicitStepMap['link_entity'],
+        $expectedInsertFragment,
+        'suggestLinkEntity existing entity explicit subject'
+    );
+
+    assert_sql_contains_fragment(
+        $entityExistingExplicitStepMap['link_entity'],
+        'WHERE NOT EXISTS',
+        'suggestLinkEntity existing entity explicit subject'
+    );
+
+    ok('suggestLinkEntity existing entity explicit subject returned link-only SQL');
+
+    /*
+     * suggestLinkEntity success path: new entity + explicit subject
+     */
+    $entityNewLabel = 'CI Fresh Entity ' . gmdate('Ymd_His');
+
+    $entityNewExplicitResult = run_endpoint(
+        $runnerPath,
+        $suggestLinkEntityScript,
+        [
+            'subject_entity_id' => $entitySubjectId,
+            'raw_label' => $entityNewLabel,
+            'entity_type_id' => $entityExistingTargetTypeId,
+            'fact_type_id' => $entityFactTypeId,
+        ]
+    );
+
+    $entityNewExplicitJson = assert_entity_success_result(
+        $entityNewExplicitResult,
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    $entityNewExplicitData = assert_entity_action(
+        $entityNewExplicitJson,
+        'create_and_link_entity_generic',
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    if (($entityNewExplicitData['subject_entity_id'] ?? null) !== $entitySubjectId) {
+        fail('suggestLinkEntity new entity explicit subject returned unexpected subject_entity_id');
+    }
+
+    $entityNewExplicitStepMap = extract_entity_step_map(
+        $entityNewExplicitJson,
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    assert_step_names(
+        $entityNewExplicitStepMap,
+        ['create_entity', 'create_label', 'link_entity'],
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    assert_sql_contains_fragment(
+        $entityNewExplicitStepMap['create_entity'],
+        'INSERT INTO sxnzlfun_chrysalis.entities',
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    assert_sql_contains_fragment(
+        $entityNewExplicitStepMap['create_label'],
+        'INSERT INTO sxnzlfun_chrysalis.entity_texts',
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    assert_sql_contains_fragment(
+        $entityNewExplicitStepMap['link_entity'],
+        'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts',
+        'suggestLinkEntity new entity explicit subject'
+    );
+
+    ok('suggestLinkEntity new entity explicit subject returned create + label + link SQL');
+
+    /*
+     * suggestLinkEntity duplicate-link path remains idempotent
+     */
+    $entityDuplicateResult = run_endpoint(
+        $runnerPath,
+        $suggestLinkEntityScript,
+        [
+            'subject_entity_id' => $entitySubjectId,
+            'raw_label' => $entityDuplicateTargetLabel,
+            'entity_type_id' => $entityDuplicateTargetTypeId,
+            'fact_type_id' => $entityFactTypeId,
+        ]
+    );
+
+    $entityDuplicateJson = assert_entity_success_result(
+        $entityDuplicateResult,
+        'suggestLinkEntity duplicate link explicit subject'
+    );
+
+    $entityDuplicateData = assert_entity_action(
+        $entityDuplicateJson,
+        'link_entity_generic',
+        'suggestLinkEntity duplicate link explicit subject'
+    );
+
+    $entityDuplicateStepMap = extract_entity_step_map(
+        $entityDuplicateJson,
+        'suggestLinkEntity duplicate link explicit subject'
+    );
+
+    assert_step_names(
+        $entityDuplicateStepMap,
+        ['link_entity'],
+        'suggestLinkEntity duplicate link explicit subject'
+    );
+
+    assert_sql_contains_fragment(
+        $entityDuplicateStepMap['link_entity'],
+        'WHERE NOT EXISTS',
+        'suggestLinkEntity duplicate link explicit subject'
+    );
+
+    ok('suggestLinkEntity duplicate link explicit subject returned idempotent link SQL');
+
+    /*
+     * suggestLinkEntity failure: missing explicit subject
+     */
+    $entityMissingSubjectJson = assert_entity_error_result(
+        run_endpoint(
+            $runnerPath,
+            $suggestLinkEntityScript,
+            [
+                'raw_label' => $entityExistingTargetLabel,
+                'entity_type_id' => $entityExistingTargetTypeId,
+                'fact_type_id' => $entityFactTypeId,
+            ]
+        ),
+        'No subject entity found in request context',
+        'suggestLinkEntity missing explicit subject'
+    );
+
+    assert_no_entity_sql_steps(
+        $entityMissingSubjectJson,
+        'suggestLinkEntity missing explicit subject'
+    );
+
+    /*
+     * suggestLinkEntity failure: missing fact_type_id
+     */
+    $entityMissingFactTypeJson = assert_entity_error_result(
+        run_endpoint(
+            $runnerPath,
+            $suggestLinkEntityScript,
+            [
+                'subject_entity_id' => $entitySubjectId,
+                'raw_label' => $entityExistingTargetLabel,
+                'entity_type_id' => $entityExistingTargetTypeId,
+            ]
+        ),
+        'fact_type_id must be a non-empty string',
+        'suggestLinkEntity missing fact_type_id'
+    );
+
+    assert_no_entity_sql_steps(
+        $entityMissingFactTypeJson,
+        'suggestLinkEntity missing fact_type_id'
+    );
+
+    /*
+     * suggestLinkEntity failure: ambiguous canonical label
+     */
+    $entityAmbiguousJson = assert_entity_error_result(
+        run_endpoint(
+            $runnerPath,
+            $suggestLinkEntityScript,
+            [
+                'subject_entity_id' => $entitySubjectId,
+                'raw_label' => $entityAmbiguousTargetLabel,
+                'entity_type_id' => $entityAmbiguousTargetTypeId,
+                'fact_type_id' => $entityFactTypeId,
+            ]
+        ),
+        'Ambiguous canonical label match',
+        'suggestLinkEntity ambiguous canonical label'
+    );
+
+    assert_no_entity_sql_steps(
+        $entityAmbiguousJson,
+        'suggestLinkEntity ambiguous canonical label'
     );
 
     $expressionContextJson = assert_expression_success_result(
