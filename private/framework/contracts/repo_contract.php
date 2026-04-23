@@ -45,5 +45,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'suggestLinkEntity' => [
+            'handler' => 'public_html/pecherie/chill-api/entity/suggest_link_entity.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
