@@ -102,6 +102,10 @@ function load_seeded_ids(string $repoRoot): array
 {
     $path = $repoRoot . '/private/framework/ci/.seeded_ids.json';
 
+    ok('repoRoot=' . $repoRoot);
+    ok('seededIdsPath=' . $path);
+    ok('seeded_ids_exists_before_load=' . (is_file($path) ? 'yes' : 'no'));
+
     if (!is_file($path)) {
         fail('Missing seeded IDs file: ' . $path);
     }

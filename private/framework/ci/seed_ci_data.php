@@ -930,3 +930,5 @@ if (file_put_contents($seedOutputPath, $json . PHP_EOL) === false) {
 }
 
 ok('Wrote seeded_ids.json');
+ok('seedOutputPath=' . $seedOutputPath);
+ok('seeded_ids_exists=' . (is_file($seedOutputPath) ? 'yes' : 'no'));
