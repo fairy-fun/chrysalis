@@ -169,10 +169,10 @@ function getDatabaseConfig(): array
 
         $port = (int) $portRaw;
         if ($port < 1) {
-            debugRespond(500, [
+            respond(500, [
                 'status' => 'error',
-                'error' => 'Database connection failed',
-            ], $e);
+                'error' => 'Database port is invalid',
+            ]);
         }
     }
 
