@@ -81,6 +81,10 @@ switch ($operation) {
         require __DIR__ . '/entity/suggest_link_entity.php';
         break;
 
+    case 'auditTraversalTriggerIntegrity':
+        require __DIR__ . '/audit/traversal_trigger_integrity.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }

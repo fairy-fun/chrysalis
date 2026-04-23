@@ -10,6 +10,7 @@ return [
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
+        'public_html/pecherie/chill-api/audit',
     ],
 
     'visible_files' => [
@@ -32,5 +33,6 @@ return [
         'query' => 'public_html/pecherie/chill-api/query.php',
         'resolveMedleyCore' => 'public_html/pecherie/chill-api/choreography/resolve_medley_core.php',
         'suggestLinkEntity' => 'public_html/pecherie/chill-api/entity/suggest_link_entity.php',
+        'auditTraversalTriggerIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_trigger_integrity.php',
     ],
 ];
