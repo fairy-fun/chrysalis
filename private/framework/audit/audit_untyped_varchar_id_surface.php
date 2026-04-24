@@ -40,6 +40,21 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
 
     $explicitExceptions = [
         'team_memberships.status_year_id' => 'calendar/year registry, not status registry',
+
+        // legacy / transitional identifiers
+        'calendar_event_id_map.old_calendar_id' => 'legacy identifier used for calendar event migration mapping',
+        'calendar_events_old.calendar_id' => 'legacy calendar event identifier retained in old table',
+        'calendar_events_old.parent_calendar_id' => 'legacy parent calendar event identifier retained in old table',
+
+        // structural / grouping identifiers
+        'calendar_records.cal_block_id' => 'internal calendar block identifier',
+        'calendar_domain_classvals.set_id' => 'classval grouping set identifier',
+        'calendar_event_type_classvals.set_id' => 'classval grouping set identifier',
+        'calendar_time_label_classvals.set_id' => 'classval grouping set identifier',
+
+        // value / record references that are not entity-backed yet
+        'calendar_event_attributes.value_id' => 'attribute value identifier; not an entity reference',
+        'calendar_event_knowledge.target_record_id' => 'target record identifier; polymorphic/structural reference',
     ];
 
     $stmt = $pdo->prepare(
@@ -84,6 +99,13 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
             continue;
         }
 
+        if (substr($columnName, -12) === '_classval_id') {
+            $column['classification'] = 'classval_reference';
+            $column['classification_source'] = 'automatic_suffix_rule:_classval_id';
+            $classified[] = $column;
+            continue;
+        }
+
         if ($columnName === 'entity_id' || substr($columnName, -10) === '_entity_id') {
             $column['classification'] = 'typed_entity_reference';
             $column['classification_source'] = $columnName === 'entity_id'
@@ -96,6 +118,26 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
         if (substr($columnName, -8) === '_type_id') {
             $column['classification'] = 'registry_candidate';
             $column['classification_source'] = 'automatic_suffix_rule:_type_id';
+            $classified[] = $column;
+            continue;
+        }
+
+        // common registry-style IDs
+        if (preg_match('/(_id)$/', $columnName)) {
+
+            // known entity suffix already handled above
+
+            // classify common registry domains
+            if (preg_match('/(role|status|type|category|phase|gender|authority|tag|pronoun)_id$/', $columnName)) {
+                $column['classification'] = 'registry_candidate';
+                $column['classification_source'] = 'automatic_pattern_rule:semantic_registry';
+                $classified[] = $column;
+                continue;
+            }
+
+            // fallback: unresolved id
+            $column['classification'] = 'unresolved_id';
+            $column['classification_source'] = 'fallback_rule';
             $classified[] = $column;
             continue;
         }
