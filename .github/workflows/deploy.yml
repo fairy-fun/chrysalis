@@ -103,6 +103,8 @@ jobs:
         run: |
           set -euo pipefail
           php private/framework/ci/validate_repo_api_registration.php
+          echo "==> Running all audits"
+          php private/framework/ci/run_all_audits.php
 
   deploy:
     name: Deploy
