@@ -90,8 +90,24 @@ function assert_classval_reference_integrity(PDO $pdo, string $schemaName): void
         return;
     }
 
+    echo json_encode($audit, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+
     throw new RuntimeException(
         'Classval reference integrity audit failed: unresolved references='
         . (string)$audit['violation_count']
     );
 }
+
+/*function assert_classval_reference_integrity(PDO $pdo, string $schemaName): void
+{
+    $audit = audit_classval_reference_integrity($pdo, $schemaName);
+
+    if ($audit['ok'] === true) {
+        return;
+    }
+
+    throw new RuntimeException(
+        'Classval reference integrity audit failed: unresolved references='
+        . (string)$audit['violation_count']
+    );
+}*/
