@@ -44,6 +44,8 @@ function create_calendar_week_for_book(
             throw new RuntimeException('Book not found for book_code=' . $bookCode);
         }
 
+        validate_calendar_date_id($pdo, $realDateStartId);
+
         $projectionCode = 'book_projection_' . $bookCode;
 
         if (calendar_week_exists_for_book_projection($pdo, $projectionCode, $weekIndex)) {
@@ -181,6 +183,24 @@ function read_calendar_week_book(PDO $pdo, string $bookCode): ?array
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     return is_array($row) ? $row : null;
+}
+
+function validate_calendar_date_id(PDO $pdo, string $dateId): void
+{
+    $stmt = $pdo->prepare(
+        "SELECT 1
+         FROM sxnzlfun_chrysalis.dates
+         WHERE id = :id
+         LIMIT 1"
+    );
+
+    $stmt->execute([
+        ':id' => $dateId,
+    ]);
+
+    if ($stmt->fetchColumn() === false) {
+        throw new RuntimeException('Invalid real_date_start_id: no matching dates.id=' . $dateId);
+    }
 }
 
 function read_calendar_projection_id(PDO $pdo, string $projectionCode): ?int
