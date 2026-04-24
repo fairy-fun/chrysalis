@@ -127,6 +127,27 @@ function upsert_entity(PDO $pdo, string $entityId, string $entityTypeId): void
     ]);
 }
 
+function mirror_all_classvals_as_entities(PDO $pdo): int
+{
+    $stmt = $pdo->prepare(
+        "INSERT INTO entities (
+            id,
+            entity_type_id
+        )
+        SELECT
+            c.id,
+            'entity_type_classval'
+        FROM classvals c
+        LEFT JOIN entities e
+            ON e.id = c.id
+        WHERE e.id IS NULL"
+    );
+
+    $stmt->execute();
+
+    return $stmt->rowCount();
+}
+
 function upsert_entity_text(
     PDO $pdo,
     string $entityId,
@@ -553,6 +574,7 @@ try {
     require_table($pdo, 'attribute_domain_map');
     require_table($pdo, 'entities');
     require_table($pdo, 'entity_texts');
+    require_entity_type($pdo, 'entity_type_classval', 'classval');
 
     /*
      * Enforce canonical classval semantics (event_theme → event_has_theme)
@@ -645,6 +667,9 @@ try {
     require_classval($pdo, 'ci_limbic_higher_profile', 'ci_limbic_higher_profile');
     require_classval($pdo, 'ci_voice_domain_visible', 'ci_voice_domain_visible');
     require_classval($pdo, 'ci_voice_domain_hidden', 'ci_voice_domain_hidden');
+
+    $mirroredClassvalCount = mirror_all_classvals_as_entities($pdo);
+    ok('Mirrored classvals as entities: ' . (string) $mirroredClassvalCount);
 
 
     /*
