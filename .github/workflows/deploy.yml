@@ -162,6 +162,8 @@ jobs:
           PECHERIE_DB_NAME: ${{ secrets.PECHERIE_DB_NAME }}
           PECHERIE_DB_USER: ${{ secrets.PECHERIE_CI_DB_USER }}
           PECHERIE_DB_PASS: ${{ secrets.PECHERIE_CI_DB_PASS }}
+          ANTHEAPECHE_API_URL: ${{ secrets.ANTHEAPECHE_API_URL }}
+          ANTHEAPECHE_API_KEY: ${{ secrets.ANTHEAPECHE_API_KEY }}
         run: |
           ssh sxnzlfun@108.174.195.142 "
             set -euo pipefail
@@ -172,6 +174,8 @@ jobs:
             export PECHERIE_DB_NAME='${PECHERIE_DB_NAME}'
             export PECHERIE_DB_USER='${PECHERIE_DB_USER}'
             export PECHERIE_DB_PASS='${PECHERIE_DB_PASS}'
+            export ANTHEAPECHE_API_URL='${ANTHEAPECHE_API_URL}'
+            export ANTHEAPECHE_API_KEY='${ANTHEAPECHE_API_KEY}'
 
             cd /home/sxnzlfun
 
