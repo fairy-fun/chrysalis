@@ -55,5 +55,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'resolveEntityTraversal' => [
+            'handler' => 'public_html/pecherie/chill-api/entity/resolve_entity_traversal.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
