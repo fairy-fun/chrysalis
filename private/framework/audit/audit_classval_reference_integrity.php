@@ -22,7 +22,6 @@ function audit_classval_reference_integrity(PDO $pdo, string $schemaName): array
         ['expression_constraint_rules', 'profile_type_classval_id'],
         ['expression_constraint_rules', 'strength_classval_id'],
         ['identity_context_alias_map', 'alias_type_classval_id'],
-        ['semantic_aliases', 'classval_id'],
     ];
 
     $violations = [];
