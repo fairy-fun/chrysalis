@@ -207,56 +207,10 @@ jobs:
           php private/framework/ci/run_repo_api_behavior_tests.php
 
           echo '==> Testing character expression resolver'
-          php private/framework/expression/test_resolver.php CI_CHAR_EXPR_1 1
-
-          response="$(
-              curl -sS -X POST "$ANTHEAPECHE_API_URL" \
-              -H 'Content-Type: application/json' \
-              -H "X-API-Key: $ANTHEAPECHE_API_KEY" \
-              -d '{
-              "operation": "resolveCharacterExpressionOutput",
-              "character_id": "CI_CHAR_EXPR_1",
-              "domain_id": 1
-            }'
-            )"
+            php private/framework/expression/test_resolver.php CI_CHAR_EXPR_1 1
             
-            echo "$response"
+            echo '==> Testing character expression API smoke'
+            bash private/framework/expression/test_api_smoke.sh
             
-            php -r '
-              $data = json_decode(stream_get_contents(STDIN), true);
-              
-              if (!is_array($data)) {
-            fwrite(STDERR, "FAIL: invalid JSON\n");
-              exit(1);
-            }
-            
-            echo "DEBUG: status=" . ($data["status"] ?? "null") . "\n";
-            echo "DEBUG: character_id=" . ($data["character_id"] ?? "null") . "\n";
-            echo "DEBUG: domain_id=" . ($data["domain_id"] ?? "null") . "\n";
-            echo "DEBUG: output_type=" . gettype($data["output"] ?? null) . "\n";
-              
-              if (($data["status"] ?? null) !== "ok") {
-            fwrite(STDERR, "FAIL: status not ok\n");
-              exit(1);
-            }
-              
-              if (($data["character_id"] ?? null) !== "CI_CHAR_EXPR_1") {
-            fwrite(STDERR, "FAIL: character_id mismatch\n");
-              exit(1);
-            }
-              
-              if (($data["domain_id"] ?? null) !== "1") {
-            fwrite(STDERR, "FAIL: domain_id not string-cast\n");
-              exit(1);
-            }
-              
-              if (!isset($data["output"]) || !is_array($data["output"])) {
-            fwrite(STDERR, "FAIL: output missing\n");
-              exit(1);
-            }
-            
-            echo "OK: API smoke test passed\n";
-              ' <<< "$response"
-  
           EOF
           
