@@ -100,6 +100,15 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
             continue;
         }
 
+        if ($columnName === 'domain_id' || substr($columnName, -10) === '_domain_id') {
+            $column['classification'] = 'registry_candidate';
+            $column['classification_source'] = $columnName === 'domain_id'
+                ? 'automatic_exact_rule:domain_id'
+                : 'automatic_suffix_rule:_domain_id';
+            $classified[] = $column;
+            continue;
+        }
+
         if (array_key_exists($key, $explicitExceptions)) {
             $column['classification'] = 'explicit_exception';
             $column['exception_reason'] = $explicitExceptions[$key];
