@@ -53,6 +53,8 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
          WHERE TABLE_SCHEMA = :schema_name
            AND DATA_TYPE IN ('char', 'varchar')
            AND COLUMN_NAME LIKE '%\\_id'
+            AND TABLE_NAME NOT LIKE 'v\\_%'
+            AND TABLE_NAME NOT LIKE 'vw\\_%' 
          ORDER BY TABLE_NAME, COLUMN_NAME"
     );
 
