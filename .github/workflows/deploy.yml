@@ -211,7 +211,7 @@ jobs:
             
             echo '==> Testing character expression API smoke'
             export API_URL="$ANTHEAPECHE_API_URL"
-            export API_KEY="$ANTHEAPECHE_API_KEY"
+            export API_KEY="ci-test-key"
             bash private/framework/expression/test_api_smoke.sh
             
           EOF
