@@ -165,107 +165,101 @@ jobs:
           ANTHEAPECHE_API_URL: ${{ secrets.ANTHEAPECHE_API_URL }}
           ANTHEAPECHE_API_KEY: ${{ secrets.ANTHEAPECHE_API_KEY }}
         run: |
-          ssh sxnzlfun@108.174.195.142 "
-            set -euo pipefail
-            trap 'rm -f /home/sxnzlfun/pecherie_ci_config.php' EXIT
+          ssh sxnzlfun@108.174.195.142 'bash -s' <<EOF
+          set -euo pipefail
+          trap 'rm -f /home/sxnzlfun/pecherie_ci_config.php /tmp/test_expression_api_smoke.sh' EXIT
 
-            export PECHERIE_DB_HOST='${PECHERIE_DB_HOST}'
-            export PECHERIE_DB_PORT='${PECHERIE_DB_PORT}'
-            export PECHERIE_DB_NAME='${PECHERIE_DB_NAME}'
-            export PECHERIE_DB_USER='${PECHERIE_DB_USER}'
-            export PECHERIE_DB_PASS='${PECHERIE_DB_PASS}'
-            export ANTHEAPECHE_API_URL='${ANTHEAPECHE_API_URL}'
-            export ANTHEAPECHE_API_KEY='${ANTHEAPECHE_API_KEY}'
+          export PECHERIE_DB_HOST='${PECHERIE_DB_HOST}'
+          export PECHERIE_DB_PORT='${PECHERIE_DB_PORT}'
+          export PECHERIE_DB_NAME='${PECHERIE_DB_NAME}'
+          export PECHERIE_DB_USER='${PECHERIE_DB_USER}'
+          export PECHERIE_DB_PASS='${PECHERIE_DB_PASS}'
+          export ANTHEAPECHE_API_URL='${ANTHEAPECHE_API_URL}'
+          export ANTHEAPECHE_API_KEY='${ANTHEAPECHE_API_KEY}'
 
-            cd /home/sxnzlfun
+          cd /home/sxnzlfun
 
-            echo '==> Writing CI config'
-            php private/framework/ci/write_ci_config.php
+          echo '==> Writing CI config'
+          php private/framework/ci/write_ci_config.php
 
-            echo '==> Seeding test data'
-            php private/framework/ci/seed_ci_data.php
+          echo '==> Seeding test data'
+          php private/framework/ci/seed_ci_data.php
 
-            echo '==> Mirroring profile types as entities'
-            php private/framework/ci/mirror_profile_types_as_entities.php
-          
-            echo '==> Mirroring profile types as entities'
-            php private/framework/ci/mirror_profile_types_as_entities.php
+          echo '==> Mirroring profile types as entities'
+          php private/framework/ci/mirror_profile_types_as_entities.php
 
-            echo '==> Mirroring status as entities'
-            php private/framework/ci/mirror_status_as_entities.php
-          
-            echo '==> Mirroring figures as entities'
-            php private/framework/ci/mirror_figures_as_entities.php
-          
-          echo "==> Running all audits"
+          echo '==> Mirroring status as entities'
+          php private/framework/ci/mirror_status_as_entities.php
+
+          echo '==> Mirroring figures as entities'
+          php private/framework/ci/mirror_figures_as_entities.php
+
+          echo '==> Running all audits'
           php private/framework/ci/run_all_audits.php
-          
-            echo '==> Inspecting deprecated event/theme classvals'
-            php private/framework/ci/debug_event_theme_rows.php
-          
-            echo '==> Validating classval semantic canonicalisation'
-            php -d display_errors=1 private/framework/ci/validate_classval_semantic_canonicalisation.php
 
-            echo '==> Running all audits'
-            php private/framework/ci/run_all_audits.php
-            
-            echo '==> Running behaviour tests'
-            php private/framework/ci/run_repo_api_behavior_tests.php
-          
-            echo '==> Testing character expression resolver'
-            php private/framework/expression/test_resolver.php CI_CHAR_EXPR_1 1
-          
-            echo '==> Testing character expression API (smoke)'
+          echo '==> Inspecting deprecated event/theme classvals'
+          php private/framework/ci/debug_event_theme_rows.php
 
-              cat > /tmp/test_expression_api_smoke.sh <<'EOF'
-              #!/usr/bin/env bash
-              set -euo pipefail
+          echo '==> Validating classval semantic canonicalisation'
+          php -d display_errors=1 private/framework/ci/validate_classval_semantic_canonicalisation.php
 
-              response="$(
-              curl -sS -X POST "$ANTHEAPECHE_API_URL" \
-            -H 'Content-Type: application/json' \
-            -H "X-API-Key: $ANTHEAPECHE_API_KEY" \
+          echo '==> Running behaviour tests'
+          php private/framework/ci/run_repo_api_behavior_tests.php
+
+          echo '==> Testing character expression resolver'
+          php private/framework/expression/test_resolver.php CI_CHAR_EXPR_1 1
+
+          echo '==> Testing character expression API smoke'
+
+          cat > /tmp/test_expression_api_smoke.sh <<'SMOKE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          response="$(
+            curl -sS -X POST "$ANTHEAPECHE_API_URL" \
+              -H 'Content-Type: application/json' \
+              -H "X-API-Key: $ANTHEAPECHE_API_KEY" \
               -d '{
-            "operation": "resolveCharacterExpressionOutput",
-            "character_id": "CI_CHAR_EXPR_1",
-            "domain_id": 1
-            }'
-            )"
+                "operation": "resolveCharacterExpressionOutput",
+                "character_id": "CI_CHAR_EXPR_1",
+                "domain_id": 1
+              }'
+          )"
 
-            echo "$response"
+          echo "$response"
 
-            php -r '
-              $data = json_decode(stream_get_contents(STDIN), true);
+          php -r '
+          $data = json_decode(stream_get_contents(STDIN), true);
 
-              if (!is_array($data)) {
-            fwrite(STDERR, "FAIL: invalid JSON\n");
+          if (!is_array($data)) {
+              fwrite(STDERR, "FAIL: invalid JSON\n");
               exit(1);
-            }
+          }
 
-              if (($data["status"] ?? null) !== "ok") {
-            fwrite(STDERR, "FAIL: status not ok\n");
+          if (($data["status"] ?? null) !== "ok") {
+              fwrite(STDERR, "FAIL: status not ok\n");
               exit(1);
-            }
+          }
 
-              if (($data["character_id"] ?? null) !== "CI_CHAR_EXPR_1") {
-            fwrite(STDERR, "FAIL: character_id mismatch\n");
+          if (($data["character_id"] ?? null) !== "CI_CHAR_EXPR_1") {
+              fwrite(STDERR, "FAIL: character_id mismatch\n");
               exit(1);
-            }
+          }
 
-              if (($data["domain_id"] ?? null) !== "1") {
-            fwrite(STDERR, "FAIL: domain_id not string-cast\n");
+          if (($data["domain_id"] ?? null) !== "1") {
+              fwrite(STDERR, "FAIL: domain_id not string-cast\n");
               exit(1);
-            }
+          }
 
-              if (!isset($data["output"]) || !is_array($data["output"])) {
-            fwrite(STDERR, "FAIL: output missing\n");
+          if (!isset($data["output"]) || !is_array($data["output"])) {
+              fwrite(STDERR, "FAIL: output missing\n");
               exit(1);
-            }
+          }
 
-            echo "OK: API smoke test passed\n";
-              ' <<< "$response"
-              EOF
+          echo "OK: API smoke test passed\n";
+          ' <<< "$response"
+          SMOKE
 
-              chmod +x /tmp/test_expression_api_smoke.sh
-              /tmp/test_expression_api_smoke.sh 
-          "
+          chmod +x /tmp/test_expression_api_smoke.sh
+          /tmp/test_expression_api_smoke.sh
+          EOF
