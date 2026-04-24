@@ -189,4 +189,7 @@ jobs:
 
             echo '==> Running behaviour tests'
             php private/framework/ci/run_repo_api_behavior_tests.php
+          
+          echo '==> Testing character expression resolver'
+          php private/framework/expression/test_resolver.php CI_CHAR_EXPR_1 1
           "
