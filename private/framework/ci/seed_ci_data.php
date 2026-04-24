@@ -105,6 +105,30 @@ function require_entity_type(PDO $pdo, string $id, ?string $code = null): void
     }
 }
 
+function upsert_entity_type(PDO $pdo, string $id, string $code, string $label): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO entity_type_classvals (
+            id,
+            code,
+            label
+        )
+        VALUES (
+            :id,
+            :code,
+            :label
+        )
+        ON DUPLICATE KEY UPDATE
+            code = VALUES(code),
+            label = VALUES(label)'
+    );
+
+    $stmt->execute([
+        ':id' => $id,
+        ':code' => $code,
+        ':label' => $label,
+    ]);
+}
 
 function upsert_entity(PDO $pdo, string $entityId, string $entityTypeId): void
 {
@@ -574,6 +598,7 @@ try {
     require_table($pdo, 'attribute_domain_map');
     require_table($pdo, 'entities');
     require_table($pdo, 'entity_texts');
+    upsert_entity_type($pdo, 'entity_type_classval', 'classval', 'Classval');
     require_entity_type($pdo, 'entity_type_classval', 'classval');
 
     /*
