@@ -7,7 +7,6 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
     $violations = [];
 
     $sql = "
-        SELECT COUNT(*) AS bad_count
         FROM calendar_events AS ce
         LEFT JOIN entities AS e
             ON e.id = ce.subject_entity_id
@@ -27,7 +26,6 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
     }
 
     $sql = "
-        SELECT COUNT(*) AS bad_count
         FROM entities AS e
         WHERE e.entity_type_id = 'entity_type_event'
     ";
