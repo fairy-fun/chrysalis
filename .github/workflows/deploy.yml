@@ -167,7 +167,7 @@ jobs:
         run: |
           ssh sxnzlfun@108.174.195.142 'bash -s' <<EOF
           set -euo pipefail
-          trap 'rm -f /home/sxnzlfun/pecherie_ci_config.php /tmp/test_expression_api_smoke.sh' EXIT
+          trap 'rm -f /home/sxnzlfun/pecherie_ci_config.php' EXIT
 
           export PECHERIE_DB_HOST='${PECHERIE_DB_HOST}'
           export PECHERIE_DB_PORT='${PECHERIE_DB_PORT}'
