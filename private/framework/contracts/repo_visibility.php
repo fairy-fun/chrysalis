@@ -40,5 +40,6 @@ return [
         'resolveEntityTraversal' => 'public_html/pecherie/chill-api/entity/resolve_entity_traversal.php',
         'resolveEntityMeasurements' => 'public_html/pecherie/chill-api/entity/resolve_entity_measurements.php',
         'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
+        'createCalendarWeek' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
     ],
 ];
