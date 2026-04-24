@@ -13,6 +13,7 @@ require __DIR__ . '/../audit/audit_profile_type_entity_mirror.php';
 require __DIR__ . '/../audit/audit_status_entity_mirror.php';
 require __DIR__ . '/../audit/audit_figure_entity_mirror.php';
 require __DIR__ . '/../audit/audit_typed_entity_reference_integrity.php';
+require __DIR__ . '/../audit/audit_untyped_varchar_id_surface.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -46,6 +47,9 @@ echo "OK: figure entity mirror passed\n";
 
 assert_typed_entity_reference_integrity($pdo, $schemaName);
 echo "OK: typed entity reference integrity passed\n";
+
+assert_untyped_varchar_id_surface($pdo, $schemaName);
+echo "OK: untyped varchar id surface passed\n";
 
 
 echo "OK: all audits passed\n";
