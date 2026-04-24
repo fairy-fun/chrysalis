@@ -16,6 +16,11 @@ declare(strict_types=1);
  * Database enforces existence where references are stable.
  * CI enforces meaning and classification.
  * No triggers.
+ *
+ * Reference promotion pattern:
+ *
+ * See:
+ * private/docs/reference_promotion_pattern.md
  */
 
 function audit_identity_reference_classification(PDO $pdo, string $schemaName): array
