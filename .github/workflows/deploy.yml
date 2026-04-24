@@ -199,14 +199,24 @@ jobs:
           
             echo '==> Testing character expression API (smoke)'
   
+              cat > /tmp/test_expression_api_smoke.sh <<'EOF'
+              #!/usr/bin/env bash
+              set -euo pipefail
+              
+              response="$(
               curl -sS -X POST "$ANTHEAPECHE_API_URL" \
-            -H "Content-Type: application/json" \
+            -H 'Content-Type: application/json' \
             -H "X-API-Key: $ANTHEAPECHE_API_KEY" \
               -d '{
             "operation": "resolveCharacterExpressionOutput",
             "character_id": "CI_CHAR_EXPR_1",
             "domain_id": 1
-            }' | php -r '
+            }'
+            )"
+            
+            echo "$response"
+            
+            php -r '
               $data = json_decode(stream_get_contents(STDIN), true);
               
               if (!is_array($data)) {
@@ -235,5 +245,11 @@ jobs:
             }
             
             echo "OK: API smoke test passed\n";
-              '
+              ' <<< "$response"
+              EOF
+              
+              chmod +x /tmp/test_expression_api_smoke.sh
+              /tmp/test_expression_api_smoke.sh
+  
+            
           "
