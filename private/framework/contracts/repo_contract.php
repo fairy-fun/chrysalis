@@ -60,5 +60,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'resolveEntityMeasurements' => [
+            'handler' => 'public_html/pecherie/chill-api/entity/resolve_entity_measurements.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
