@@ -75,5 +75,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => true,
             'audit_visibility_required' => true,
         ],
+        'createCalendarWeek' => [
+            'handler' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
