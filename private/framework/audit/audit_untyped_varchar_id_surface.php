@@ -147,7 +147,18 @@ function assert_untyped_varchar_id_surface(PDO $pdo, string $schemaName): void
         return;
     }
 
-    echo json_encode($audit, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    $failureSummary = [
+        'ok' => $audit['ok'],
+        'schema_name' => $audit['schema_name'],
+        'varchar_id_column_count' => $audit['varchar_id_column_count'],
+        'classified_count' => $audit['classified_count'],
+        'unclassified_count' => $audit['unclassified_count'],
+        'first_unclassified_columns' => array_slice($audit['unclassified_columns'], 0, 50),
+    ];
+
+    echo json_encode($failureSummary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+
+    //echo json_encode($audit, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 
     throw new RuntimeException(
         'Untyped varchar *_id surface audit failed: unclassified columns='
