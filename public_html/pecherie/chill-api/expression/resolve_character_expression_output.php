@@ -27,18 +27,11 @@ if (!is_string($rawCharacterId) || trim($rawCharacterId) === '') {
 
 $characterId = trim($rawCharacterId);
 
-if (is_int($rawDomainId)) {
-    $domainId = $rawDomainId;
-} elseif (is_string($rawDomainId) && trim($rawDomainId) !== '' && ctype_digit(trim($rawDomainId))) {
-    $domainId = (int)trim($rawDomainId);
+if (is_int($rawDomainId) && $rawDomainId > 0) {
+    $domainId = (string)$rawDomainId;
+} elseif (is_string($rawDomainId) && trim($rawDomainId) !== '' && ctype_digit(trim($rawDomainId)) && (int)trim($rawDomainId) > 0) {
+    $domainId = trim($rawDomainId);
 } else {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'domain_id must be a positive integer',
-    ]);
-}
-
-if ($domainId < 1) {
     respond(400, [
         'status' => 'error',
         'error' => 'domain_id must be a positive integer',
