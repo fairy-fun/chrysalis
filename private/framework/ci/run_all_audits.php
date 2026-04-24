@@ -18,38 +18,36 @@ require __DIR__ . '/../audit/audit_untyped_varchar_id_surface.php';
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
 
-assert_traversal_trigger_absence($pdo, $schemaName);
-echo "OK: traversal trigger absence passed\n";
+$audits = [
+    'traversal trigger absence' => fn () => assert_traversal_trigger_absence($pdo, $schemaName),
+    'event graph identity' => fn () => assert_event_graph_identity($pdo, $schemaName),
+    'attribute domain mapping' => fn () => assert_attribute_domain_mapping($pdo, $schemaName),
+    'classval uniqueness' => fn () => assert_classval_uniqueness($pdo, $schemaName),
+    'classval reference integrity' => fn () => assert_classval_reference_integrity($pdo, $schemaName),
+    'classval entity mirror' => fn () => assert_classval_entity_mirror($pdo, $schemaName),
+    'profile type entity mirror' => fn () => assert_profile_type_entity_mirror($pdo, $schemaName),
+    'status entity mirror' => fn () => assert_status_entity_mirror($pdo, $schemaName),
+    'figure entity mirror' => fn () => assert_figure_entity_mirror($pdo, $schemaName),
+    'typed entity reference integrity' => fn () => assert_typed_entity_reference_integrity($pdo, $schemaName),
+    'untyped varchar id surface' => fn () => assert_untyped_varchar_id_surface($pdo, $schemaName),
+];
 
-assert_event_graph_identity($pdo, $schemaName);
-echo "OK: event graph identity passed\n";
+foreach ($audits as $auditName => $runAudit) {
+    echo "==> Running audit: {$auditName}\n";
 
-assert_attribute_domain_mapping($pdo, $schemaName);
-echo "OK: attribute domain mapping passed\n";
+    try {
+        $runAudit();
+        echo "OK: {$auditName} passed\n";
+    } catch (Throwable $e) {
+        fwrite(STDERR, "\nFAIL: {$auditName}\n");
+        fwrite(STDERR, $e->getMessage() . "\n");
 
-assert_classval_uniqueness($pdo, $schemaName);
-echo "OK: classval uniqueness passed\n";
+        if ($e->getPrevious() !== null) {
+            fwrite(STDERR, "Previous: " . $e->getPrevious()->getMessage() . "\n");
+        }
 
-assert_classval_reference_integrity($pdo, $schemaName);
-echo "OK: classval reference integrity passed\n";
-
-assert_classval_entity_mirror($pdo, $schemaName);
-echo "OK: classval entity mirror passed\n";
-
-assert_profile_type_entity_mirror($pdo, $schemaName);
-echo "OK: profile type entity mirror passed\n";
-
-assert_status_entity_mirror($pdo, $schemaName);
-echo "OK: status entity mirror passed\n";
-
-assert_figure_entity_mirror($pdo, $schemaName);
-echo "OK: figure entity mirror passed\n";
-
-assert_typed_entity_reference_integrity($pdo, $schemaName);
-echo "OK: typed entity reference integrity passed\n";
-
-assert_untyped_varchar_id_surface($pdo, $schemaName);
-echo "OK: untyped varchar id surface passed\n";
-
+        exit(1);
+    }
+}
 
 echo "OK: all audits passed\n";
