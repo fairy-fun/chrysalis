@@ -229,6 +229,11 @@ jobs:
             fwrite(STDERR, "FAIL: invalid JSON\n");
               exit(1);
             }
+            
+            echo "DEBUG: status=" . ($data["status"] ?? "null") . "\n";
+            echo "DEBUG: character_id=" . ($data["character_id"] ?? "null") . "\n";
+            echo "DEBUG: domain_id=" . ($data["domain_id"] ?? "null") . "\n";
+            echo "DEBUG: output_type=" . gettype($data["output"] ?? null) . "\n";
               
               if (($data["status"] ?? null) !== "ok") {
             fwrite(STDERR, "FAIL: status not ok\n");
