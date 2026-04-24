@@ -93,6 +93,10 @@ switch ($operation) {
         require __DIR__ . '/entity/resolve_entity_measurements.php';
         break;
 
+    case 'resolveCharacterExpressionOutput':
+        require __DIR__ . '/expression/resolve_character_expression_output.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
