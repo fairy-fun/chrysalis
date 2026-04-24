@@ -89,6 +89,10 @@ switch ($operation) {
         require __DIR__ . '/entity/resolve_entity_traversal.php';
         break;
 
+    case 'resolveEntityMeasurements':
+        require __DIR__ . '/entity/resolve_entity_measurements.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
