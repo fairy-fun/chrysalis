@@ -94,14 +94,44 @@ function audit_expression_domain_alias(PDO $pdo, string $schemaName): array
         }
     }
 
+    $targetDomainIds = array_values(array_unique(array_map(
+        static fn(array $alias): string => trim((string)($alias['target_domain_id'] ?? '')),
+        $requiredAliases
+    )));
+
+    $targetDomainIds = array_values(array_filter(
+        $targetDomainIds,
+        static fn(string $id): bool => $id !== ''
+    ));
+
+    $missingTargetDomainEntities = [];
+
+    if ($targetDomainIds !== []) {
+        $placeholders = implode(',', array_fill(0, count($targetDomainIds), '?'));
+
+        $entityStmt = $pdo->prepare("
+        SELECT id
+        FROM {$schemaName}.entities
+        WHERE id IN ($placeholders)
+          AND entity_type_id = 'entity_type_domain'
+    ");
+
+        $entityStmt->execute($targetDomainIds);
+
+        $validTargetDomainIds = $entityStmt->fetchAll(PDO::FETCH_COLUMN);
+        $missingTargetDomainEntities = array_values(array_diff($targetDomainIds, $validTargetDomainIds));
+    }
+
     return [
         'ok' => count($missingAliases) === 0
             && count($inactiveAliases) === 0
-            && count($invalidAliases) === 0,
+            && count($invalidAliases) === 0
+            && count($missingTargetDomainEntities) === 0,
         'table_exists' => true,
         'missing_aliases' => $missingAliases,
         'inactive_aliases' => $inactiveAliases,
         'invalid_aliases' => $invalidAliases,
+        'missing_target_domain_entities' => $missingTargetDomainEntities,
     ];
 }
 
