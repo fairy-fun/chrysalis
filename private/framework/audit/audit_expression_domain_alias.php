@@ -27,12 +27,7 @@ function audit_expression_domain_alias(PDO $pdo, string $schemaName): array
         ];
     }
 
-    $requiredAliases = [
-        [
-            'input_domain_id' => '1',
-            'target_domain_id' => '101',
-        ],
-    ];
+    $requiredAliases = require __DIR__ . '/../expression/expression_domain_alias_contract.php';
 
     $stmt = $pdo->prepare(
         "SELECT input_domain_id, target_domain_id, is_active
