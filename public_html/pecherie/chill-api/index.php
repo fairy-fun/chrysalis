@@ -101,9 +101,11 @@ switch ($operation) {
         require __DIR__ . '/expression/resolve_character_expression_output.php';
         break;
 
-    case 'createCalendarWeek':
+    /*case 'createCalendarWeek':
         require __DIR__ . '/calendar/create_calendar_week.php';
         break;
+
+    */
 
     default:
         api_error(400, 'Unknown operation: ' . $operation);
