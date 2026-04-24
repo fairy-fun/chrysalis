@@ -65,5 +65,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'resolveCharacterExpressionOutput' => [
+            'handler' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
