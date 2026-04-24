@@ -191,6 +191,9 @@ jobs:
             echo '==> Validating classval semantic canonicalisation'
             php -d display_errors=1 private/framework/ci/validate_classval_semantic_canonicalisation.php
 
+            echo '==> Auditing event graph identity'
+            php private/framework/ci/run_event_graph_identity_audit.php
+            
             echo '==> Running behaviour tests'
             php private/framework/ci/run_repo_api_behavior_tests.php
           
@@ -249,7 +252,5 @@ jobs:
               EOF
               
               chmod +x /tmp/test_expression_api_smoke.sh
-              /tmp/test_expression_api_smoke.sh
-  
-            
+              /tmp/test_expression_api_smoke.sh 
           "
