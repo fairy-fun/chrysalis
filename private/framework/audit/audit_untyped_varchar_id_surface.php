@@ -53,8 +53,8 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
          WHERE TABLE_SCHEMA = :schema_name
            AND DATA_TYPE IN ('char', 'varchar')
            AND COLUMN_NAME LIKE '%\\_id'
-            AND TABLE_NAME NOT LIKE 'v\\_%'
-            AND TABLE_NAME NOT LIKE 'vw\\_%' 
+           AND TABLE_NAME NOT LIKE 'v\\_%'
+           AND TABLE_NAME NOT LIKE 'vw\\_%'
          ORDER BY TABLE_NAME, COLUMN_NAME"
     );
 
@@ -68,7 +68,9 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
     $classvalLookup = array_flip($classvalReferences);
 
     foreach ($columns as $column) {
-        $key = (string)$column['table_name'] . '.' . (string)$column['column_name'];
+        $tableName = (string)$column['table_name'];
+        $columnName = (string)$column['column_name'];
+        $key = $tableName . '.' . $columnName;
 
         if (isset($typedLookup[$key])) {
             $column['classification'] = 'typed_entity_reference';
@@ -78,6 +80,13 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
 
         if (isset($classvalLookup[$key])) {
             $column['classification'] = 'classval_reference';
+            $classified[] = $column;
+            continue;
+        }
+
+        if (substr($columnName, -10) === '_entity_id') {
+            $column['classification'] = 'typed_entity_reference';
+            $column['classification_source'] = 'automatic_suffix_rule:_entity_id';
             $classified[] = $column;
             continue;
         }
