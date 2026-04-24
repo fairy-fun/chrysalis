@@ -42,6 +42,8 @@ function validate_entity_traversal_definition(PDO $pdo, array $definition): void
 
     $knownTables = [$rootTable => true];
     $sequenceIndexes = [];
+    $joinSignatures = [];
+    $graph = [];
     $lastSequenceIndex = 0;
 
     foreach ($steps as $step) {
@@ -71,17 +73,32 @@ function validate_entity_traversal_definition(PDO $pdo, array $definition): void
             throw new RuntimeException('Traversal step left_table_name is not reachable in chain: ' . $leftTable);
         }
 
-        if (isset($knownTables[$viaTable])) {
-            throw new RuntimeException('Traversal step would re-enter an existing table without explicit self-join metadata: ' . $viaTable);
+        $joinSignature = implode('|', [
+            $leftTable,
+            $viaTable,
+            $fromColumn,
+            $toColumn,
+        ]);
+
+        if (isset($joinSignatures[$joinSignature])) {
+            throw new RuntimeException('Duplicate traversal join detected: ' . $joinSignature);
         }
+        $joinSignatures[$joinSignature] = true;
 
         traversal_validator_assert_table_exists($pdo, $leftTable, 'step left table');
         traversal_validator_assert_table_exists($pdo, $viaTable, 'step via table');
         traversal_validator_assert_column_exists($pdo, $leftTable, $fromColumn, 'step from column');
         traversal_validator_assert_column_exists($pdo, $viaTable, $toColumn, 'step to column');
+        traversal_validator_assert_join_column_types_match($pdo, $leftTable, $fromColumn, $viaTable, $toColumn);
+
+        $graph[$leftTable] ??= [];
+        $graph[$leftTable][] = $viaTable;
+        $graph[$viaTable] ??= [];
 
         $knownTables[$viaTable] = true;
     }
+
+    traversal_validator_assert_acyclic($graph);
 
     if ($projections === []) {
         throw new RuntimeException('Traversal definition must include at least one projection');
@@ -134,6 +151,37 @@ function traversal_validator_identifier(mixed $value, string $label): string
     }
 
     return $value;
+}
+
+function traversal_validator_assert_acyclic(array $graph): void
+{
+    $visited = [];
+    $stack = [];
+
+    foreach (array_keys($graph) as $node) {
+        if (!isset($visited[$node])) {
+            traversal_validator_cycle_check($node, $graph, $visited, $stack);
+        }
+    }
+}
+
+function traversal_validator_cycle_check(string $node, array $graph, array &$visited, array &$stack): void
+{
+    $visited[$node] = true;
+    $stack[$node] = true;
+
+    foreach (($graph[$node] ?? []) as $next) {
+        if (!isset($visited[$next])) {
+            traversal_validator_cycle_check($next, $graph, $visited, $stack);
+            continue;
+        }
+
+        if (isset($stack[$next])) {
+            throw new RuntimeException('Traversal contains a cycle involving: ' . $next);
+        }
+    }
+
+    unset($stack[$node]);
 }
 
 function traversal_validator_assert_table_exists(PDO $pdo, string $tableName, string $label): void
@@ -195,4 +243,55 @@ SQL
     if ($columnCache[$cacheKey] !== true) {
         throw new RuntimeException('Unknown ' . $label . ': ' . $cacheKey);
     }
+}
+
+function traversal_validator_assert_join_column_types_match(
+    PDO $pdo,
+    string $leftTable,
+    string $fromColumn,
+    string $viaTable,
+    string $toColumn
+): void {
+    $leftType = traversal_validator_column_type($pdo, $leftTable, $fromColumn);
+    $rightType = traversal_validator_column_type($pdo, $viaTable, $toColumn);
+
+    if ($leftType !== $rightType) {
+        throw new RuntimeException(
+            'Traversal join column type mismatch: '
+            . $leftTable . '.' . $fromColumn . ' (' . $leftType . ') vs '
+            . $viaTable . '.' . $toColumn . ' (' . $rightType . ')'
+        );
+    }
+}
+
+function traversal_validator_column_type(PDO $pdo, string $tableName, string $columnName): string
+{
+    static $typeCache = [];
+
+    $cacheKey = $tableName . '.' . $columnName;
+    if (array_key_exists($cacheKey, $typeCache)) {
+        return $typeCache[$cacheKey];
+    }
+
+    $stmt = $pdo->prepare(<<<'SQL'
+SELECT COLUMN_TYPE
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = :table_name
+  AND COLUMN_NAME = :column_name
+LIMIT 1
+SQL
+    );
+    $stmt->execute([
+        'table_name' => $tableName,
+        'column_name' => $columnName,
+    ]);
+
+    $columnType = $stmt->fetchColumn();
+    if (!is_string($columnType) || trim($columnType) === '') {
+        throw new RuntimeException('Unknown column type: ' . $cacheKey);
+    }
+
+    $typeCache[$cacheKey] = strtolower(trim($columnType));
+    return $typeCache[$cacheKey];
 }
