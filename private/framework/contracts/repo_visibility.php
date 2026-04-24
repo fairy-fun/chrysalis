@@ -12,6 +12,7 @@ return [
         'public_html/pecherie/chill-api/entity',
         'public_html/pecherie/chill-api/expression',
         'public_html/pecherie/chill-api/audit',
+        'public_html/pecherie/chill-api/calendar',
     ],
 
     'visible_files' => [
