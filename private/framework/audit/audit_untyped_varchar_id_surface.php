@@ -84,9 +84,11 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
             continue;
         }
 
-        if (substr($columnName, -10) === '_entity_id') {
+        if ($columnName === 'entity_id' || substr($columnName, -10) === '_entity_id') {
             $column['classification'] = 'typed_entity_reference';
-            $column['classification_source'] = 'automatic_suffix_rule:_entity_id';
+            $column['classification_source'] = $columnName === 'entity_id'
+                ? 'automatic_exact_rule:entity_id'
+                : 'automatic_suffix_rule:_entity_id';
             $classified[] = $column;
             continue;
         }
