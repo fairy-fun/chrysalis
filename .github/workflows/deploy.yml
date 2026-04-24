@@ -185,6 +185,9 @@ jobs:
             echo '==> Seeding test data'
             php private/framework/ci/seed_ci_data.php
           
+            echo '==> Mirroring profile types as entities'
+             php private/framework/ci/mirror_profile_types_as_entities.php
+          
             echo '==> Inspecting deprecated event/theme classvals'
             php private/framework/ci/debug_event_theme_rows.php
           
