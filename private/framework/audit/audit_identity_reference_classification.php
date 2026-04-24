@@ -32,6 +32,41 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['identity_context_alias_map', 'alias_type_classval_id', 'CLASSVAL'],
     ];
 
+    $classifiedReferences = [];
+
+        foreach ($references as [$tableName, $columnName, $expectedKind]) {
+            $classifiedReferences[$tableName . '.' . $columnName] = true;
+        }
+
+        $discoverySql = "
+        SELECT TABLE_NAME, COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = " . $pdo->quote($schemaName) . "
+          AND (
+              COLUMN_NAME LIKE '%\\_classval_id'
+              OR COLUMN_NAME LIKE '%\\_domain_id'
+              OR COLUMN_NAME = 'domain_id'
+          )
+        ORDER BY TABLE_NAME, COLUMN_NAME
+    ";
+
+        $stmt = $pdo->query($discoverySql);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $key = $row['TABLE_NAME'] . '.' . $row['COLUMN_NAME'];
+
+            if (!isset($classifiedReferences[$key])) {
+                $violations[] = [
+                    'table_name' => $row['TABLE_NAME'],
+                    'column_name' => $row['COLUMN_NAME'],
+                    'expected_kind' => 'UNCLASSIFIED_REFERENCE',
+                    'invalid_value' => null,
+                    'actual_entity_type_id' => null,
+                    'reference_count' => 0,
+                ];
+            }
+        }
+
     $violations = [];
     $queryErrors = [];
 
