@@ -4,8 +4,8 @@ set -euo pipefail
 : "${API_URL:?API_URL is required}"
 : "${API_KEY:?API_KEY is required}"
 
-CHARACTER_ID="${1:-CI_CHAR_EXPR_1}"
-DOMAIN_ID="${2:-1}"
+export CHARACTER_ID="${1:-CI_CHAR_EXPR_1}"
+export DOMAIN_ID="${2:-1}"
 
 response="$(
   curl -sS -X POST "$API_URL" \
