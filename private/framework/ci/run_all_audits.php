@@ -8,6 +8,8 @@ require __DIR__ . '/../audit/audit_event_graph_identity.php';
 require __DIR__ . '/../audit/audit_attribute_domain_mapping.php';
 require __DIR__ . '/../audit/audit_classval_uniqueness.php';
 require __DIR__ . '/../audit/audit_classval_reference_integrity.php';
+require __DIR__ . '/../audit/audit_classval_entity_mirror.php';
+require __DIR__ . '/../audit/audit_profile_type_entity_mirror.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -26,6 +28,12 @@ echo "OK: classval uniqueness passed\n";
 
 assert_classval_reference_integrity($pdo, $schemaName);
 echo "OK: classval reference integrity passed\n";
+
+assert_classval_entity_mirror($pdo, $schemaName);
+echo "OK: classval entity mirror passed\n";
+
+assert_profile_type_entity_mirror($pdo, $schemaName);
+echo "OK: profile type entity mirror passed\n";
 
 
 echo "OK: all audits passed\n";
