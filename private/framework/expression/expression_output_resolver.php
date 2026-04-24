@@ -162,11 +162,69 @@ function compare_expression_candidates(array $a, array $b): int
 
 function resolve_attribute_domain_id(PDO $pdo, ?string $domainId): ?string
 {
-    unset($pdo); // intentionally unused for now
-
     if ($domainId === null) {
         return null;
     }
 
-    return $domainId;
+    $domainId = trim($domainId);
+    if ($domainId === '') {
+        return null;
+    }
+
+    if (!expression_domain_aliases_table_exists($pdo)) {
+        return $domainId;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT target_domain_id, is_active
+         FROM expression_domain_aliases
+         WHERE input_domain_id = :input_domain_id
+         LIMIT 1'
+    );
+
+    $stmt->execute([
+        ':input_domain_id' => $domainId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row === false) {
+        return $domainId;
+    }
+
+    if ((int)($row['is_active'] ?? 0) !== 1) {
+        throw new RuntimeException('Expression domain alias is inactive for input_domain_id=' . $domainId);
+    }
+
+    $mappedDomainId = trim((string)($row['target_domain_id'] ?? ''));
+    if ($mappedDomainId === '') {
+        throw new RuntimeException('Expression domain alias has empty target_domain_id for input_domain_id=' . $domainId);
+    }
+
+    return $mappedDomainId;
+}
+
+function expression_domain_aliases_table_exists(PDO $pdo): bool
+{
+    static $exists = null;
+
+    if ($exists !== null) {
+        return $exists;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT 1
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name
+         LIMIT 1'
+    );
+
+    $stmt->execute([
+        ':table_name' => 'expression_domain_aliases',
+    ]);
+
+    $exists = $stmt->fetchColumn() !== false;
+
+    return $exists;
 }
