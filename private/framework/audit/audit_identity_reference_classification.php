@@ -20,10 +20,27 @@ declare(strict_types=1);
 
 function audit_identity_reference_classification(PDO $pdo, string $schemaName): array
 {
+    /*
+     * DOMAIN ENTITY REFERENCES (PROMOTED)
+     *
+     * DOMAIN_ENTITY_FK indicates:
+     *
+     * - Database enforces existence via FK → entities.id
+     * - CI enforces semantic correctness:
+     *       entity_type_id = 'entity_type_domain'
+     *
+     * This is no longer a soft classification.
+     * It is a split enforcement model:
+     *
+     *     DB → existence
+     *     CI → type correctness
+     *
+     * Do not downgrade DOMAIN_ENTITY_FK references back to audit-only.
+     */
     $references = [
         // identity layer
-        ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY'],
-        ['profile_type_domain_map', 'domain_id', 'DOMAIN_ENTITY'],
+        ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['profile_type_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
 
         // typed value layer
         ['attribute_type_layer_map', 'layer_classval_id', 'CLASSVAL'],
@@ -71,7 +88,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
     $queryErrors = [];
 
     foreach ($references as [$tableName, $columnName, $expectedKind]) {
-        if ($expectedKind === 'DOMAIN_ENTITY') {
+        if ($expectedKind === 'DOMAIN_ENTITY' || $expectedKind === 'DOMAIN_ENTITY_FK') {
             $sql = "
                 SELECT
                     '{$tableName}' AS table_name,
