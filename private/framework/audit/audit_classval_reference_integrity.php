@@ -40,7 +40,7 @@ function audit_classval_reference_integrity(PDO $pdo, string $schemaName): array
     // These remain in CI because they are rule-driven, semantically complex,
     // or still evolving as part of the expression constraint engine.
 
-        $references = [
+    $references = [
             // FK-backed: keep listed here for visibility/audit reporting, but DB now enforces existence.
             ['attribute_type_layer_map', 'layer_classval_id', 'FK'],
             ['character_profile_attributes', 'value_classval_id', 'FK'],
