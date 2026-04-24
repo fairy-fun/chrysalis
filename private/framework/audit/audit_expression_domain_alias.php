@@ -29,6 +29,34 @@ function audit_expression_domain_alias(PDO $pdo, string $schemaName): array
 
     $requiredAliases = require __DIR__ . '/../expression/expression_domain_alias_contract.php';
 
+    // --- contract validation (fail fast before DB work) ---
+    $seenInputs = [];
+
+    foreach ($requiredAliases as $i => $alias) {
+        $input = trim((string)($alias['input_domain_id'] ?? ''));
+        $target = trim((string)($alias['target_domain_id'] ?? ''));
+
+        if ($input === '') {
+            throw new RuntimeException(
+                'Expression domain alias contract error: empty input_domain_id at index ' . $i
+            );
+        }
+
+        if ($target === '') {
+            throw new RuntimeException(
+                'Expression domain alias contract error: empty target_domain_id for input_domain_id=' . $input
+            );
+        }
+
+        if (isset($seenInputs[$input])) {
+            throw new RuntimeException(
+                'Expression domain alias contract error: duplicate input_domain_id=' . $input
+            );
+        }
+
+        $seenInputs[$input] = true;
+    }
+
     $stmt = $pdo->prepare(
         "SELECT input_domain_id, target_domain_id, is_active
          FROM {$schemaName}.expression_domain_aliases
