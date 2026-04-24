@@ -2,6 +2,25 @@
 
 declare(strict_types=1);
 
+/*
+ * Domain reference contract:
+ *
+ * attribute_domain_map.domain_id and profile_type_domain_map.domain_id
+ * are schema-enforced foreign keys to entities.id.
+ *
+ * The database enforces reference existence only.
+ * This audit enforces semantic identity:
+ *
+ *     entities.entity_type_id = 'entity_type_domain'
+ *
+ * Locked principle:
+ *
+ *     Database enforces existence.
+ *     CI enforces meaning.
+ *
+ * Do not replace this audit with trigger-based DB logic.
+ */
+
 function audit_domain_entity_mirror(PDO $pdo, string $schemaName): array
 {
     $tables = [
