@@ -10,8 +10,8 @@ require __DIR__ . '/../audit/audit_attribute_domain_mapping.php';
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
 
-assert_traversal_trigger_integrity($pdo, $schemaName);
-echo "OK: traversal trigger integrity passed\n";
+assert_traversal_trigger_absence($pdo, $schemaName);
+echo "OK: traversal trigger absence passed\n";
 
 assert_event_graph_identity($pdo, $schemaName);
 echo "OK: event graph identity passed\n";
