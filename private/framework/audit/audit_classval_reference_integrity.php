@@ -2,6 +2,29 @@
 
 declare(strict_types=1);
 
+/*
+ * Classval reference promotion policy:
+ *
+ * Classval reference columns are promoted from CI-audited references
+ * to schema-enforced foreign keys only when they are:
+ *
+ * - stable
+ * - required for core logic
+ * - already clean under audit
+ *
+ * Columns that are dynamic, legacy, sparsely used, or still being
+ * classified remain audit-only until their ownership and semantics are
+ * clear.
+ *
+ * Locked principle:
+ *
+ *     Database enforces stable structural references.
+ *     CI audits classify and enforce the remaining semantic surface.
+ *
+ * Do not add broad classval foreign keys without first classifying the
+ * column as FK-safe.
+ */
+
 function audit_classval_reference_integrity(PDO $pdo, string $schemaName): array
 {
     $references = [
