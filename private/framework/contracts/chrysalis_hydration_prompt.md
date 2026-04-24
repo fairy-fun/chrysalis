@@ -195,4 +195,36 @@ Be concrete, not abstract. Use real file paths and function names from the repos
 
 ---
 
+## API Surface Enforcement Model
+
+The repo API uses a three-layer enforcement model.
+
+1. Router: `public_html/pecherie/chill-api/index.php`
+  - Defines what operations are callable.
+
+2. Repo contract: `private/framework/contracts/repo_contract.php`
+  - Defines what operations are officially supported.
+  - CI validates that every routed operation is declared here.
+
+3. Visibility contract: `private/framework/contracts/repo_visibility.php`
+  - Defines what operation handlers and paths are externally visible.
+  - CI validates that every required operation has a handler and router entry.
+
+Invariant:
+
+No API operation may be exposed by the router unless it is declared in both:
+- `FW_REPO_CONTRACT['api_operations']`
+- `repo_visibility.php['required_operations']`
+
+CI must fail closed if:
+- an operation is routed but undeclared
+- an operation is declared but missing a handler
+- an operation is declared but not routed
+- a handler path is not visibility-approved
+
+When adding a new API operation, update all three:
+1. `index.php`
+2. `repo_contract.php`
+3. `repo_visibility.php`
+
 If repository access is incomplete or ambiguous, state exactly what is missing and proceed with best-effort analysis.
