@@ -75,5 +75,6 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => true,
             'audit_visibility_required' => true,
         ],
+
     ],
 ];
