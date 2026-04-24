@@ -103,8 +103,6 @@ jobs:
         run: |
           set -euo pipefail
           php private/framework/ci/validate_repo_api_registration.php
-          echo "==> Running all audits"
-          php private/framework/ci/run_all_audits.php
 
   deploy:
     name: Deploy
@@ -198,6 +196,9 @@ jobs:
           
             echo '==> Mirroring figures as entities'
             php private/framework/ci/mirror_figures_as_entities.php
+          
+          echo "==> Running all audits"
+          php private/framework/ci/run_all_audits.php
           
             echo '==> Inspecting deprecated event/theme classvals'
             php private/framework/ci/debug_event_theme_rows.php
