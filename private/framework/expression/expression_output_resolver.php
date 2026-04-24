@@ -160,8 +160,10 @@ function compare_expression_candidates(array $a, array $b): int
     return $b['profile_id'] <=> $a['profile_id'];
 }
 
-function resolve_expression_attribute_domain_id(PDO $pdo, ?string $domainId): ?string
+function resolve_attribute_domain_id(PDO $pdo, ?string $domainId): ?string
 {
+    unset($pdo); // intentionally unused for now
+
     if ($domainId === null) {
         return null;
     }
