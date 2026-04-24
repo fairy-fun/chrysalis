@@ -10,6 +10,7 @@ return [
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
+        'public_html/pecherie/chill-api/expression',
         'public_html/pecherie/chill-api/audit',
     ],
 
@@ -35,5 +36,7 @@ return [
         'suggestLinkEntity' => 'public_html/pecherie/chill-api/entity/suggest_link_entity.php',
         'auditTraversalTriggerIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_trigger_integrity.php',
         'resolveEntityTraversal' => 'public_html/pecherie/chill-api/entity/resolve_entity_traversal.php',
+        'resolveEntityMeasurements' => 'public_html/pecherie/chill-api/entity/resolve_entity_measurements.php',
+        'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
     ],
 ];
