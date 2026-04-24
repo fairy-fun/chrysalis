@@ -569,6 +569,30 @@ function ensure_profile_type_domain_map(PDO $pdo, string $profileTypeId, int $do
     ]);
 }
 
+function ensure_expression_domain_alias(PDO $pdo, string $inputDomainId, string $targetDomainId): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO expression_domain_aliases (
+            input_domain_id,
+            target_domain_id,
+            is_active
+        )
+        VALUES (
+            :input_domain_id,
+            :target_domain_id,
+            1
+        )
+        ON DUPLICATE KEY UPDATE
+            target_domain_id = VALUES(target_domain_id),
+            is_active = VALUES(is_active)'
+    );
+
+    $stmt->execute([
+        ':input_domain_id' => $inputDomainId,
+        ':target_domain_id' => $targetDomainId,
+    ]);
+}
+
 $medleyCode = 'CI_MEDLEY_1';
 $medleyName = 'CI Test Medley';
 
@@ -579,6 +603,7 @@ $medleyId = null;
 
 $expressionTestCharacterId = 'CI_CHAR_EXPR_1';
 $expressionDomainMatchId = 101;
+$expressionApiDomainId = '1';
 
 try {
     $pdo->beginTransaction();
@@ -596,6 +621,7 @@ try {
     require_table($pdo, 'profile_type_domain_map');
     require_table($pdo, 'attribute_type_layer_map');
     require_table($pdo, 'attribute_domain_map');
+    require_table($pdo, 'expression_domain_aliases');
     require_table($pdo, 'entities');
     require_table($pdo, 'entity_texts');
     upsert_entity_type($pdo, 'entity_type_classval', 'classval', 'Classval');
@@ -1096,6 +1122,12 @@ SQL
      * so the domain-filtered resolver path remains valid under strict-mode DB
      * enforcement.
      */
+
+    ensure_expression_domain_alias(
+        $pdo,
+        $expressionApiDomainId,
+        (string) $expressionDomainMatchId
+    );
 
 
     ensure_attribute_domain_map($pdo, $attributeVoicePriority, $expressionDomainMatchId);
