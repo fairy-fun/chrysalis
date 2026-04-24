@@ -93,6 +93,13 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
             continue;
         }
 
+        if (substr($columnName, -8) === '_type_id') {
+            $column['classification'] = 'registry_candidate';
+            $column['classification_source'] = 'automatic_suffix_rule:_type_id';
+            $classified[] = $column;
+            continue;
+        }
+
         if (array_key_exists($key, $explicitExceptions)) {
             $column['classification'] = 'explicit_exception';
             $column['exception_reason'] = $explicitExceptions[$key];
