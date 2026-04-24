@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 const ENTITY_MEASUREMENT_HEIGHT_TYPE_ID = 'measurement_height';
+const ENTITY_MEASUREMENT_TYPE_CLASSVAL_DOMAIN = 'cvt_measurement_type';
 
 function resolve_measurement_lookup_entity_id(PDO $pdo, mixed $rawEntityId): string
 {
@@ -44,6 +45,8 @@ function lookup_entity_measurements(PDO $pdo, string $entityId, string $measurem
         throw new InvalidArgumentException('measurement_type_id must be a non-empty string');
     }
 
+    assert_valid_measurement_type_id($pdo, $measurementTypeId);
+
     $stmt = $pdo->prepare(<<<'SQL'
 SELECT
     cm.measurement_id,
@@ -65,4 +68,30 @@ SQL
     ]);
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function assert_valid_measurement_type_id(PDO $pdo, string $measurementTypeId): void
+{
+    $measurementTypeId = trim($measurementTypeId);
+    if ($measurementTypeId === '') {
+        throw new InvalidArgumentException('measurement_type_id must be a non-empty string');
+    }
+
+    $stmt = $pdo->prepare(<<<'SQL'
+SELECT 1
+FROM sxnzlfun_chrysalis.classvals
+WHERE id = :measurement_type_id
+  AND classval_type_id = :classval_type_id
+LIMIT 1
+SQL
+    );
+
+    $stmt->execute([
+        'measurement_type_id' => $measurementTypeId,
+        'classval_type_id' => ENTITY_MEASUREMENT_TYPE_CLASSVAL_DOMAIN,
+    ]);
+
+    if (!$stmt->fetchColumn()) {
+        throw new RuntimeException('Invalid measurement_type_id: ' . $measurementTypeId);
+    }
 }
