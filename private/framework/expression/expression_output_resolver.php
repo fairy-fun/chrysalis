@@ -24,14 +24,27 @@ function resolve_character_expression_output(PDO $pdo, string $characterId, ?str
     $rows = read_expression_candidates($pdo, $characterId);
 
     $candidatesByAttribute = [];
+    $debug = [];
 
     foreach ($rows as $row) {
         if ($domainId !== null && (string)($row['domain_id'] ?? '') !== $domainId) {
+            $debug[] = [
+                'dropped_reason' => 'domain_mismatch',
+                'row_domain_id' => $row['domain_id'] ?? null,
+                'requested_domain_id' => $domainId,
+                'attribute_type_id' => $row['attribute_type_id'] ?? null,
+            ];
             continue;
         }
 
         $candidate = normalise_expression_candidate($row);
         if ($candidate === null) {
+            $debug[] = [
+                'dropped_reason' => 'no_value',
+                'attribute_type_id' => $row['attribute_type_id'] ?? null,
+                'value_text' => $row['value_text'] ?? null,
+                'value_classval_id' => $row['value_classval_id'] ?? null,
+            ];
             continue;
         }
 
@@ -82,6 +95,7 @@ function resolve_character_expression_output(PDO $pdo, string $characterId, ?str
         'limbic_state' => $limbic,
         'unlayered_state' => $unlayered,
         'winners' => $winners,
+        'debug' => $debug,
     ];
 }
 
