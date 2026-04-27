@@ -35,6 +35,7 @@ return [
         'columns' => 'public_html/pecherie/chill-api/columns.php',
         'query' => 'public_html/pecherie/chill-api/query.php',
         'resolveMedleyCore' => 'public_html/pecherie/chill-api/choreography/resolve_medley_core.php',
+        'runChoreography' => 'public_html/pecherie/chill-api/choreography/run_choreography.php',
         'suggestLinkEntity' => 'public_html/pecherie/chill-api/entity/suggest_link_entity.php',
         'auditTraversalTriggerIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_trigger_integrity.php',
         'auditEventGraphIdentity' => 'public_html/pecherie/chill-api/audit/event_graph_identity.php',
