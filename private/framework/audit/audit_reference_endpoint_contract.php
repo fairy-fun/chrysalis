@@ -37,6 +37,41 @@ function audit_reference_endpoint_contract(PDO $pdo, string $schemaName): array
 
         $source = file_get_contents($expectedFile);
 
+        if (!str_contains($source, "'status' => 'ok'")) {
+            $violations[] = [
+                'rule' => 'reference_response_must_include_ok_status',
+                'operation' => $operation,
+                'handler' => $handlerPath,
+            ];
+        }
+
+        if (!str_contains($source, "'database' => \$expectedDatabase")) {
+            $violations[] = [
+                'rule' => 'reference_response_must_include_database',
+                'operation' => $operation,
+                'handler' => $handlerPath,
+            ];
+        }
+
+        if (!preg_match('/SELECT\s+[^;]*\bid\b/i', $source)) {
+            $violations[] = [
+                'rule' => 'reference_select_must_include_id',
+                'operation' => $operation,
+                'handler' => $handlerPath,
+            ];
+        }
+
+        if (
+            !preg_match('/SELECT\s+[^;]*\blabel\b/i', $source)
+            && !preg_match('/SELECT\s+[^;]*\b[a-zA-Z0-9_]+_value\b/i', $source)
+        ) {
+            $violations[] = [
+                'rule' => 'reference_select_must_include_label_or_value',
+                'operation' => $operation,
+                'handler' => $handlerPath,
+            ];
+        }
+
         if (!str_contains($source, "REQUEST_METHOD") || !str_contains($source, "'GET'")) {
             $violations[] = [
                 'rule' => 'reference_endpoint_must_be_get_only',
