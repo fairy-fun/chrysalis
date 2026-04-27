@@ -5,6 +5,7 @@ declare(strict_types=1);
 function execute_traversal_by_traversal_id_and_start_entity(
     PDO $pdo,
     int $traversalId,
+    int $startEntityId
     string $startEntityId
 ): array {
     if ($traversalId < 1) {
@@ -15,6 +16,8 @@ function execute_traversal_by_traversal_id_and_start_entity(
 
     if ($startEntityId === '') {
         throw new InvalidArgumentException('start_entity_id must be a non-empty string');
+    if ($startEntityId < 1) {
+        throw new InvalidArgumentException('start_entity_id must be a positive integer');
     }
 
     $pathStmt = $pdo->prepare("SELECT p.id FROM sxnzlfun_chrysalis.entity_traversal_paths p WHERE p.traversal_id = :traversal_id ORDER BY p.priority ASC, p.id ASC");
@@ -38,6 +41,7 @@ function execute_traversal_by_traversal_id_and_start_entity(
 
         $sql = (string)$result['sql'];
         $needle = "WHERE p.id = " . $pathId . "\nORDER BY";
+        $replacement = "WHERE p.id = " . $pathId . "\n  AND " . $rootAlias . ".id = :start_entity_id\nORDER BY";
         $replacement = "WHERE p.id = " . $pathId . "\n  AND " . $rootAlias . ".entity_id = :start_entity_id\nORDER BY";
         $filteredSql = str_replace($needle, $replacement, $sql);
 

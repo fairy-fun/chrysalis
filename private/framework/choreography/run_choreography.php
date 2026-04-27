@@ -35,6 +35,7 @@ SQL
 }
 
 function run_choreography(PDO $pdo, string $startEntityId): array
+function run_choreography(PDO $pdo, int $startEntityId): array
 {
     if ($startEntityId < 1) {
         throw new InvalidArgumentException('start_entity_id must be a positive integer');

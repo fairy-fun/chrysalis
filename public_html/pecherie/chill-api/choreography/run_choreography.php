@@ -15,6 +15,7 @@ requireAuth();
 
 $body = getJsonBody();
 
+$startEntityId = (int)($body['start_entity_id'] ?? 0);
 $startEntityId = (string)($body['start_entity_id'] ?? '');
 
 $pdo = makePdo();
