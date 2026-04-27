@@ -63,6 +63,23 @@ foreach ($operations as $operation => $meta) {
         fail("Declared handler does not exist for {$operation}: {$handler}");
     }
 
+    $isReferenceOperation = str_starts_with(
+        $handler,
+        'public_html/pecherie/chill-api/reference/'
+    );
+
+    if ($isReferenceOperation) {
+        if (
+            str_contains($router, 'repo_visibility.php')
+            && str_contains($router, 'required_operations')
+            && str_contains($router, 'public_html/pecherie/chill-api/reference/')
+        ) {
+            continue;
+        }
+
+        fail("Declared reference operation is not dynamically routed in index.php: {$operation}");
+    }
+
     $caseNeedle = "case '{$operation}':";
     if (strpos($router, $caseNeedle) === false) {
         fail("Declared operation is not routed in index.php: {$operation}");
