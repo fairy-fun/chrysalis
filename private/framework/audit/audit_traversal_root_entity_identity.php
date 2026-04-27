@@ -32,7 +32,8 @@ function audit_traversal_root_entity_identity(PDO $pdo, string $schemaName): arr
             'TRAVERSAL-COMPANY-STAFF',
             'TRAVERSAL-ROLE-LOOKUP',
             'TRAVERSAL-PROFILE-FULL',
-            'TRAVERSAL-TEAM-MEMBERS'
+            'TRAVERSAL-TEAM-MEMBERS',
+            'TRAVERSAL-MEMBERSHIP-LIST'
         )
           AND (
               c.COLUMN_NAME IS NULL
