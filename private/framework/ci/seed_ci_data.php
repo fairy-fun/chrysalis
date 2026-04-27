@@ -730,11 +730,12 @@ try {
     $entityTypeTheme = resolve_entity_type_id($pdo, 'theme');
     $entityTypeSong  = resolve_entity_type_id($pdo, 'song');
     $entityTypeIdea  = resolve_entity_type_id($pdo, 'idea');
+    $entityTypeMedley = resolve_entity_type_id($pdo, 'medley');
 
+    require_entity_type($pdo, $entityTypeMedley, 'medley');
     require_entity_type($pdo, $entityTypeTheme, 'theme');
     require_entity_type($pdo, $entityTypeSong,  'song');
     require_entity_type($pdo, $entityTypeIdea,  'idea');
-
 
     /*
      * Entity label-resolution fixture.
@@ -932,30 +933,42 @@ SQL
         throw new RuntimeException('Resolved seeded segment id was invalid');
     }
 
+    $medleyEntityId = 'ci_medley_1';
+
+    upsert_entity($pdo, $medleyEntityId, $entityTypeMedley);
+
     /*
      * Seed medley by business key: medleys.code
      */
+    $medleyEntityId = 'ci_medley_1';
+
+    upsert_entity($pdo, $medleyEntityId, $entityTypeMedley);
+
     $stmt = $pdo->prepare(
         <<<'SQL'
 INSERT INTO medleys (
+    entity_id,
     code,
     name,
     search_name,
     created_at
 )
 VALUES (
+    :entity_id,
     :code,
     :name,
     :search_name,
     NOW()
 )
 ON DUPLICATE KEY UPDATE
+    entity_id = VALUES(entity_id),
     name = VALUES(name),
     search_name = VALUES(search_name)
 SQL
     );
 
     $stmt->execute([
+        ':entity_id' => $medleyEntityId,
         ':code' => $medleyCode,
         ':name' => $medleyName,
         ':search_name' => $medleyName,
