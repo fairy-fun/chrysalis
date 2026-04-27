@@ -95,7 +95,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['v_medley_pairings', 'status_classval_id', 'CLASSVAL'],
         ['v_relationship_resolver', 'status_classval_id', 'CLASSVAL'],
         ['vw_figure_following_conditions', 'following_figure_classval_id', 'CLASSVAL'],
-        ['vw_figure_following_conditions', 'predecessor_figure_classval_id', 'CLASSVAL'],
+        array('vw_figure_following_conditions', 'predecessor_figure_classval_id', 'CLASSVAL'),
         ['vw_figure_preceding_conditions', 'preceding_figure_classval_id', 'CLASSVAL'],
         ['vw_figure_preceding_conditions', 'successor_figure_classval_id', 'CLASSVAL'],
     ];
