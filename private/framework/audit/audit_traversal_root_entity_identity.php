@@ -27,7 +27,8 @@ function audit_traversal_root_entity_identity(PDO $pdo, string $schemaName): arr
          AND kcu.REFERENCED_COLUMN_NAME = 'id'
         WHERE t.code IN (
             'TRAVERSAL-MEDLEY-CHOREO',
-            'TRAVERSAL-CHARACTER-FULL'
+            'TRAVERSAL-CHARACTER-FULL',
+            'TRAVERSAL-RELATIONSHIP-FULL'
         )
           AND (
               c.COLUMN_NAME IS NULL
