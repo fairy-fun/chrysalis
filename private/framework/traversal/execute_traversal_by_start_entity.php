@@ -5,7 +5,6 @@ declare(strict_types=1);
 function execute_traversal_by_traversal_id_and_start_entity(
     PDO $pdo,
     int $traversalId,
-    int $startEntityId
     string $startEntityId
 ): array {
     if ($traversalId < 1) {
@@ -16,12 +15,18 @@ function execute_traversal_by_traversal_id_and_start_entity(
 
     if ($startEntityId === '') {
         throw new InvalidArgumentException('start_entity_id must be a non-empty string');
-    if ($startEntityId < 1) {
-        throw new InvalidArgumentException('start_entity_id must be a positive integer');
     }
 
-    $pathStmt = $pdo->prepare("SELECT p.id FROM sxnzlfun_chrysalis.entity_traversal_paths p WHERE p.traversal_id = :traversal_id ORDER BY p.priority ASC, p.id ASC");
-    $pathStmt->execute([':traversal_id' => $traversalId]);
+    $pathStmt = $pdo->prepare(
+        "SELECT p.id
+         FROM sxnzlfun_chrysalis.entity_traversal_paths p
+         WHERE p.traversal_id = :traversal_id
+         ORDER BY p.priority ASC, p.id ASC"
+    );
+
+    $pathStmt->execute([
+        ':traversal_id' => $traversalId
+    ]);
 
     $pathIds = array_map('intval', $pathStmt->fetchAll(PDO::FETCH_COLUMN));
 
