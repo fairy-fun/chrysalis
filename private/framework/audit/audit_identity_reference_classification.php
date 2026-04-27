@@ -141,8 +141,8 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         if ($expectedKind === 'DOMAIN_ENTITY' || $expectedKind === 'DOMAIN_ENTITY_FK') {
             $sql = "
                 SELECT
-                    '{$tableName}' AS table_name,
-                    '{$columnName}' AS column_name,
+                    '$tableName' AS table_name,
+                    '$columnName' AS column_name,
                     '{$expectedKind}' AS expected_kind,
                     t.{$columnName} AS invalid_value,
                     e.entity_type_id AS actual_entity_type_id,
