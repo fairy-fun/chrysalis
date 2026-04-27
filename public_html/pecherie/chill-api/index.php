@@ -105,6 +105,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/create_calendar_week.php';
         break;
 
+    case 'listYears':
+        require __DIR__ . '/reference/list_years.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }

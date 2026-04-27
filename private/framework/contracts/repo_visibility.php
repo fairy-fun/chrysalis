@@ -13,6 +13,7 @@ return [
         'public_html/pecherie/chill-api/expression',
         'public_html/pecherie/chill-api/audit',
         'public_html/pecherie/chill-api/calendar',
+        'public_html/pecherie/chill-api/reference',
     ],
 
     'visible_files' => [
@@ -41,5 +42,6 @@ return [
         'resolveEntityMeasurements' => 'public_html/pecherie/chill-api/entity/resolve_entity_measurements.php',
         'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
         'createCalendarWeek' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
+        'listYears' => 'public_html/pecherie/chill-api/reference/list_years.php',
     ],
 ];

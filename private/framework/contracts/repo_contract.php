@@ -80,6 +80,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'listYears' => [
+            'method' => 'GET',
+            'path' => '/reference/list_years.php',
+            'description' => 'List available years'
+        ],
     ],
 ];
 

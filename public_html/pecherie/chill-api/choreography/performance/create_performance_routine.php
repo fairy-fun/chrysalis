@@ -15,116 +15,25 @@ requireAuth();
 
 $body = getJsonBody();
 
-$teamId = $body['team_id'] ?? null;
-$yearValue = $body['year_value'] ?? null;
-$routineName = $body['routine_name'] ?? null;
-$choreographyTypeId = $body['choreography_type_id'] ?? null;
-$musicTitle = $body['music_title'] ?? null;
-$durationSeconds = $body['duration_seconds'] ?? null;
-$statusClassvalId = $body['status_classval_id'] ?? null;
-$notes = $body['notes'] ?? null;
-$sourceDocument = $body['source_document'] ?? null;
-
-if (!is_string($teamId) || trim($teamId) === '') {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'team_id must be a non-empty string',
-    ]);
-}
-
-if (!is_int($yearValue) || $yearValue < 1) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'year_value must be a positive integer',
-    ]);
-}
-
-if (!is_string($routineName) || trim($routineName) === '') {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'routine_name must be a non-empty string',
-    ]);
-}
-
-if (!is_string($choreographyTypeId) || trim($choreographyTypeId) === '') {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'choreography_type_id must be a non-empty string',
-    ]);
-}
-
-if ($musicTitle !== null && !is_string($musicTitle)) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'music_title must be a string when supplied',
-    ]);
-}
-
-if ($durationSeconds !== null && (!is_int($durationSeconds) || $durationSeconds < 1)) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'duration_seconds must be a positive integer when supplied',
-    ]);
-}
-
-if ($statusClassvalId !== null && !is_string($statusClassvalId)) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'status_classval_id must be a string when supplied',
-    ]);
-}
-
-if ($notes !== null && !is_string($notes)) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'notes must be a string when supplied',
-    ]);
-}
-
-if ($sourceDocument !== null && !is_string($sourceDocument)) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'source_document must be a string when supplied',
-    ]);
-}
-
 $pdo = makePdo();
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
-try {
-    $result = create_performance_routine(
-        $pdo,
-        trim($teamId),
-        $yearValue,
-        trim($routineName),
-        trim($choreographyTypeId),
-        $musicTitle,
-        $durationSeconds,
-        $statusClassvalId,
-        $notes,
-        $sourceDocument
-    );
+$result = create_performance_routine(
+    $pdo,
+    $body['team_id'],
+    $body['choreography_type_id'],
+    $body['status_classval_id'],
+    $body['year_id'],
+    $body['medley_id'] ?? null,
+    $body['routine_name'],
+    $body['music_title'] ?? null,
+    $body['duration_seconds'] ?? null,
+    $body['notes'] ?? null,
+    $body['source_document'] ?? null
+);
 
-    respond(200, [
-        'status' => 'ok',
-        'database' => $expectedDatabase,
-        'result' => $result,
-    ]);
-} catch (InvalidArgumentException $e) {
-    respond(400, [
-        'status' => 'error',
-        'error' => $e->getMessage(),
-        'database' => $expectedDatabase,
-    ]);
-} catch (RuntimeException $e) {
-    respond(409, [
-        'status' => 'error',
-        'error' => $e->getMessage(),
-        'database' => $expectedDatabase,
-    ]);
-} catch (Throwable $e) {
-    debugRespond(500, [
-        'error' => 'Failed to create performance routine',
-        'database' => $expectedDatabase,
-    ], $e);
-}
+respond(200, [
+    'status' => 'ok',
+    'database' => $expectedDatabase,
+    'result' => $result,
+]);
