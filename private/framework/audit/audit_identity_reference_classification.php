@@ -54,6 +54,8 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['identity_context_alias_map', 'alias_type_classval_id', 'CLASSVAL'],
     ];
 
+    $violations = [];
+    $queryErrors = [];
     $classifiedReferences = [];
 
         foreach ($references as [$tableName, $columnName, $expectedKind]) {
@@ -88,9 +90,6 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
                 ];
             }
         }
-
-    $violations = [];
-    $queryErrors = [];
 
     foreach ($references as [$tableName, $columnName, $expectedKind]) {
         if ($expectedKind === 'DOMAIN_ENTITY' || $expectedKind === 'DOMAIN_ENTITY_FK') {
