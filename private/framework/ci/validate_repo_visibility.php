@@ -209,12 +209,42 @@ if (!is_file($indexFile)) {
 
 $indexCases = load_switch_cases($indexFile);
 
+$indexSource = file_get_contents($indexFile);
+if ($indexSource === false) {
+    fail('API_SURFACE_INCOMPLETE', "Unable to read $indexFile");
+}
+
 foreach ($requiredOperations as $operation => $handlerPath) {
+    $normalizedHandler = normalize_relative_path($handlerPath);
+
+    $isReferenceOperation = str_starts_with(
+        $normalizedHandler,
+        'public_html/pecherie/chill-api/reference/'
+    );
+
+    if ($isReferenceOperation) {
+        if (
+            str_contains($indexSource, 'repo_visibility.php')
+            && str_contains($indexSource, 'required_operations')
+            && str_contains($indexSource, 'public_html/pecherie/chill-api/reference/')
+        ) {
+            ok("reference operation dynamically routed in index.php: $operation");
+            continue;
+        }
+
+        fail(
+            'API_SURFACE_INCOMPLETE',
+            "Reference operation $operation is declared but dynamic reference routing is missing in chill-api/index.php"
+        );
+    }
+
     if (!in_array($operation, $indexCases, true)) {
         fail('API_SURFACE_INCOMPLETE', "Operation $operation is declared but not routed in chill-api/index.php");
     }
+
     ok("operation routed in index.php: $operation");
 }
+
 
 foreach ($indexCases as $operation) {
     if (!array_key_exists($operation, $requiredOperations)) {
