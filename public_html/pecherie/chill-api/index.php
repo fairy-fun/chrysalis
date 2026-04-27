@@ -106,6 +106,10 @@ switch ($operation) {
         require __DIR__ . '/entity/resolve_entity_traversal.php';
         break;
 
+    case 'executeEntityTraversal':
+        require __DIR__ . '/entity/execute_entity_traversal.php';
+        break;
+
     case 'resolveEntityMeasurements':
         require __DIR__ . '/entity/resolve_entity_measurements.php';
         break;
