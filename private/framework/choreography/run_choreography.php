@@ -7,6 +7,7 @@ require_once __DIR__ . '/../traversal/traversal_definition_validator.php';
 require_once __DIR__ . '/../traversal/traversal_plan_builder.php';
 require_once __DIR__ . '/../traversal/traversal_sql_emitter.php';
 require_once __DIR__ . '/../traversal/execute_entity_traversal.php';
+require_once __DIR__ . '/../traversal/execute_traversal_by_start_entity.php';
 
 const FW_CHOREOGRAPHY_TRAVERSAL_CODE = 'TRAVERSAL-MEDLEY-CHOREO';
 
@@ -33,34 +34,6 @@ SQL
     return (int)$id;
 }
 
-function resolve_choreography_traversal_path_id(PDO $pdo, int $traversalId): int
-{
-    if ($traversalId < 1) {
-        throw new InvalidArgumentException('traversal_id must be a positive integer');
-    }
-
-    $stmt = $pdo->prepare(<<<'SQL'
-SELECT p.id
-FROM sxnzlfun_chrysalis.entity_traversal_paths p
-WHERE p.traversal_id = :traversal_id
-ORDER BY p.priority ASC, p.id ASC
-LIMIT 1
-SQL
-    );
-
-    $stmt->execute([
-        ':traversal_id' => $traversalId,
-    ]);
-
-    $id = $stmt->fetchColumn();
-
-    if ($id === false || (int)$id < 1) {
-        throw new RuntimeException('Traversal path for ' . FW_CHOREOGRAPHY_TRAVERSAL_CODE . ' not found');
-    }
-
-    return (int)$id;
-}
-
 function run_choreography(PDO $pdo, int $startEntityId): array
 {
     if ($startEntityId < 1) {
@@ -68,13 +41,16 @@ function run_choreography(PDO $pdo, int $startEntityId): array
     }
 
     $traversalId = resolve_choreography_traversal_id($pdo);
-    $pathId = resolve_choreography_traversal_path_id($pdo, $traversalId);
-    $rows = execute_entity_traversal($pdo, $pathId);
+
+    $rows = execute_traversal_by_traversal_id_and_start_entity(
+        $pdo,
+        $traversalId,
+        $startEntityId
+    );
 
     return [
         'traversal_code' => FW_CHOREOGRAPHY_TRAVERSAL_CODE,
         'traversal_id' => $traversalId,
-        'path_id' => $pathId,
         'start_entity_id' => $startEntityId,
         'row_count' => count($rows),
         'rows' => $rows,
