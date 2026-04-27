@@ -15,6 +15,7 @@ require __DIR__ . '/../audit/audit_figure_entity_mirror.php';
 require __DIR__ . '/../audit/audit_typed_entity_reference_integrity.php';
 require __DIR__ . '/../audit/audit_untyped_varchar_id_surface.php';
 require __DIR__ . '/../audit/audit_identity_reference_classification.php';
+require __DIR__ . '/../audit/audit_performance_routine_references.php';
 require __DIR__ . '/../audit/audit_expression_domain_alias.php';
 require __DIR__ . '/../audit/audit_domain_entity_mirror.php';
 
@@ -33,6 +34,7 @@ $audits = [
     'figure entity mirror' => fn () => assert_figure_entity_mirror($pdo, $schemaName),
     'typed entity reference integrity' => fn () => assert_typed_entity_reference_integrity($pdo, $schemaName),
     'identity reference classification' => fn () => assert_identity_reference_classification($pdo, $schemaName),
+    'performance routine references' => fn () => assert_performance_routine_references($pdo, $schemaName),
     'untyped varchar id surface' => fn () => assert_untyped_varchar_id_surface($pdo, $schemaName),
     'expression domain alias' => fn () => assert_expression_domain_alias($pdo, $schemaName),
     'domain entity mirror' => fn () => assert_domain_entity_mirror($pdo, $schemaName),
