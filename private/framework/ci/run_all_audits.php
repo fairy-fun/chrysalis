@@ -20,12 +20,14 @@ require __DIR__ . '/../audit/audit_expression_domain_alias.php';
 require __DIR__ . '/../audit/audit_domain_entity_mirror.php';
 require __DIR__ . '/../audit/audit_reference_endpoint_contract.php';
 require __DIR__ . '/../audit/audit_performance_routine_entity_identity.php';
+require __DIR__ . '/../audit/audit_traversal_root_entity_identity.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
 
 $audits = [
     'traversal trigger absence' => fn () => assert_traversal_trigger_absence($pdo, $schemaName),
+    'traversal root entity identity' => fn () => assert_traversal_root_entity_identity($pdo, $schemaName),
     'event graph identity' => fn () => assert_event_graph_identity($pdo, $schemaName),
     'attribute domain mapping' => fn () => assert_attribute_domain_mapping($pdo, $schemaName),
     'classval uniqueness' => fn () => assert_classval_uniqueness($pdo, $schemaName),
