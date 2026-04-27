@@ -43,15 +43,61 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
      * Do not downgrade DOMAIN_ENTITY_FK references back to audit-only.
      */
     $references = [
-        // identity layer
+        // domain entity references
         ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['attribute_domains', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['calendar_events', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['calendar_events_old', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['calendar_records', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['expression_domain_aliases', 'input_domain_id', 'DOMAIN_ENTITY_FK'],
+        ['expression_domain_aliases', 'target_domain_id', 'DOMAIN_ENTITY_FK'],
+        ['idea_classifications', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['profile_type_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
 
-        // typed value layer
+        // classval references
         ['attribute_type_layer_map', 'layer_classval_id', 'CLASSVAL'],
         ['character_profile_attributes', 'value_classval_id', 'CLASSVAL'],
-        ['classval_tag_map', 'classval_id', 'CLASSVAL'],
+        ['choreography_hierarchy', 'child_group_classval_id', 'CLASSVAL'],
+        ['dancer_choreography_status', 'status_classval_id', 'CLASSVAL'],
+        ['entity_linked_fact_qualifiers', 'value_classval_id', 'CLASSVAL'],
+        ['expression_constraint_outputs', 'access_state_classval_id', 'CLASSVAL'],
+        ['expression_constraint_outputs', 'constraint_effect_type_classval_id', 'CLASSVAL'],
+        ['expression_constraint_outputs', 'constraint_strength_classval_id', 'CLASSVAL'],
+        ['expression_constraint_outputs', 'input_value_classval_id', 'CLASSVAL'],
+        ['expression_constraint_outputs', 'output_value_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rule_conditions', 'comparator_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rule_conditions', 'expected_value_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rule_effects', 'access_state_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rule_effects', 'constraint_effect_type_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rule_effects', 'output_value_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rules', 'constraint_rule_type_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rules', 'profile_type_classval_id', 'CLASSVAL'],
+        ['expression_constraint_rules', 'strength_classval_id', 'CLASSVAL'],
         ['identity_context_alias_map', 'alias_type_classval_id', 'CLASSVAL'],
+        ['nl_intent_directives', 'intent_classval_id', 'CLASSVAL'],
+        ['nl_intent_traversals', 'intent_classval_id', 'CLASSVAL'],
+        ['nl_phrase_patterns', 'intent_classval_id', 'CLASSVAL'],
+        ['performance_routines', 'status_classval_id', 'CLASSVAL'],
+        ['relationships', 'status_classval_id', 'CLASSVAL'],
+        ['segment_groups', 'group_classval_id', 'CLASSVAL'],
+        ['segment_pairings', 'status_classval_id', 'CLASSVAL'],
+        ['team_choreography_assignments', 'status_classval_id', 'CLASSVAL'],
+        ['team_choreography_status', 'status_classval_id', 'CLASSVAL'],
+        ['teams', 'team_domain_classval_id', 'CLASSVAL'],
+
+        // view-projected classval references
+        ['v_character_appearance_resolved', 'value_classval_id', 'CLASSVAL'],
+        ['v_medley_2025_display', 'group_classval_id', 'CLASSVAL'],
+        ['v_medley_2025_display', 'status_classval_id', 'CLASSVAL'],
+        ['v_medley_2025_v1_final', 'group_classval_id', 'CLASSVAL'],
+        ['v_medley_2025_v1_final', 'status_classval_id', 'CLASSVAL'],
+        ['v_medley_pairings', 'group_classval_id', 'CLASSVAL'],
+        ['v_medley_pairings', 'status_classval_id', 'CLASSVAL'],
+        ['v_relationship_resolver', 'status_classval_id', 'CLASSVAL'],
+        ['vw_figure_following_conditions', 'following_figure_classval_id', 'CLASSVAL'],
+        ['vw_figure_following_conditions', 'predecessor_figure_classval_id', 'CLASSVAL'],
+        ['vw_figure_preceding_conditions', 'preceding_figure_classval_id', 'CLASSVAL'],
+        ['vw_figure_preceding_conditions', 'successor_figure_classval_id', 'CLASSVAL'],
     ];
 
     $violations = [];
