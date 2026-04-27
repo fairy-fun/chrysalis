@@ -18,6 +18,7 @@ require __DIR__ . '/../audit/audit_identity_reference_classification.php';
 require __DIR__ . '/../audit/audit_performance_routine_references.php';
 require __DIR__ . '/../audit/audit_expression_domain_alias.php';
 require __DIR__ . '/../audit/audit_domain_entity_mirror.php';
+require __DIR__ . '/../audit/audit_reference_endpoint_contract.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -38,7 +39,7 @@ $audits = [
     'untyped varchar id surface' => fn () => assert_untyped_varchar_id_surface($pdo, $schemaName),
     'expression domain alias' => fn () => assert_expression_domain_alias($pdo, $schemaName),
     'domain entity mirror' => fn () => assert_domain_entity_mirror($pdo, $schemaName),
-
+    'reference endpoint contract' => fn () => assert_reference_endpoint_contract($pdo, $schemaName),
 ];
 
 foreach ($audits as $auditName => $runAudit) {
