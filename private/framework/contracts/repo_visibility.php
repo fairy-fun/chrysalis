@@ -45,5 +45,6 @@ return [
         'listYears' => 'public_html/pecherie/chill-api/reference/list_years.php',
         'listChoreographyTypes' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',
         'listRoutineStatuses' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
+        'executeEntityTraversal' => 'public_html/pecherie/chill-api/entity/execute_entity_traversal.php',
     ],
 ];
