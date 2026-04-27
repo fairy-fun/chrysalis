@@ -81,9 +81,29 @@ const FW_REPO_CONTRACT = [
             'audit_visibility_required' => true,
         ],
         'listYears' => [
+            'handler' => 'public_html/pecherie/chill-api/reference/list_years.php',
             'method' => 'GET',
             'path' => '/reference/list_years.php',
-            'description' => 'List available years'
+            'description' => 'List available years',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'listChoreographyTypes' => [
+            'handler' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',
+            'method' => 'GET',
+            'path' => '/reference/list_choreography_types.php',
+            'description' => 'List choreography types',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+
+        'listRoutineStatuses' => [
+            'handler' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
+            'method' => 'GET',
+            'path' => '/reference/list_routine_statuses.php',
+            'description' => 'List routine statuses',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
         ],
     ],
 ];
