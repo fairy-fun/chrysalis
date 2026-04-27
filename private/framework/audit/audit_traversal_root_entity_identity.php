@@ -16,11 +16,11 @@ function audit_traversal_root_entity_identity(PDO $pdo, string $schemaName): arr
         JOIN {$schemaName}.entity_type_classvals etc
           ON etc.id = t.root_entity_type_id
         LEFT JOIN information_schema.COLUMNS c
-          ON c.TABLE_SCHEMA = :schema_name
+          ON c.TABLE_SCHEMA = :schema_name_columns
          AND c.TABLE_NAME = etc.base_table_name
          AND c.COLUMN_NAME = 'entity_id'
         LEFT JOIN information_schema.KEY_COLUMN_USAGE kcu
-          ON kcu.TABLE_SCHEMA = :schema_name
+          ON kcu.TABLE_SCHEMA = :schema_name_keys
          AND kcu.TABLE_NAME = etc.base_table_name
          AND kcu.COLUMN_NAME = 'entity_id'
          AND kcu.REFERENCED_TABLE_NAME = 'entities'
@@ -32,7 +32,8 @@ function audit_traversal_root_entity_identity(PDO $pdo, string $schemaName): arr
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
-        ':schema_name' => $schemaName,
+        ':schema_name_columns' => $schemaName,
+        ':schema_name_keys' => $schemaName,
     ]);
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
