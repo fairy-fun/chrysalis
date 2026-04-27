@@ -19,6 +19,7 @@ require __DIR__ . '/../audit/audit_performance_routine_references.php';
 require __DIR__ . '/../audit/audit_expression_domain_alias.php';
 require __DIR__ . '/../audit/audit_domain_entity_mirror.php';
 require __DIR__ . '/../audit/audit_reference_endpoint_contract.php';
+require __DIR__ . '/../audit/audit_performance_routine_entity_identity.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -40,6 +41,7 @@ $audits = [
     'expression domain alias' => fn () => assert_expression_domain_alias($pdo, $schemaName),
     'domain entity mirror' => fn () => assert_domain_entity_mirror($pdo, $schemaName),
     'reference endpoint contract' => fn () => assert_reference_endpoint_contract($pdo, $schemaName),
+    'performance routine entity identity' => fn () => assert_performance_routine_entity_identity($pdo, $schemaName),
 ];
 
 foreach ($audits as $auditName => $runAudit) {
