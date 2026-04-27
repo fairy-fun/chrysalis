@@ -143,7 +143,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
                 SELECT
                     '$tableName' AS table_name,
                     '$columnName' AS column_name,
-                    '{$expectedKind}' AS expected_kind,
+                    '$expectedKind' AS expected_kind,
                     t.{$columnName} AS invalid_value,
                     e.entity_type_id AS actual_entity_type_id,
                     COUNT(*) AS reference_count
