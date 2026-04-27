@@ -109,6 +109,10 @@ switch ($operation) {
         require __DIR__ . '/reference/list_years.php';
         break;
 
+    case 'listChoreographyTypes':
+        require __DIR__ . '/reference/list_choreography_types.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
