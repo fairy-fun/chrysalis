@@ -43,5 +43,7 @@ return [
         'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
         'createCalendarWeek' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
         'listYears' => 'public_html/pecherie/chill-api/reference/list_years.php',
+        'listChoreographyTypes' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',
+        'listRoutineStatuses' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
     ],
 ];
