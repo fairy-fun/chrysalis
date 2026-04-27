@@ -48,6 +48,19 @@ if (!is_string($operation) || $operation === '') {
 $GLOBALS['_API_BODY'] = $body;
 $GLOBALS['_QUERY_BODY'] = $body;
 
+$visibility = require __DIR__ . '/../../../private/framework/contracts/repo_visibility.php';
+
+$requiredOperations = $visibility['required_operations'] ?? [];
+$handlerPath = $requiredOperations[$operation] ?? null;
+
+if (
+    is_string($handlerPath)
+    && str_starts_with($handlerPath, 'public_html/pecherie/chill-api/reference/')
+) {
+    require dirname(__DIR__, 3) . '/' . $handlerPath;
+    exit;
+}
+
 switch ($operation) {
     case 'listRepo':
         require __DIR__ . '/repo/list_repo.php';
@@ -105,20 +118,6 @@ switch ($operation) {
         require __DIR__ . '/calendar/create_calendar_week.php';
         break;
 
-    case 'listYears':
-        require __DIR__ . '/reference/list_years.php';
-        break;
-
-    case 'listChoreographyTypes':
-        require __DIR__ . '/reference/list_choreography_types.php';
-        break;
-
-    case 'listRoutineStatuses':
-        require __DIR__ . '/reference/list_routine_statuses.php';
-        break;
-
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
-
-
