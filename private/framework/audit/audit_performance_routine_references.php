@@ -40,7 +40,7 @@ LEFT JOIN {$schemaName}.classvals c
 WHERE pr.status_classval_id IS NOT NULL
   AND (
       c.id IS NULL
-      OR c.classval_type_id <> 'classval_type_status'
+      OR c.classval_type_id <> 'classval_type_routine_status'
   )
 SQL;
 
@@ -49,7 +49,7 @@ SQL;
             'rule' => 'performance_routine_status_classval',
             'routine_id' => $row['routine_id'],
             'value' => $row['status_classval_id'],
-            'expected_classval_type_id' => 'classval_type_status',
+            'expected_classval_type_id' => 'classval_type_routine_status',
             'actual_classval_type_id' => $row['classval_type_id'],
         ];
     }
