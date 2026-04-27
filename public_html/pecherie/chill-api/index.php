@@ -113,6 +113,10 @@ switch ($operation) {
         require __DIR__ . '/reference/list_choreography_types.php';
         break;
 
+    case 'listRoutineStatuses':
+        require __DIR__ . '/reference/list_routine_statuses.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
