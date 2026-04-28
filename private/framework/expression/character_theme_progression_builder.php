@@ -8,9 +8,14 @@ function buildCharacterThemeProgression(
     ?string $projectionEntityId = null
 ): array {
     $characterEntityId = trim($characterEntityId);
+    $projectionEntityId = $projectionEntityId !== null ? trim($projectionEntityId) : null;
 
     if ($characterEntityId === '') {
         throw new InvalidArgumentException('characterEntityId is required');
+    }
+
+    if ($projectionEntityId === '') {
+        $projectionEntityId = null;
     }
 
     $params = [
@@ -20,14 +25,14 @@ function buildCharacterThemeProgression(
     $projectionJoin = '';
     $projectionWhere = '';
 
-    if ($projectionEntityId !== null && trim($projectionEntityId) !== '') {
+    if ($projectionEntityId !== null) {
         $projectionJoin = <<<SQL
 JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
     ON cepm.calendar_event_id = ce.id
 SQL;
 
         $projectionWhere = 'AND cepm.projection_entity_id = :projection_entity_id';
-        $params['projection_entity_id'] = trim($projectionEntityId);
+        $params['projection_entity_id'] = $projectionEntityId;
     }
 
     $stmt = $pdo->prepare(<<<SQL
@@ -105,7 +110,7 @@ function validateCharacterThemeProgression(array $sequence): array
 
         $seenEvents[$eventEntityId] = true;
 
-        if ($lastChronology !== null && strnatcmp($lastChronology, $chronology) > 0) {
+        if ($lastChronology !== null && strnatcmp((string)$lastChronology, (string)$chronology) > 0) {
             $issues[] = [
                 'type' => 'chronology_out_of_order',
                 'previous' => $lastChronology,
@@ -116,31 +121,61 @@ function validateCharacterThemeProgression(array $sequence): array
         $lastChronology = $chronology;
     }
 
-    $expected = [
-        'entity_theme_control_under_activation',
-        'entity_theme_social_evaluation',
-        'entity_theme_regulated_engagement',
-        'entity_theme_authority_alignment',
-        'entity_theme_collective_execution',
-    ];
-
-    $actual = array_values(array_map(
+    $themeEntityIds = array_values(array_map(
         fn ($row) => $row['theme_entity_id'],
         $sequence
     ));
 
-    if (count($actual) === count($expected) && $actual !== $expected) {
-        $issues[] = [
-            'type' => 'arc_template_mismatch',
-            'expected' => $expected,
-            'actual' => $actual,
-        ];
-    }
+    $knownArcSlices = detectKnownThemeArcSlices($themeEntityIds);
 
     return [
         'status' => $issues === [] ? 'pass' : 'fail',
         'issues' => $issues,
+        'known_arc_slices' => $knownArcSlices,
     ];
+}
+
+function detectKnownThemeArcSlices(array $themeEntityIds): array
+{
+    $knownArcs = [
+        'shay_1_6_2_theme_arc' => [
+            'entity_theme_control_under_activation',
+            'entity_theme_social_evaluation',
+            'entity_theme_regulated_engagement',
+            'entity_theme_authority_alignment',
+            'entity_theme_collective_execution',
+        ],
+    ];
+
+    $detected = [];
+
+    foreach ($knownArcs as $arcId => $arcThemeEntityIds) {
+        $detected[] = [
+            'arc_id' => $arcId,
+            'status' => containsThemeArcSlice($themeEntityIds, $arcThemeEntityIds) ? 'present' : 'not_present',
+            'theme_entity_ids' => $arcThemeEntityIds,
+        ];
+    }
+
+    return $detected;
+}
+
+function containsThemeArcSlice(array $themeEntityIds, array $arcThemeEntityIds): bool
+{
+    $arcLength = count($arcThemeEntityIds);
+    $themeCount = count($themeEntityIds);
+
+    if ($arcLength === 0 || $themeCount < $arcLength) {
+        return false;
+    }
+
+    for ($i = 0; $i <= $themeCount - $arcLength; $i++) {
+        if (array_slice($themeEntityIds, $i, $arcLength) === $arcThemeEntityIds) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function labelThemeBeat(string $chronologyAddress, string $themeEntityId): ?string
