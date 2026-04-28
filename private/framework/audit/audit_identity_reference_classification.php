@@ -149,7 +149,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
                     COUNT(*) AS reference_count
                 FROM $schemaName.$tableName t
                 LEFT JOIN $schemaName.entities e
-                    ON e.id COLLATE utf8mb4_general_ci = t.{$columnName} COLLATE utf8mb4_general_ci
+                    ON e.id COLLATE utf8mb4_general_ci = t.$columnName COLLATE utf8mb4_general_ci
                 WHERE t.{$columnName} IS NOT NULL
                   AND t.{$columnName} <> ''
                   AND (
