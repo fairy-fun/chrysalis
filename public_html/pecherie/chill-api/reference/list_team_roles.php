@@ -19,11 +19,13 @@ try {
     requireAuth();
 
     $pdo = makePdo();
+    $database = verifyExpectedDatabase($pdo);
 
     $roles = list_team_roles($pdo);
 
     respond(200, [
         'status' => 'ok',
+        'database' => $database,
         'data' => [
             'roles' => $roles,
         ],

@@ -6,6 +6,9 @@ function list_team_roles(PDO $pdo): array
 {
     $stmt = $pdo->query(
         'SELECT
+            tr.role_id AS id,
+            tr.role_label AS label,
+
             tr.role_id,
             tr.role_code,
             tr.role_label,
