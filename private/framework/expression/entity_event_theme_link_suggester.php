@@ -31,7 +31,7 @@ LEFT JOIN sxnzlfun_chrysalis.entity_linked_facts existing
     ON existing.subject_entity_id = r.context_entity_id
    AND existing.fact_type_id = 'fact_type_event_theme'
    AND existing.object_entity_id = rule.theme_entity_id
-WHERE existing.id IS NULL
+WHERE existing.linked_fact_id IS NULL
 $where
 ORDER BY r.created_at DESC, rule.id ASC
 SQL);
