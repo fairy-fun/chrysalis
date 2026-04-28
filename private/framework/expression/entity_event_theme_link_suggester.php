@@ -47,6 +47,7 @@ SQL);
             'fact_type_id' => $row['fact_type_id'],
             'object_entity_id' => $row['object_entity_id'],
             'match_status' => 'suggested',
+            'confidence_classval_id' => $row['confidence_classval_id'],
             'evidence' => [
                 'source' => 'expression_constraint_outputs',
                 'attribute_type_id' => $row['attribute_type_id'],
