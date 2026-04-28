@@ -21,6 +21,8 @@ SELECT
     o.output_value_classval_id,
     rule.confidence_classval_id
 FROM sxnzlfun_chrysalis.expression_constraint_runs r
+JOIN sxnzlfun_chrysalis.calendar_events ce
+    ON ce.entity_id = r.context_entity_id
 JOIN sxnzlfun_chrysalis.expression_constraint_outputs o
     ON o.constraint_run_id = r.id
 JOIN sxnzlfun_chrysalis.expression_theme_inference_rules rule
@@ -32,6 +34,11 @@ LEFT JOIN sxnzlfun_chrysalis.entity_linked_facts existing
    AND existing.fact_type_id = 'fact_type_event_theme'
    AND existing.object_entity_id = rule.theme_entity_id
 WHERE existing.linked_fact_id IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM sxnzlfun_chrysalis.calendar_events child
+      WHERE child.parent_event_id = ce.id
+  )
 $where
 ORDER BY r.created_at DESC, rule.id ASC
 SQL);
@@ -53,6 +60,7 @@ SQL);
                 'attribute_type_id' => $row['attribute_type_id'],
                 'output_value_classval_id' => $row['output_value_classval_id'],
                 'confidence_classval_id' => $row['confidence_classval_id'],
+                'leaf_event_only' => true,
             ],
             'proposed_action' => [
                 'table' => 'entity_linked_facts',
