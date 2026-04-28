@@ -101,7 +101,6 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
-
         'listRoutineStatuses' => [
             'handler' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
             'method' => 'GET',
@@ -110,15 +109,28 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
-
         'executeEntityTraversal' => [
             'handler' => 'public_html/pecherie/chill-api/entity/execute_entity_traversal.php',
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
-
         'auditTraversalStepChainIntegrity' => [
             'handler' => 'public_html/pecherie/chill-api/audit/traversal_step_chain_integrity.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'auditTraversalProjectionIntegrity' => [
+            'handler' => 'public_html/pecherie/chill-api/audit/traversal_projection_integrity.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'auditTraversalJoinSemantics' => [
+            'handler' => 'public_html/pecherie/chill-api/audit/traversal_join_semantics.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'auditTraversalOptionalityIntegrity' => [
+            'handler' => 'public_html/pecherie/chill-api/audit/traversal_optionality_integrity.php',
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
