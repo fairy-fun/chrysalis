@@ -13,7 +13,7 @@ function suggest_entity_event_theme_link(PDO $pdo, ?string $contextEntityId = nu
     }
 
     $stmt = $pdo->prepare(<<<SQL
-SELECT DISTINCT
+SELECT
     r.context_entity_id AS subject_entity_id,
     'fact_type_event_theme' AS fact_type_id,
     rule.theme_entity_id AS object_entity_id,
