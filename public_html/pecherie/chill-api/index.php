@@ -150,6 +150,10 @@ switch ($operation) {
         require __DIR__ . '/expression/run_expression_pipeline.php';
         break;
 
+    case 'applyEntityEventThemeLink':
+        require __DIR__ . '/expression/apply_entity_event_theme_link.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }

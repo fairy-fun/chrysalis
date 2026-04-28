@@ -153,5 +153,15 @@ const FW_REPO_CONTRACT = [
             'handler' => 'public_html/pecherie/chill-api/expression/run_expression_pipeline.php',
             'behaviour_tested' => false,
         ],
+
+        'applyEntityEventThemeLink' => [
+            'handler' => 'public_html/pecherie/chill-api/expression/apply_entity_event_theme_link.php',
+            'behaviour_tested' => false,
+        ],
+
+        'suggestEntityEventThemeLink' => [
+            'handler' => 'public_html/pecherie/chill-api/expression/suggest_entity_event_theme_link.php',
+            'behaviour_tested' => false,
+        ],
     ],
 ];
