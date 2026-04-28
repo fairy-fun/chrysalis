@@ -33,18 +33,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'HEAD') {
     exit;
 }
 
-// ─── GET — not allowed for MCP endpoint ──────────────────────────────────────
-
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    header('Allow: POST, HEAD, OPTIONS');
-    http_response_code(405);
-    exit;
-}
+// ─── GET — only allowed for OAuth proxy routes (handled below) ───────────────
+// Non-proxy GETs are rejected after route matching
 
 // ─── OAuth discovery endpoints ───────────────────────────────────────────────
 
 $requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $requestUri = rtrim((string) $requestUri, '/');
+
+// ─── /authorize proxy — redirect to Auth0 ───────────────────────────────────
+
+if (str_ends_with($requestUri, '/authorize')) {
+    $query = $_SERVER['QUERY_STRING'] ?? '';
+    // Force correct audience so Auth0 issues a token scoped to our API
+    if (strpos($query, 'audience=') === false) {
+        $query .= ($query !== '' ? '&' : '') . 'audience=' . urlencode(AUTH0_AUDIENCE);
+    }
+    header('Location: https://' . AUTH0_DOMAIN . '/authorize?' . $query, true, 302);
+    exit;
+}
+
+// ─── /token proxy — forward to Auth0 and relay response ─────────────────────
+
+if (str_ends_with($requestUri, '/token') && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $body = file_get_contents('php://input');
+
+    $context = stream_context_create([
+        'http' => [
+            'method'  => 'POST',
+            'header'  => implode("\r\n", [
+                'Content-Type: application/x-www-form-urlencoded',
+                'Content-Length: ' . strlen((string) $body),
+            ]),
+            'content' => $body,
+            'timeout' => 10,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $response = @file_get_contents(
+        'https://' . AUTH0_DOMAIN . '/oauth/token',
+        false,
+        $context
+    );
+
+    // Relay Auth0 response headers that matter
+    foreach ($http_response_header ?? [] as $header) {
+        if (stripos($header, 'Content-Type:') === 0) {
+            header($header);
+        }
+        if (stripos($header, 'HTTP/') === 0) {
+            $parts = explode(' ', $header, 3);
+            http_response_code((int) ($parts[1] ?? 200));
+        }
+    }
+
+    echo $response !== false ? $response : json_encode(['error' => 'token_proxy_failed']);
+    exit;
+}
 
 if (str_ends_with($requestUri, '/.well-known/oauth-protected-resource')) {
     header('Content-Type: application/json; charset=utf-8');
@@ -73,7 +119,13 @@ if (str_ends_with($requestUri, '/.well-known/oauth-authorization-server')) {
     exit;
 }
 
-// ─── Only POST from here ─────────────────────────────────────────────────────
+// ─── Only POST from here (non-proxy GETs rejected) ───────────────────────────
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    header('Allow: POST, HEAD, OPTIONS');
+    http_response_code(405);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
