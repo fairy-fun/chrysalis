@@ -1,0 +1,11 @@
+Options -Indexes
+
+RewriteEngine On
+
+# Route all requests (including .well-known paths) through index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]
+
+# Pass Authorization header through to PHP (required for OAuth Bearer tokens)
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
