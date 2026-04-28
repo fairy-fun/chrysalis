@@ -2,19 +2,64 @@
 
 declare(strict_types=1);
 
-function suggest_entity_event_theme_link(PDO $pdo, ?string $contextId = null): array
-{
-    return [
-        'proposal_type' => 'entity_event_theme_link',
-        'context_id' => $contextId,
-        'subject_entity_id' => 'entity_event_123',
-        'fact_type_id' => 'fact_type_event_theme',
-        'object_entity_id' => 'entity_theme_sacrifice',
-        'match_status' => 'placeholder',
-        'proposed_action' => [
-            'table' => 'entity_linked_facts',
-            'operation' => 'insert_if_missing',
-        ],
-        'sql_text' => null,
-    ];
+header('Content-Type: application/json; charset=utf-8');
+
+require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
+require_once __DIR__ . '/../../../../private/framework/expression/entity_event_theme_link_suggester.php';
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    respond(405, [
+        'status' => 'error',
+        'error' => 'Method not allowed',
+    ]);
+}
+
+requireAuth();
+
+$body = getJsonBody();
+
+$contextEntityId = $body['context_entity_id'] ?? null;
+
+if ($contextEntityId !== null && (!is_string($contextEntityId) || trim($contextEntityId) === '')) {
+    respond(400, [
+        'status' => 'error',
+        'error' => 'context_entity_id must be a non-empty string or null',
+    ]);
+}
+
+$pdo = makePdo();
+$database = verifyExpectedDatabase($pdo);
+
+try {
+    $result = suggest_entity_event_theme_link(
+        $pdo,
+        is_string($contextEntityId) ? trim($contextEntityId) : null
+    );
+
+    respond(200, [
+        'status' => 'ok',
+        'database' => $database,
+        'data' => $result,
+    ]);
+
+} catch (InvalidArgumentException $e) {
+    respond(400, [
+        'status' => 'error',
+        'error' => $e->getMessage(),
+        'database' => $database,
+    ]);
+
+} catch (RuntimeException $e) {
+    respond(404, [
+        'status' => 'error',
+        'error' => $e->getMessage(),
+        'database' => $database,
+    ]);
+
+} catch (Throwable $e) {
+    debugRespond(500, [
+        'status' => 'error',
+        'error' => 'Failed to generate event theme suggestions',
+        'database' => $database,
+    ], $e);
 }
