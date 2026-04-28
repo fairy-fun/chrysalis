@@ -134,5 +134,14 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+
+        'listTeamRoles' => [
+            'handler' => 'public_html/pecherie/chill-api/reference/list_team_roles.php',
+            'method' => 'GET',
+            'path' => '/reference/list_team_roles.php',
+            'description' => 'List team roles',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];

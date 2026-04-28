@@ -48,5 +48,9 @@ return [
         'listRoutineStatuses' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
         'executeEntityTraversal' => 'public_html/pecherie/chill-api/entity/execute_entity_traversal.php',
         'auditTraversalStepChainIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_step_chain_integrity.php',
+        'auditTraversalProjectionIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_projection_integrity.php',
+        'auditTraversalJoinSemantics' => 'public_html/pecherie/chill-api/audit/traversal_join_semantics.php',
+        'auditTraversalOptionalityIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_optionality_integrity.php',
+        'listTeamRoles' => 'public_html/pecherie/chill-api/reference/list_team_roles.php',
     ],
 ];
