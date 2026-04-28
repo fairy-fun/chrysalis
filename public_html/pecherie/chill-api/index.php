@@ -146,6 +146,10 @@ switch ($operation) {
         require __DIR__ . '/music/resolve_song_artist_pair.php';
         break;
 
+    case 'runExpressionPipeline':
+        require __DIR__ . '/expression/run_expression_pipeline.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
