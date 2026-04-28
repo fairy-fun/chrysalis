@@ -47,7 +47,7 @@ $audits = [
 ];
 
 foreach ($audits as $auditName => $runAudit) {
-    echo "==> Running audit: {$auditName}\n";
+    echo "==> Running audit: $auditName\n";
 
     try {
         $runAudit();
