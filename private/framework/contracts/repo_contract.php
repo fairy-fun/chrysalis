@@ -117,5 +117,10 @@ const FW_REPO_CONTRACT = [
             'audit_visibility_required' => true,
         ],
 
+        'auditTraversalStepChainIntegrity' => [
+            'handler' => 'public_html/pecherie/chill-api/audit/traversal_step_chain_integrity.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];

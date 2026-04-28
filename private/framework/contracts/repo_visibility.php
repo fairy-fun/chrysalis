@@ -47,5 +47,6 @@ return [
         'listChoreographyTypes' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',
         'listRoutineStatuses' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
         'executeEntityTraversal' => 'public_html/pecherie/chill-api/entity/execute_entity_traversal.php',
+        'auditTraversalStepChainIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_step_chain_integrity.php',
     ],
 ];
