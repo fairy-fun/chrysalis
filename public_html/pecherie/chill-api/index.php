@@ -134,6 +134,14 @@ switch ($operation) {
         require __DIR__ . '/audit/traversal_projection_integrity.php';
         break;
 
+    case 'auditTraversalJoinSemantics':
+        require __DIR__ . '/audit/traversal_join_semantics.php';
+        break;
+
+    case 'auditTraversalOptionalityIntegrity':
+        require __DIR__ . '/audit/traversal_optionality_integrity.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
