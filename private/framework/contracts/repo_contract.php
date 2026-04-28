@@ -143,5 +143,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+
+        'resolveSongArtistPair' => [
+            'handler' => 'public_html/pecherie/chill-api/music/resolve_song_artist_pair.php',
+            'behaviour_tested' => false,
+        ],
     ],
 ];
