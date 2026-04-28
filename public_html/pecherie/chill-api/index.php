@@ -142,6 +142,10 @@ switch ($operation) {
         require __DIR__ . '/audit/traversal_optionality_integrity.php';
         break;
 
+    case 'resolveSongArtistPair':
+        require __DIR__ . '/music/resolve_song_artist_pair.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }

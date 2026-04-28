@@ -14,6 +14,7 @@ return [
         'public_html/pecherie/chill-api/audit',
         'public_html/pecherie/chill-api/calendar',
         'public_html/pecherie/chill-api/reference',
+        'public_html/pecherie/chill-api/music',
     ],
 
     'visible_files' => [
@@ -52,5 +53,6 @@ return [
         'auditTraversalJoinSemantics' => 'public_html/pecherie/chill-api/audit/traversal_join_semantics.php',
         'auditTraversalOptionalityIntegrity' => 'public_html/pecherie/chill-api/audit/traversal_optionality_integrity.php',
         'listTeamRoles' => 'public_html/pecherie/chill-api/reference/list_team_roles.php',
+        'resolveSongArtistPair' => 'public_html/pecherie/chill-api/music/resolve_song_artist_pair.php',
     ],
 ];
