@@ -603,7 +603,7 @@ $medleyId = null;
 
 $expressionTestCharacterId = 'CI_CHAR_EXPR_1';
 $expressionDomainMatchId = 101;
-$expressionApiDomainId = '1';
+$expressionApiDomainId = '101';
 
 try {
     $pdo->beginTransaction();
