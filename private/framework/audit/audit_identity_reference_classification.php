@@ -73,6 +73,10 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['expression_constraint_rules', 'constraint_rule_type_classval_id', 'CLASSVAL'],
         ['expression_constraint_rules', 'profile_type_classval_id', 'CLASSVAL'],
         ['expression_constraint_rules', 'strength_classval_id', 'CLASSVAL'],
+
+        ['expression_theme_inference_rules', 'confidence_classval_id', 'CLASSVAL'],
+        ['expression_theme_inference_rules', 'output_value_classval_id', 'CLASSVAL'],
+
         ['identity_context_alias_map', 'alias_type_classval_id', 'CLASSVAL'],
         ['nl_intent_directives', 'intent_classval_id', 'CLASSVAL'],
         ['nl_intent_traversals', 'intent_classval_id', 'CLASSVAL'],
