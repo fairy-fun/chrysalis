@@ -55,6 +55,7 @@ return [
         'listTeamRoles' => 'public_html/pecherie/chill-api/reference/list_team_roles.php',
         'resolveSongArtistPair' => 'public_html/pecherie/chill-api/music/resolve_song_artist_pair.php',
         'runExpressionPipeline' => 'public_html/pecherie/chill-api/expression/run_expression_pipeline.php',
+        'suggestEntityEventThemeLink' => 'public_html/pecherie/chill-api/expression/suggest_entity_event_theme_link.php',
         'applyEntityEventThemeLink' => 'public_html/pecherie/chill-api/expression/apply_entity_event_theme_link.php',
     ],
 ];
