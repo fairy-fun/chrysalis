@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/character_beat_label_suggester.php';
+require_once __DIR__ . '/character_next_beat_suggester.php';
 
 function buildAuthorBeatView(
     PDO $pdo,
@@ -25,7 +26,7 @@ function buildAuthorBeatView(
     $observedBeats = [];
     $lines = [];
 
-    foreach ($suggestionResult['proposals'] as $proposal) {
+    foreach (($suggestionResult['proposals'] ?? []) as $proposal) {
         $beat = [
             'chronology_address' => $proposal['chronology_address'],
             'theme' => $proposal['theme_entity_id'],
@@ -36,14 +37,43 @@ function buildAuthorBeatView(
         $lines[] = $proposal['chronology_address'] . ' → ' . $proposal['beat_label'];
     }
 
+    $lastTheme = !empty($observedBeats)
+        ? $observedBeats[array_key_last($observedBeats)]['theme']
+        : null;
+
+    $nextBeatResult = [
+        'status' => 'skipped',
+        'suggestions' => [],
+    ];
+
+    if ($mode === 'PROPOSE_FORWARD' && $lastTheme) {
+        $nextBeatResult = suggestNextCharacterBeat(
+            $pdo,
+            $characterEntityId,
+            $projectionEntityId,
+            $lastTheme
+        );
+    }
+
     return [
         'status' => 'ok',
         'character_entity_id' => $characterEntityId,
         'projection_entity_id' => $projectionEntityId,
         'mode' => $mode,
         'sequence_status' => 'pass',
-        'observed_beats' => $mode === 'READ_BASELINE' ? $observedBeats : [],
-        'suggested_beats' => $mode === 'PROPOSE_FORWARD' ? $suggestionResult['proposals'] : [],
+
+        'observed_beats' => $mode === 'READ_BASELINE'
+            ? $observedBeats
+            : [],
+
+        'suggested_beats' => $mode === 'PROPOSE_FORWARD'
+            ? ($suggestionResult['proposals'] ?? [])
+            : [],
+
+        'suggested_next_beats' => $mode === 'PROPOSE_FORWARD'
+            ? ($nextBeatResult['suggestions'] ?? [])
+            : [],
+
         'author_view' => [
             'heading' => 'Shay Beat Sequence',
             'lines' => $lines,
