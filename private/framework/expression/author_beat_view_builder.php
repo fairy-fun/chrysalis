@@ -57,19 +57,65 @@ function buildAuthorBeatView(
     }
 
     $driftAudit = [];
+    $rankedNextBeats = $nextBeatResult['suggestions'] ?? [];
 
     if ($mode === 'PROPOSE_FORWARD' && $lastTheme) {
-        foreach (($nextBeatResult['suggestions'] ?? []) as $suggestion) {
+        foreach ($rankedNextBeats as $index => $suggestion) {
             if (empty($suggestion['theme_entity_id'])) {
                 continue;
             }
 
-            $driftAudit[] = auditCharacterPredictionDrift(
+            $audit = auditCharacterPredictionDrift(
                 $pdo,
                 $suggestion['theme_entity_id'],
                 $lastTheme
             );
+
+            $score = isset($suggestion['score'])
+                ? (float) $suggestion['score']
+                : 0.0;
+
+            $scoreMultiplier = isset($audit['score_multiplier'])
+                ? (float) $audit['score_multiplier']
+                : 0.0;
+
+            $rankedNextBeats[$index]['drift'] = $audit;
+            $rankedNextBeats[$index]['drift_adjusted_score'] = $score * $scoreMultiplier;
+            $driftAudit[] = $audit;
         }
+
+        usort($rankedNextBeats, static function (array $left, array $right): int {
+            $leftAdjustedScore = isset($left['drift_adjusted_score'])
+                ? (float) $left['drift_adjusted_score']
+                : 0.0;
+
+            $rightAdjustedScore = isset($right['drift_adjusted_score'])
+                ? (float) $right['drift_adjusted_score']
+                : 0.0;
+
+            if ($leftAdjustedScore !== $rightAdjustedScore) {
+                return $rightAdjustedScore <=> $leftAdjustedScore;
+            }
+
+            $leftScore = isset($left['score']) ? (float) $left['score'] : 0.0;
+            $rightScore = isset($right['score']) ? (float) $right['score'] : 0.0;
+
+            if ($leftScore !== $rightScore) {
+                return $rightScore <=> $leftScore;
+            }
+
+            $leftSubjectHits = isset($left['subject_hits']) ? (int) $left['subject_hits'] : 0;
+            $rightSubjectHits = isset($right['subject_hits']) ? (int) $right['subject_hits'] : 0;
+
+            if ($leftSubjectHits !== $rightSubjectHits) {
+                return $rightSubjectHits <=> $leftSubjectHits;
+            }
+
+            $leftGlobalHits = isset($left['global_hits']) ? (int) $left['global_hits'] : 0;
+            $rightGlobalHits = isset($right['global_hits']) ? (int) $right['global_hits'] : 0;
+
+            return $rightGlobalHits <=> $leftGlobalHits;
+        });
     }
 
     return [
@@ -88,7 +134,7 @@ function buildAuthorBeatView(
             : [],
 
         'suggested_next_beats' => $mode === 'PROPOSE_FORWARD'
-            ? ($nextBeatResult['suggestions'] ?? [])
+            ? $rankedNextBeats
             : [],
 
         'drift_audit' => $mode === 'PROPOSE_FORWARD'
