@@ -5,8 +5,8 @@ declare(strict_types=1);
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 const AUTH0_DOMAIN   = 'antheapeche7.us.auth0.com';
-const AUTH0_AUDIENCE = 'https://antheapeche.com/pecherie/mcp/';
-const MCP_SERVER_URL = 'https://antheapeche.com/pecherie/mcp/';
+const AUTH0_AUDIENCE = 'https://mcp.antheapeche.com/';
+const MCP_SERVER_URL = 'https://mcp.antheapeche.com/';
 const MCP_VERSION    = '2025-06-18';
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
