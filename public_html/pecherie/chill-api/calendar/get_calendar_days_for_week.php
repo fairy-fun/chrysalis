@@ -29,15 +29,17 @@ $expectedDatabase = verifyExpectedDatabase($pdo);
 try {
     $parent = $pdo->prepare("
         SELECT
-            id,
-            entity_id,
-            projection_entity_id,
-            layer_id,
-            week_index,
-            chronology_address
-        FROM sxnzlfun_chrysalis.calendar_events
-        WHERE entity_id = :entity_id
-          AND layer_id = 'calendar_layer_week'
+            ce.id,
+            ce.entity_id,
+            COALESCE(ce.projection_entity_id, cepm.projection_entity_id) AS projection_entity_id,
+            ce.layer_id,
+            ce.week_index,
+            ce.chronology_address
+        FROM sxnzlfun_chrysalis.calendar_events ce
+        LEFT JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
+            ON cepm.calendar_event_id = ce.id
+        WHERE ce.entity_id = :entity_id
+          AND ce.layer_id = 'calendar_layer_week'
         LIMIT 1
     ");
 
