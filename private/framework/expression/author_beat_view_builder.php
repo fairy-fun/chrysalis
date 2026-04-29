@@ -77,6 +77,15 @@ function buildAuthorBeatView(
         'disruptive' => null,
     ];
     $selectedRecommendedPath = null;
+    $selectionReason = [
+        'requested_author_mode' => $authorMode,
+        'selected_author_mode' => null,
+        'used_fallback' => false,
+        'fallback_from' => null,
+        'fallback_to' => null,
+        'justification' => 'No forward recommendation was selected.',
+        'signals' => [],
+    ];
 
     // --- RAW ORDER CAPTURE ---
     $rawOrderedBeats = $rankedNextBeats;
@@ -206,8 +215,44 @@ function buildAuthorBeatView(
         $recommendedPaths['disruptive'] = $highTensionCandidates[0] ?? null;
 
         $selectedPathKey = strtolower($authorMode);
-        $selectedRecommendedPath = $recommendedPaths[$selectedPathKey]
-            ?? $recommendedPaths['stable'];
+        $selectedAuthorMode = $authorMode;
+        $selectedRecommendedPath = $recommendedPaths[$selectedPathKey] ?? null;
+
+        if ($selectedRecommendedPath === null && $recommendedPaths['stable'] !== null) {
+            $selectedRecommendedPath = $recommendedPaths['stable'];
+            $selectedAuthorMode = 'STABLE';
+        }
+
+        $selectionReason['selected_author_mode'] = $selectedAuthorMode;
+        $selectionReason['used_fallback'] = $selectedAuthorMode !== $authorMode;
+        $selectionReason['fallback_from'] = $selectedAuthorMode !== $authorMode ? $authorMode : null;
+        $selectionReason['fallback_to'] = $selectedAuthorMode !== $authorMode ? $selectedAuthorMode : null;
+
+        if ($selectedRecommendedPath !== null) {
+            $selectionReason['signals'] = [
+                'theme_entity_id' => $selectedRecommendedPath['theme_entity_id'] ?? null,
+                'raw_score_rank' => $selectedRecommendedPath['raw_score_rank'] ?? null,
+                'drift_adjusted_rank' => $selectedRecommendedPath['drift_adjusted_rank'] ?? null,
+                'rank_delta' => $selectedRecommendedPath['rank_delta'] ?? null,
+                'rank_delta_abs' => $selectedRecommendedPath['rank_delta_abs'] ?? null,
+                'tension_label' => $selectedRecommendedPath['tension_label'] ?? null,
+                'audit_category' => $selectedRecommendedPath['drift']['audit_category'] ?? null,
+                'score' => isset($selectedRecommendedPath['score']) ? (float) $selectedRecommendedPath['score'] : null,
+                'drift_adjusted_score' => isset($selectedRecommendedPath['drift_adjusted_score'])
+                    ? (float) $selectedRecommendedPath['drift_adjusted_score']
+                    : null,
+            ];
+
+            if ($selectedAuthorMode === 'STABLE') {
+                $selectionReason['justification'] = 'Selected the highest drift-adjusted candidate for the cleanest continuation of the current trajectory.';
+            } elseif ($selectedAuthorMode === 'EXPLORATORY') {
+                $selectionReason['justification'] = 'Selected a rare-but-aligned candidate: less habitual than the baseline, but more strongly suited to the current trajectory.';
+            } else {
+                $selectionReason['justification'] = 'Selected the strongest high-tension candidate: the option with the clearest disagreement between pattern memory and trajectory fit.';
+            }
+        } elseif ($mode === 'PROPOSE_FORWARD') {
+            $selectionReason['justification'] = 'No forward candidates were available for selection.';
+        }
     }
 
     return [
@@ -245,6 +290,10 @@ function buildAuthorBeatView(
         'selected_recommended_path' => $mode === 'PROPOSE_FORWARD'
             ? $selectedRecommendedPath
             : null,
+
+        'selection_reason' => $mode === 'PROPOSE_FORWARD'
+            ? $selectionReason
+            : [],
 
         'drift_audit' => $mode === 'PROPOSE_FORWARD'
             ? $driftAudit
