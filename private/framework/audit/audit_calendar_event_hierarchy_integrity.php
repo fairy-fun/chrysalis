@@ -11,7 +11,7 @@ SELECT
     subject_entity_id,
     parent_event_id,
     chronology_address,
-    event_label
+    summary
 FROM {$schemaName}.calendar_events
 WHERE parent_event_id IS NULL
   AND chronology_address LIKE '%.%.%'
@@ -23,7 +23,7 @@ SQL;
             'calendar_event_id' => $row['id'],
             'subject_entity_id' => $row['subject_entity_id'],
             'chronology_address' => $row['chronology_address'],
-            'event_label' => $row['event_label'],
+            'summary' => $row['summary'],
             'rule' => 'calendar_events with chronology depth 3+ must have parent_event_id',
         ];
     }
