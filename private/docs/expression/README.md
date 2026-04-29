@@ -186,6 +186,117 @@ A predicted beat must never become truth unless explicitly accepted/applied.
 
 7. Drift between prediction and observation should be audited, not erased.
 
+### Implementation — Drift Classification Layer
+
+Drift classification is performed in the PHP framework layer using:
+
+```text
+private/framework/theme/theme_taxonomy.php
+```
+Core function:
+```php
+classifyThemeMatch(PDO $pdo, string $predictedThemeId, string $actualThemeId)
+
+```
+
+This function returns:
+
+* EXACT_MATCH
+* NEAR_MATCH
+* DIVERGENCE
+
+with an associated score multiplier:
+
+* EXACT_MATCH → 1.00
+* NEAR_MATCH → 0.50
+* DIVERGENCE → 0.00
+  
+### Cluster-Based Similarity (NEAR_MATCH)
+
+NEAR_MATCH is determined via theme cluster membership:
+```text
+theme_cluster_membership
+theme_clusters
+```
+Rule:
+
+Two themes are considered a NEAR_MATCH if they share at least one active cluster.
+
+Example:
+```text
+entity_theme_control_under_activation
+entity_theme_stability_transfer
+→ both in theme_cluster_control_dynamics
+→ NEAR_MATCH
+
+```
+### Separation of Concerns (CRITICAL)
+
+Drift classification MUST follow these boundaries:
+
+DB:
+
+* Stores theme clusters and memberships only
+
+Framework (PHP):
+
+* Computes match classification (EXACT / NEAR / DIVERGENCE)
+
+Predictive layer:
+
+* Generates predicted themes
+* MUST NOT evaluate accuracy
+
+Observation layer:
+
+* Stores actual applied themes
+* Remains the source of truth
+### Drift Auditor (Framework Layer)
+
+Drift evaluation is performed via:
+```text
+private/framework/expression/character_prediction_drift_auditor.php
+```
+Function:
+```php
+auditCharacterPredictionDrift(PDO $pdo, predicted, actual)
+```
+Returns:
+```json
+{
+"audit_category": "EXACT_MATCH | NEAR_MATCH | DIVERGENCE",
+"score_multiplier": 1.00 | 0.50 | 0.00
+}
+```
+### System Role Summary
+
+character_next_beat_suggester.php
+→ generates predictions
+
+narrative_theme_observations
+→ stores actual outcomes
+
+character_prediction_drift_auditor.php
+→ compares prediction vs outcome
+
+theme_taxonomy.php
+→ defines similarity rules
+
+### Final Rule
+
+Drift is not an error condition.
+
+Drift is a signal used to:
+
+improve prediction weighting
+detect narrative branching
+identify new structural patterns
+
+Drift must never modify:
+
+observed facts
+applied themes
+historical sequences
 
 ## 🔗 Event → Projection → Theme → Observation (CRITICAL LINKING SEQUENCE)
 
