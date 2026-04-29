@@ -56,7 +56,7 @@ $bookCode = trim($bookCode);
 $weekLabel = trim($weekLabel);
 $realDateStartId = trim($realDateStartId);
 
-$pdo = makePdo();
+$pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
