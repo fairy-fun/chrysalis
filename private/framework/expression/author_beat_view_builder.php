@@ -134,10 +134,19 @@ function buildAuthorBeatView(
         // --- DRIFT RANK ASSIGNMENT ---
         foreach ($rankedNextBeats as $i => &$beat) {
             $beat['drift_adjusted_rank'] = $i + 1;
+            $beat['is_high_tension'] = false;
+            $beat['tension_label'] = 'LOW_TENSION';
 
-            // Optional: disagreement signal
             if (isset($beat['raw_score_rank'], $beat['drift_adjusted_rank'])) {
                 $beat['rank_delta'] = $beat['raw_score_rank'] - $beat['drift_adjusted_rank'];
+                $beat['rank_delta_abs'] = abs($beat['rank_delta']);
+
+                if ($beat['rank_delta_abs'] >= 2) {
+                    $beat['is_high_tension'] = true;
+                    $beat['tension_label'] = $beat['rank_delta'] > 0
+                        ? 'RARE_BUT_ALIGNED'
+                        : 'COMMON_BUT_MISALIGNED';
+                }
             }
         }
         unset($beat);
