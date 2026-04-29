@@ -83,6 +83,21 @@ function buildProseTrainingView(
 
     $annotations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $proseText = $draft['prose_body'];
+
+    foreach ($annotations as &$annotation) {
+        if ($annotation['span_start'] !== null && $annotation['span_end'] !== null) {
+            $annotation['span_text'] = mb_substr(
+                $proseText,
+                $annotation['span_start'],
+                $annotation['span_end'] - $annotation['span_start'] + 1
+            );
+        } else {
+            $annotation['span_text'] = null;
+        }
+    }
+    unset($annotation);
+
     $characters = [];
     $voiceLabels = [];
     $limbicLabels = [];
