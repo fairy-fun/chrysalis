@@ -1,4 +1,4 @@
-📘 SYSTEM DOCUMENT — Calendar ↔ Projection ↔ Expression Mapping
+# 📘 SYSTEM DOCUMENT — Calendar ↔ Projection ↔ Expression Mapping
 Purpose
 
 Define how narrative time (calendar), narrative scope (projections/books), and internal state (expression pipeline) interact.

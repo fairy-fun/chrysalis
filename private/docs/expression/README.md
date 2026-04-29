@@ -187,3 +187,194 @@ A predicted beat must never become truth unless explicitly accepted/applied.
 7. Drift between prediction and observation should be audited, not erased.
 
 
+## 🔗 Event → Projection → Theme → Observation (CRITICAL LINKING SEQUENCE)
+
+This section defines the required steps to make a calendar event visible to the narrative system.
+
+If any step is skipped, the event will not appear in author views and will not affect prediction.
+
+### 🧱 Mental Model (Non-Negotiable)
+
+For an event to fully exist in the narrative system, it must satisfy:
+
+calendar_event
+→ participant link (character)
+→ projection membership (book)
+→ theme fact (meaning)
+→ narrative observation (learning)
+
+All four must exist.
+
+### ✅ REQUIRED STEPS (FOR EVERY EVENT)
+1. Event Exists (Given)
+   calendar_events
+
+Example:
+```text
+calendar_event:142
+chronology_address: 1.6.2.2.2
+```
+2. Character Participation (REQUIRED FOR VISIBILITY)
+
+The event must be linked to the character:
+```sql
+INSERT INTO calendar_event_participants (
+entity_id,
+role_id,
+event_id,
+created_at,
+subsequence_index
+)
+VALUES (
+'CHAR-MAIN-001',
+'<valid_role_id>',
+<event_id>,
+NOW(),
+0
+);
+```
+⚠️ If this is missing:
+
+Event will NOT appear in suggested_beats
+3. Projection Membership (REQUIRED FOR FILTERING)
+
+This is the step that was missing and broke visibility.
+```sql
+INSERT INTO calendar_event_projection_membership (
+calendar_event_id,
+projection_entity_id
+)
+VALUES (
+<event_id>,
+'book_projection_BOOK-001'
+);
+```
+
+⚠️ If this is missing:
+
+Event will NOT appear in author view
+Event will NOT be included in sequence ordering
+Everything looks “correct” but silently fails
+4. Theme Application (MEANING LAYER)
+
+Apply exactly one theme:
+```sql
+INSERT INTO entity_linked_facts (
+subject_entity_id,
+fact_type_id,
+object_entity_id,
+notes,
+source_document
+)
+VALUES (
+'calendar_event:<id>',
+'fact_type_event_theme',
+'<theme_entity_id>',
+'<optional explanation>',
+'<source>'
+);
+```
+
+Example:
+```text
+entity_theme_collective_execution
+```
+
+⚠️ Rules:
+
+One event → one theme
+Do NOT invent new themes casually
+Prefer reuse of existing system states
+5. Narrative Observation (LEARNING LAYER)
+
+This is what powers prediction.
+```sql
+INSERT INTO narrative_theme_observations (
+source_type_id,
+source_entity_id,
+subject_entity_id,
+projection_entity_id,
+theme_entity_id,
+sequence_index,
+confidence,
+sequence_sort_key
+)
+VALUES (
+'source_type_calendar_event',
+'calendar_event:<id>',
+'CHAR-MAIN-001',
+'book_projection_BOOK-001',
+'<theme_entity_id>',
+<sequence_index>,
+1.00,
+'<sequence_sort_key>'
+);
+```
+⚠️ If this is missing:
+
+suggested_next_beats will be EMPTY
+System cannot learn transitions
+🔍 DEBUG CHECK (RUN THIS FIRST IF SOMETHING BREAKS)
+```sql
+SELECT
+ce.id,
+ce.entity_id,
+cep.entity_id AS participant_entity_id,
+cepm.projection_entity_id,
+elf.object_entity_id AS theme_entity_id,
+nto.theme_entity_id AS observation_theme
+FROM calendar_events ce
+LEFT JOIN calendar_event_participants cep
+ON cep.event_id = ce.id
+AND cep.entity_id = 'CHAR-MAIN-001'
+LEFT JOIN calendar_event_projection_membership cepm
+ON cepm.calendar_event_id = ce.id
+AND cepm.projection_entity_id = 'book_projection_BOOK-001'
+LEFT JOIN entity_linked_facts elf
+ON elf.subject_entity_id = ce.entity_id
+AND elf.fact_type_id = 'fact_type_event_theme'
+LEFT JOIN narrative_theme_observations nto
+ON nto.source_entity_id = ce.entity_id
+AND nto.subject_entity_id = 'CHAR-MAIN-001'
+AND nto.projection_entity_id = 'book_projection_BOOK-001'
+WHERE ce.id = <event_id>;
+```
+
+
+✅ SUCCESS CRITERIA
+
+All of these must be NON-NULL:
+
+participant_entity_id
+projection_entity_id
+theme_entity_id
+observation_theme
+
+If any are NULL → that layer is broken.
+
+🧠 IMPORTANT SYSTEM RULES
+DB stores facts only
+Observations enable learning
+Predictions are computed, never stored
+Themes are reused states, not descriptions
+Projection membership is REQUIRED for visibility
+🚨 MOST COMMON FAILURE (WHAT JUST HAPPENED)
+
+Event had:
+
+participant ✅
+theme ✅
+observation ✅
+
+But was missing:
+
+projection membership ❌
+
+Result:
+→ Event completely invisible in author view
+→ No contribution to sequence
+→ Debugging confusion
+
+🔒 FINAL RULE
+
+If an event is not in calendar_event_projection_membership, it does not exist for the narrative system.
