@@ -7,6 +7,8 @@ return [
         '.github/workflows',
         'private/framework/contracts',
         'private/framework/support',
+        'private/framework/procedures',
+        'private/framework/calendar',
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
