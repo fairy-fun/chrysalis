@@ -11,9 +11,12 @@ function create_calendar_event(
     ?int $eventIndex,
     ?int $subeventIndex,
     string $chronologyAddress,
-    ?int $parentEventId
+    ?int $parentEventId = null
 ): array {
-    if (trim($summary) === '') {
+    $summary = trim($summary);
+    $chronologyAddress = trim($chronologyAddress);
+
+    if ($summary === '') {
         throw new InvalidArgumentException('summary must be a non-empty string');
     }
 
@@ -21,28 +24,41 @@ function create_calendar_event(
         throw new InvalidArgumentException('week_index must be a positive integer');
     }
 
-    if (trim($chronologyAddress) === '') {
+    if ($chronologyAddress === '') {
         throw new InvalidArgumentException('chronology_address must be a non-empty string');
     }
 
-    $depth = substr_count($chronologyAddress, '.') + 1;
+    $layerId = resolve_calendar_layer_id_from_chronology_address($chronologyAddress);
 
-    if ($depth > 2 && $parentEventId === null) {
+    $resolvedParentEventId = resolve_calendar_parent_event_id_from_chronology_address(
+        $pdo,
+        $chronologyAddress
+    );
+
+    if ($parentEventId !== null && $parentEventId !== $resolvedParentEventId) {
         throw new InvalidArgumentException(
-            'Non-root calendar events must include parent_event_id'
+            'Provided parent_event_id does not match chronology_address-derived parent_event_id'
         );
     }
 
-    if ($parentEventId !== null) {
-        validate_calendar_event_parent_exists($pdo, $parentEventId);
-    }
+    $parentEventId = $resolvedParentEventId;
 
-    $pdo->beginTransaction();
+    $startedTransaction = false;
 
     try {
+        if (!$pdo->inTransaction()) {
+            $pdo->beginTransaction();
+            $startedTransaction = true;
+        }
+
+        $eventId = next_calendar_event_id($pdo);
+        $entityId = 'calendar_event:' . $eventId;
+
         $stmt = $pdo->prepare(
             "INSERT INTO sxnzlfun_chrysalis.calendar_events (
                 entity_id,
+                layer_id,
+                event_id,
                 summary,
                 week_index,
                 day_index,
@@ -52,7 +68,9 @@ function create_calendar_event(
                 chronology_address,
                 parent_event_id
             ) VALUES (
-                '__pending_calendar_event__',
+                :entity_id,
+                :layer_id,
+                :event_id,
                 :summary,
                 :week_index,
                 :day_index,
@@ -65,31 +83,24 @@ function create_calendar_event(
         );
 
         $stmt->execute([
-            ':summary' => trim($summary),
+            ':entity_id' => $entityId,
+            ':layer_id' => $layerId,
+            ':event_id' => $eventId,
+            ':summary' => $summary,
             ':week_index' => $weekIndex,
             ':day_index' => $dayIndex,
             ':time_index' => $timeIndex,
             ':event_index' => $eventIndex,
             ':subevent_index' => $subeventIndex,
-            ':chronology_address' => trim($chronologyAddress),
+            ':chronology_address' => $chronologyAddress,
             ':parent_event_id' => $parentEventId,
         ]);
 
-        $eventId = (int) $pdo->lastInsertId();
+        $id = (int) $pdo->lastInsertId();
 
-        if ($eventId < 1) {
-            throw new RuntimeException('Failed to read inserted calendar event id');
+        if ($id < 1) {
+            throw new RuntimeException('Failed to read inserted calendar_events.id');
         }
-
-        $stmt = $pdo->prepare(
-            "UPDATE sxnzlfun_chrysalis.calendar_events
-             SET entity_id = CONCAT('calendar_event:', id)
-             WHERE id = :id"
-        );
-
-        $stmt->execute([
-            ':id' => $eventId,
-        ]);
 
         $stmt = $pdo->prepare(
             "SELECT *
@@ -99,7 +110,7 @@ function create_calendar_event(
         );
 
         $stmt->execute([
-            ':id' => $eventId,
+            ':id' => $id,
         ]);
 
         $event = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -108,17 +119,82 @@ function create_calendar_event(
             throw new RuntimeException('Failed to fetch created calendar event');
         }
 
-        $pdo->commit();
+        if ($startedTransaction) {
+            $pdo->commit();
+        }
 
         return $event;
 
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
+        if ($startedTransaction && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
 
         throw $e;
     }
+}
+
+function resolve_calendar_layer_id_from_chronology_address(string $chronologyAddress): string
+{
+    $chronologyAddress = trim($chronologyAddress);
+
+    if ($chronologyAddress === '') {
+        throw new InvalidArgumentException('chronology_address must be a non-empty string');
+    }
+
+    $depth = substr_count($chronologyAddress, '.') + 1;
+
+    return match ($depth) {
+        1 => 'calendar_layer_week',
+        2 => 'calendar_layer_day',
+        3 => 'calendar_layer_time',
+        4 => 'calendar_layer_event',
+        default => throw new InvalidArgumentException(
+            'Invalid chronology_address depth: ' . $chronologyAddress
+        ),
+    };
+}
+
+function resolve_calendar_parent_event_id_from_chronology_address(
+    PDO $pdo,
+    string $chronologyAddress
+): ?int {
+    $chronologyAddress = trim($chronologyAddress);
+
+    if ($chronologyAddress === '') {
+        throw new InvalidArgumentException('chronology_address must be a non-empty string');
+    }
+
+    $parts = explode('.', $chronologyAddress);
+
+    if (count($parts) === 1) {
+        return null;
+    }
+
+    array_pop($parts);
+    $parentChronologyAddress = implode('.', $parts);
+
+    $stmt = $pdo->prepare(
+        "SELECT id
+         FROM sxnzlfun_chrysalis.calendar_events
+         WHERE chronology_address = :chronology_address
+         LIMIT 1"
+    );
+
+    $stmt->execute([
+        ':chronology_address' => $parentChronologyAddress,
+    ]);
+
+    $parentId = $stmt->fetchColumn();
+
+    if ($parentId === false) {
+        throw new RuntimeException(
+            'No parent calendar event found for chronology_address ' . $chronologyAddress .
+            '; expected parent chronology_address ' . $parentChronologyAddress
+        );
+    }
+
+    return (int) $parentId;
 }
 
 function validate_calendar_event_parent_exists(PDO $pdo, int $parentEventId): void
