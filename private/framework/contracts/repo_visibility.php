@@ -44,6 +44,7 @@ return [
         'resolveEntityMeasurements' => 'public_html/pecherie/chill-api/entity/resolve_entity_measurements.php',
         'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
         'createCalendarWeek' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
+        'createCalendarEvent' => 'public_html/pecherie/chill-api/calendar/create_calendar_event.php',
         'listYears' => 'public_html/pecherie/chill-api/reference/list_years.php',
         'listChoreographyTypes' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',
         'listRoutineStatuses' => 'public_html/pecherie/chill-api/reference/list_routine_statuses.php',
