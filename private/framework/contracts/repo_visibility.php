@@ -67,5 +67,6 @@ return [
         'suggestEntityEventThemeLink' => 'public_html/pecherie/chill-api/expression/suggest_entity_event_theme_link.php',
         'applyEntityEventThemeLink' => 'public_html/pecherie/chill-api/expression/apply_entity_event_theme_link.php',
         'resolveProseCalendarTarget' => 'public_html/pecherie/chill-api/prose/resolve_prose_calendar_target.php',
+        'createProseDraft' => 'public_html/pecherie/chill-api/prose/create_prose_draft.php',
     ],
 ];
