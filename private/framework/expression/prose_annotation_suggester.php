@@ -92,3 +92,52 @@ function suggestProseAnnotations(
         'suggestions' => $suggestions,
     ];
 }
+
+function reviewProseAnnotationSuggestions(
+    PDO $pdo,
+    string $proseEntityId,
+    ?string $subjectEntityId = null
+): array {
+    $suggestions = suggestProseAnnotations($pdo, $proseEntityId, $subjectEntityId);
+
+    $stmt = $pdo->prepare("
+        SELECT
+            annotation_type_id,
+            annotation_value_id,
+            span_start,
+            span_end
+        FROM sxnzlfun_chrysalis.prose_annotation_spans
+        WHERE prose_entity_id = :prose_entity_id
+    ");
+
+    $stmt->execute([
+        ':prose_entity_id' => $proseEntityId,
+    ]);
+
+    $existing = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $existingSet = [];
+    foreach ($existing as $row) {
+        $key = implode('|', [
+            $row['annotation_type_id'],
+            $row['annotation_value_id'],
+            $row['span_start'] ?? 'null',
+            $row['span_end'] ?? 'null',
+        ]);
+        $existingSet[$key] = true;
+    }
+
+    foreach ($suggestions['suggestions'] as &$s) {
+        $key = implode('|', [
+            $s['annotation_type_id'],
+            $s['annotation_value_id'],
+            $s['span_start'] ?? 'null',
+            $s['span_end'] ?? 'null',
+        ]);
+
+        $s['already_applied'] = isset($existingSet[$key]);
+    }
+    unset($s);
+
+    return $suggestions;
+}
