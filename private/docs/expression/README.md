@@ -378,3 +378,206 @@ Result:
 🔒 FINAL RULE
 
 If an event is not in calendar_event_projection_membership, it does not exist for the narrative system.
+
+## Theme Creation and Reuse (CRITICAL ONTOLOGY RULES)
+
+This section defines how to decide whether a prose beat should reuse an existing theme or create a new theme entity.
+
+Most beats should reuse existing themes. New themes are rare. Do not create a new theme just because the prose contains a new image, new partner, new dance figure, or higher pressure.
+
+### Mental Model
+
+Themes are reusable narrative states.
+
+Themes are not:
+- prose summaries
+- choreography descriptions
+- one-off metaphors
+- mood labels
+- micro-actions
+
+A theme should describe a repeatable state or structural transition that can appear again elsewhere in the story.
+
+### Default Rule: Reuse Before Creating
+
+Before creating a new theme, search existing themes:
+
+```sql
+SELECT *
+FROM sxnzlfun_chrysalis.entities
+WHERE id LIKE 'entity_theme_%'
+ORDER BY id;
+```
+
+Also search by likely fragments:
+
+```sql
+SELECT id
+FROM sxnzlfun_chrysalis.entities
+WHERE id LIKE 'entity_theme_%control%'
+   OR id LIKE 'entity_theme_%authority%'
+   OR id LIKE 'entity_theme_%execution%'
+   OR id LIKE 'entity_theme_%engagement%'
+   OR id LIKE 'entity_theme_%evaluation%'
+ORDER BY id;
+```
+
+If an existing theme captures the state, reuse it.
+
+### When Reuse Is Correct
+
+Reuse the existing theme when the prose changes pressure but not state.
+
+Examples:
+- execution continues under surveillance
+- execution continues under partner anxiety
+- execution continues under transition risk
+- authority is present but does not intervene
+- social judgement is visible but does not change behaviour
+- Shay compensates inside the current system without changing strategy
+
+Example from the 1.6.2.2 sequence:
+
+Several beats introduced surveillance, fragility, compensation, and transition risk. They still reused:
+
+```text
+entity_theme_collective_execution
+```
+
+Reason: the formation kept holding. No fracture, intervention, or strategy change had occurred.
+
+### When a New Theme Is Justified
+
+Create a new theme only when the state changes.
+
+A state change usually includes at least one of the following:
+- visible breakdown or coordination failure
+- authority intervention or override
+- social evaluation becoming active consequence rather than background pressure
+- Shay changing strategy or role inside the system
+- control or stability transferring between actors
+- a new repeatable structural pattern appearing for the first time
+
+Example:
+
+A partner change where Shay stops acting as the stabiliser and has to yield into Everett as the new anchor may justify:
+
+```text
+entity_theme_stability_transfer
+```
+
+Reason: this is not merely continued execution. Stability/control transfers between actors. That is a repeatable structural pattern.
+
+### Required DB Shape for Theme Entities
+
+The `entities` table currently requires only:
+
+```text
+id
+entity_type_id
+```
+
+Existing theme entities use:
+
+```text
+entity_type_theme
+```
+
+Create a new theme entity like this:
+
+```sql
+INSERT INTO sxnzlfun_chrysalis.entities (
+    id,
+    entity_type_id
+)
+VALUES (
+    '<entity_theme_new_theme_id>',
+    'entity_type_theme'
+);
+```
+
+Example:
+
+```sql
+INSERT INTO sxnzlfun_chrysalis.entities (
+    id,
+    entity_type_id
+)
+VALUES (
+    'entity_theme_stability_transfer',
+    'entity_type_theme'
+);
+```
+
+### Then Apply the New Theme to the Event
+
+Creating the theme entity is not enough.
+
+The event still needs the normal four-part linkage:
+
+1. participant link
+2. projection membership
+3. event theme fact
+4. narrative observation
+
+Example event theme fact:
+
+```sql
+INSERT INTO sxnzlfun_chrysalis.entity_linked_facts (
+    subject_entity_id,
+    fact_type_id,
+    object_entity_id,
+    notes,
+    source_document
+)
+VALUES (
+    'calendar_event:<id>',
+    'fact_type_event_theme',
+    'entity_theme_stability_transfer',
+    'Derived from prose: partner transition shifts stability/control between actors.',
+    'prose_subbeat_<chronology_address>'
+);
+```
+
+Example observation:
+
+```sql
+INSERT INTO sxnzlfun_chrysalis.narrative_theme_observations (
+    source_type_id,
+    source_entity_id,
+    subject_entity_id,
+    projection_entity_id,
+    theme_entity_id,
+    sequence_index,
+    confidence,
+    sequence_sort_key
+)
+VALUES (
+    'source_type_calendar_event',
+    'calendar_event:<id>',
+    'CHAR-MAIN-001',
+    'book_projection_BOOK-001',
+    'entity_theme_stability_transfer',
+    <sequence_index>,
+    1.00,
+    '<sequence_sort_key>'
+);
+```
+
+### Important Failure Mode
+
+If the new theme entity does not exist before inserting into `narrative_theme_observations`, the insert will fail with a foreign key error:
+
+```text
+Cannot add or update a child row: foreign key constraint fails ... theme_entity_id REFERENCES entities(id)
+```
+
+This is correct. The FK is preventing an unregistered theme from entering the learning layer.
+
+Fix by creating the theme entity first, using `entity_type_theme`, then rerun the event fact and observation inserts.
+
+### Final Rule
+
+Do not create a theme because a beat is interesting.
+
+Create a theme only when the system state changes in a reusable way.
