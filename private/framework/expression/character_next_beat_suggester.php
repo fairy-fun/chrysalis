@@ -10,6 +10,8 @@ function suggestNextCharacterBeat(
         SELECT
             candidate.theme_entity_id,
             tal.beat_label,
+            tcm.cluster_id AS primary_cluster_id,
+            tc.label AS primary_cluster_label,
             SUM(candidate.weighted_score) AS score,
             SUM(candidate.subject_hits) AS subject_hits,
             SUM(candidate.global_hits) AS global_hits
@@ -54,9 +56,17 @@ function suggestNextCharacterBeat(
         ) candidate
         LEFT JOIN sxnzlfun_chrysalis.theme_author_labels tal
             ON tal.theme_entity_id = candidate.theme_entity_id
+        LEFT JOIN sxnzlfun_chrysalis.theme_cluster_membership tcm
+            ON tcm.theme_entity_id = candidate.theme_entity_id
+           AND tcm.is_primary = 1
+        LEFT JOIN sxnzlfun_chrysalis.theme_clusters tc
+            ON tc.id = tcm.cluster_id
+           AND tc.is_active = 1
         GROUP BY
             candidate.theme_entity_id,
-            tal.beat_label
+            tal.beat_label,
+            tcm.cluster_id,
+            tc.label
         ORDER BY
             score DESC,
             subject_hits DESC,
