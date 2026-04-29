@@ -170,6 +170,15 @@ Predictions must be stored separately from applied facts.
 
 A predicted beat must never become truth unless explicitly accepted/applied.
 
+### Implementation — Drift Classification Layer
+
+Drift classification is performed in PHP, not SQL.
+
+Core taxonomy helper:
+
+```text
+private/framework/theme/theme_taxonomy.php
+```
 ## LOCKED RULES
 
 1. Dream journals are source artefacts, not exceptions.
