@@ -50,6 +50,7 @@ return [
         'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
         'createCalendarWeek' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
         'createCalendarDay' => 'public_html/pecherie/chill-api/calendar/create_calendar_day.php',
+        'createCalendarTime' => 'public_html/pecherie/chill-api/calendar/create_calendar_time.php',
         'createCalendarEvent' => 'public_html/pecherie/chill-api/calendar/create_calendar_event.php',
         'listYears' => 'public_html/pecherie/chill-api/reference/list_years.php',
         'listChoreographyTypes' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',

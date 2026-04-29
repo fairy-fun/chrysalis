@@ -90,6 +90,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'createCalendarTime' => [
+            'handler' => 'public_html/pecherie/chill-api/calendar/create_calendar_time.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'createCalendarEvent' => [
             'handler' => 'public_html/pecherie/chill-api/calendar/create_calendar_event.php',
             'behaviour_tested' => false,
