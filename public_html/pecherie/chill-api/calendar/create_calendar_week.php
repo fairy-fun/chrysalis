@@ -20,10 +20,6 @@ $weekIndex = $body['week_index'] ?? null;
 $weekLabel = $body['week_label'] ?? null;
 $realDateStartId = $body['real_date_start_id'] ?? null;
 
-/**
- * Validation — mirror existing API style exactly
- */
-
 if (!is_string($bookCode) || trim($bookCode) === '') {
     respond(400, [
         'status' => 'error',
@@ -60,7 +56,7 @@ $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
-    $result = create_calendar_week_for_book(
+    $week = create_calendar_week_for_book(
         $pdo,
         $bookCode,
         $weekIndex,
@@ -71,9 +67,7 @@ try {
     respond(200, [
         'status' => 'ok',
         'database' => $expectedDatabase,
-        'book_code' => $bookCode,
-        'week_index' => $weekIndex,
-        'result' => $result,
+        'week' => $week,
     ]);
 
 } catch (InvalidArgumentException $e) {
@@ -84,7 +78,7 @@ try {
     ]);
 
 } catch (RuntimeException $e) {
-    respond(409, [ // conflict / invariant violation
+    respond(409, [
         'status' => 'error',
         'error' => $e->getMessage(),
         'database' => $expectedDatabase,
