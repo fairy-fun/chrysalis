@@ -8,13 +8,25 @@ function buildAuthorBeatView(
     PDO $pdo,
     string $characterEntityId,
     ?string $projectionEntityId,
-    string $mode
+    string $mode,
+    string $authorMode = 'STABLE'
 ): array {
     if (!in_array($mode, ['READ_BASELINE', 'PROPOSE_FORWARD'], true)) {
         return [
             'status' => 'error',
             'message' => 'Invalid mode',
             'allowed_modes' => ['READ_BASELINE', 'PROPOSE_FORWARD'],
+        ];
+    }
+
+    $authorMode = strtoupper($authorMode);
+    $allowedAuthorModes = ['STABLE', 'EXPLORATORY', 'DISRUPTIVE'];
+
+    if (!in_array($authorMode, $allowedAuthorModes, true)) {
+        return [
+            'status' => 'error',
+            'message' => 'Invalid author mode',
+            'allowed_author_modes' => $allowedAuthorModes,
         ];
     }
 
@@ -64,6 +76,7 @@ function buildAuthorBeatView(
         'exploratory' => null,
         'disruptive' => null,
     ];
+    $selectedRecommendedPath = null;
 
     // --- RAW ORDER CAPTURE ---
     $rawOrderedBeats = $rankedNextBeats;
@@ -191,6 +204,10 @@ function buildAuthorBeatView(
         }
 
         $recommendedPaths['disruptive'] = $highTensionCandidates[0] ?? null;
+
+        $selectedPathKey = strtolower($authorMode);
+        $selectedRecommendedPath = $recommendedPaths[$selectedPathKey]
+            ?? $recommendedPaths['stable'];
     }
 
     return [
@@ -198,6 +215,7 @@ function buildAuthorBeatView(
         'character_entity_id' => $characterEntityId,
         'projection_entity_id' => $projectionEntityId,
         'mode' => $mode,
+        'author_mode' => $authorMode,
         'sequence_status' => 'pass',
 
         'observed_beats' => $mode === 'READ_BASELINE'
@@ -223,6 +241,10 @@ function buildAuthorBeatView(
                 'exploratory' => null,
                 'disruptive' => null,
             ],
+
+        'selected_recommended_path' => $mode === 'PROPOSE_FORWARD'
+            ? $selectedRecommendedPath
+            : null,
 
         'drift_audit' => $mode === 'PROPOSE_FORWARD'
             ? $driftAudit
