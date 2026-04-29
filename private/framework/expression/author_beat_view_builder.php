@@ -58,6 +58,7 @@ function buildAuthorBeatView(
 
     $driftAudit = [];
     $rankedNextBeats = $nextBeatResult['suggestions'] ?? [];
+    $highTensionCandidates = [];
 
     // --- RAW ORDER CAPTURE ---
     $rawOrderedBeats = $rankedNextBeats;
@@ -150,6 +151,30 @@ function buildAuthorBeatView(
             }
         }
         unset($beat);
+
+        $highTensionCandidates = array_values(array_filter(
+            $rankedNextBeats,
+            static fn (array $beat): bool => !empty($beat['is_high_tension'])
+        ));
+
+        usort($highTensionCandidates, static function (array $left, array $right): int {
+            $leftDelta = isset($left['rank_delta_abs']) ? (int) $left['rank_delta_abs'] : 0;
+            $rightDelta = isset($right['rank_delta_abs']) ? (int) $right['rank_delta_abs'] : 0;
+
+            if ($leftDelta !== $rightDelta) {
+                return $rightDelta <=> $leftDelta;
+            }
+
+            $leftAdjustedScore = isset($left['drift_adjusted_score'])
+                ? (float) $left['drift_adjusted_score']
+                : 0.0;
+
+            $rightAdjustedScore = isset($right['drift_adjusted_score'])
+                ? (float) $right['drift_adjusted_score']
+                : 0.0;
+
+            return $rightAdjustedScore <=> $leftAdjustedScore;
+        });
     }
 
     return [
@@ -169,6 +194,10 @@ function buildAuthorBeatView(
 
         'suggested_next_beats' => $mode === 'PROPOSE_FORWARD'
             ? $rankedNextBeats
+            : [],
+
+        'high_tension_candidates' => $mode === 'PROPOSE_FORWARD'
+            ? $highTensionCandidates
             : [],
 
         'drift_audit' => $mode === 'PROPOSE_FORWARD'
