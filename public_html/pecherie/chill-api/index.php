@@ -126,6 +126,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/create_calendar_week.php';
         break;
 
+    case 'createCalendarDay':
+        require __DIR__ . '/calendar/create_calendar_day.php';
+        break;
+
     case 'createCalendarEvent':
         require __DIR__ . '/calendar/create_calendar_event.php';
         break;
