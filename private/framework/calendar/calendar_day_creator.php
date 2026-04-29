@@ -44,6 +44,8 @@ function resolve_parent_week_for_calendar_day(
         SELECT
             ce.id,
             ce.entity_id,
+            ce.layer_id,
+            ce.week_index,
             ce.chronology_address,
             COALESCE(ce.projection_entity_id, cepm.projection_entity_id) AS projection_entity_id
         FROM sxnzlfun_chrysalis.calendar_events ce
@@ -66,6 +68,14 @@ function resolve_parent_week_for_calendar_day(
 
     if (!isset($row['id']) || (int) $row['id'] <= 0) {
         throw new RuntimeException('Invalid parent week: missing calendar_events.id');
+    }
+
+    if (($row['layer_id'] ?? null) !== 'calendar_layer_week') {
+        throw new RuntimeException('Parent is not a week');
+    }
+
+    if ($row['week_index'] === null) {
+        throw new RuntimeException('Parent week missing week_index');
     }
 
     if (!isset($row['chronology_address']) || trim((string) $row['chronology_address']) === '') {
@@ -139,6 +149,7 @@ function create_calendar_day(
 
     $parentWeek = resolve_parent_week_for_calendar_day($pdo, $parentWeekEntityId);
     $weekCalendarEventId = (int) $parentWeek['id'];
+    $weekIndex = (int) $parentWeek['week_index'];
     $parentChronologyAddress = trim((string) $parentWeek['chronology_address']);
     $projectionEntityId = trim((string) $parentWeek['projection_entity_id']);
 
@@ -187,7 +198,7 @@ function create_calendar_day(
                 'calendar_layer_day',
                 :event_id,
                 :summary,
-                NULL,
+                :week_index,
                 :day_index,
                 NULL,
                 NULL,
@@ -204,6 +215,7 @@ function create_calendar_day(
             ':projection_entity_id' => $projectionEntityId,
             ':event_id' => $eventId,
             ':summary' => $dayLabel,
+            ':week_index' => $weekIndex,
             ':day_index' => $dayIndex,
             ':chronology_address' => $chronologyAddress,
             ':parent_event_id' => $weekCalendarEventId,
