@@ -8,8 +8,8 @@ function count_bad_calendar_event_links(PDO $pdo): int
         'SELECT COUNT(*)
          FROM sxnzlfun_chrysalis.calendar_events ce
          LEFT JOIN sxnzlfun_chrysalis.entities e
-           ON e.id = ce.subject_entity_id
-         WHERE ce.subject_entity_id IS NULL
+           ON e.id = ce.entity_id
+         WHERE ce.entity_id IS NULL
             OR e.id IS NULL
             OR e.entity_type_id <> "entity_type_calendar_event"'
     );
@@ -48,7 +48,7 @@ function validate_event_graph_identity_contract(PDO $pdo): void
     if ($badCalendarEventLinks > 0 || $badEventEntities > 0) {
         throw new RuntimeException(
             'Event graph identity contract violated: ' .
-            'calendar_events.subject_entity_id must resolve to entities.id ' .
+            'calendar_events.entity_id must resolve to entities.id ' .
             'with entity_type_calendar_event, and entity_type_event ' .
             'must not be in active use.'
         );
