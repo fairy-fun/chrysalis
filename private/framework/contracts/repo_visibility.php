@@ -7,8 +7,6 @@ return [
         '.github/workflows',
         'private/framework/contracts',
         'private/framework/support',
-        'private/framework/procedures',
-        'private/framework/calendar',
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
@@ -22,6 +20,8 @@ return [
     'visible_files' => [
         'private/framework/procedures/procedure_registry_reader.php',
         'private/framework/procedures/procedure_source_inspector.php',
+        'private/framework/procedures/calendar_event_id.php',
+        'private/framework/calendar/calendar_week_creator.php',
         'private/framework/directives/directive_text.php',
         'private/framework/directives/directive_validator.php',
         'public_html/pecherie/chill-api/index.php',
