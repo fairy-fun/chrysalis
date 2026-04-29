@@ -28,6 +28,15 @@ function create_calendar_event(
         throw new InvalidArgumentException('chronology_address must be a non-empty string');
     }
 
+    validate_calendar_indices_match_chronology_address(
+        $weekIndex,
+        $dayIndex,
+        $timeIndex,
+        $eventIndex,
+        $subeventIndex,
+        $chronologyAddress
+    );
+
     $layerId = resolve_calendar_layer_id_from_chronology_address($chronologyAddress);
 
     $resolvedParentEventId = resolve_calendar_parent_event_id_from_chronology_address(
@@ -134,15 +143,72 @@ function create_calendar_event(
     }
 }
 
-function resolve_calendar_layer_id_from_chronology_address(string $chronologyAddress): string
-{
+function validate_calendar_indices_match_chronology_address(
+    int $weekIndex,
+    ?int $dayIndex,
+    ?int $timeIndex,
+    ?int $eventIndex,
+    ?int $subeventIndex,
+    string $chronologyAddress
+): void {
     $chronologyAddress = trim($chronologyAddress);
 
     if ($chronologyAddress === '') {
         throw new InvalidArgumentException('chronology_address must be a non-empty string');
     }
 
-    $depth = substr_count($chronologyAddress, '.') + 1;
+    $rawParts = explode('.', $chronologyAddress);
+
+    foreach ($rawParts as $part) {
+        if ($part === '' || !ctype_digit($part)) {
+            throw new InvalidArgumentException(
+                'chronology_address must contain only positive integer parts separated by dots'
+            );
+        }
+
+        if ((int) $part < 1) {
+            throw new InvalidArgumentException(
+                'chronology_address parts must be positive integers'
+            );
+        }
+    }
+
+    if (count($rawParts) > 4) {
+        throw new InvalidArgumentException(
+            'Invalid chronology_address depth: ' . $chronologyAddress
+        );
+    }
+
+    $parts = array_map('intval', $rawParts);
+
+    $expected = [
+        $weekIndex,
+        $dayIndex,
+        $timeIndex,
+        $eventIndex,
+        $subeventIndex,
+    ];
+
+    foreach ($parts as $i => $part) {
+        if ($expected[$i] !== $part) {
+            throw new InvalidArgumentException(
+                'Calendar indices do not match chronology_address'
+            );
+        }
+    }
+
+    for ($i = count($parts); $i < count($expected); $i++) {
+        if ($expected[$i] !== null) {
+            throw new InvalidArgumentException(
+                'Calendar index is populated beyond chronology_address depth'
+            );
+        }
+    }
+}
+
+function resolve_calendar_layer_id_from_chronology_address(string $chronologyAddress): string
+{
+    $depth = substr_count(trim($chronologyAddress), '.') + 1;
 
     return match ($depth) {
         1 => 'calendar_layer_week',
@@ -160,11 +226,6 @@ function resolve_calendar_parent_event_id_from_chronology_address(
     string $chronologyAddress
 ): ?int {
     $chronologyAddress = trim($chronologyAddress);
-
-    if ($chronologyAddress === '') {
-        throw new InvalidArgumentException('chronology_address must be a non-empty string');
-    }
-
     $parts = explode('.', $chronologyAddress);
 
     if (count($parts) === 1) {
@@ -195,24 +256,4 @@ function resolve_calendar_parent_event_id_from_chronology_address(
     }
 
     return (int) $parentId;
-}
-
-function validate_calendar_event_parent_exists(PDO $pdo, int $parentEventId): void
-{
-    $stmt = $pdo->prepare(
-        "SELECT 1
-         FROM sxnzlfun_chrysalis.calendar_events
-         WHERE id = :id
-         LIMIT 1"
-    );
-
-    $stmt->execute([
-        ':id' => $parentEventId,
-    ]);
-
-    if ($stmt->fetchColumn() === false) {
-        throw new RuntimeException(
-            'Invalid parent_event_id: no matching calendar_events.id = ' . $parentEventId
-        );
-    }
 }

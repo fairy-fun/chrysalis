@@ -5,6 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
+require_once __DIR__ . '/../../../../private/framework/procedures/calendar_event_id.php';
 require_once __DIR__ . '/../../../../private/framework/calendar/calendar_event_creator.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -91,6 +92,17 @@ $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
+    $layerId = $body['layer_id'] ?? null;
+
+    if (!is_string($layerId) || trim($layerId) === '') {
+        respond(400, [
+            'status' => 'error',
+            'error' => 'layer_id must be a non-empty string',
+        ]);
+    }
+
+    $layerId = trim($layerId);
+
     $event = create_calendar_event(
         $pdo,
         $summary,
@@ -100,7 +112,8 @@ try {
         $eventIndex,
         $subeventIndex,
         $chronologyAddress,
-        $parentEventId
+        $parentEventId,
+        $layerId
     );
 
     respond(200, [
