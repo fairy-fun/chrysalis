@@ -49,6 +49,10 @@ function resolve_parent_day_for_calendar_time(
         );
     }
 
+    if (!isset($row['id']) || (int) $row['id'] <= 0) {
+        throw new RuntimeException('Invalid parent day: missing calendar_events.id');
+    }
+
     if (($row['layer_id'] ?? null) !== 'calendar_layer_day') {
         throw new RuntimeException('Parent is not a day');
     }
@@ -104,6 +108,12 @@ function create_calendar_time(
     ?string $timeLabel = null
 ): array {
     $parentDayEntityId = trim($parentDayEntityId);
+
+    $timeLabel = trim((string) ($timeLabel ?? ''));
+
+    if ($timeLabel === '') {
+        $timeLabel = 'Time ' . $timeIndex;
+    }
 
     if ($parentDayEntityId === '') {
         throw new InvalidArgumentException('parent_day_entity_id must be non-empty');
@@ -191,6 +201,10 @@ function create_calendar_time(
 
         $calendarEventId = (int) $pdo->lastInsertId();
 
+        if ($calendarEventId <= 0) {
+            throw new RuntimeException('Failed to create calendar event');
+        }
+
         $membership = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_event_projection_membership (
                 calendar_event_id,
@@ -218,6 +232,10 @@ function create_calendar_time(
         $select->execute([':id' => $calendarEventId]);
 
         $row = $select->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($row)) {
+            throw new RuntimeException('Failed to fetch created calendar time');
+        }
 
         if ($startedTransaction) {
             $pdo->commit();

@@ -19,6 +19,16 @@ $parentDayEntityId = $body['parent_day_entity_id'] ?? null;
 $timeIndex = $body['time_index'] ?? null;
 $timeLabel = $body['time_label'] ?? null;
 
+if ($timeLabel !== null && !is_string($timeLabel)) {
+    respond(400, [
+        'status' => 'error',
+        'error' => 'time_label must be a string when provided',
+    ]);
+}
+
+$parentDayEntityId = is_string($parentDayEntityId) ? trim($parentDayEntityId) : $parentDayEntityId;
+$timeLabel = is_string($timeLabel) ? trim($timeLabel) : null;
+
 if (!is_string($parentDayEntityId) || trim($parentDayEntityId) === '') {
     respond(400, ['status' => 'error', 'error' => 'parent_day_entity_id required']);
 }
@@ -42,6 +52,20 @@ try {
         'status' => 'ok',
         'database' => $expectedDatabase,
         'time' => $time,
+    ]);
+
+} catch (InvalidArgumentException $e) {
+    respond(400, [
+        'status' => 'error',
+        'error' => $e->getMessage(),
+        'database' => $expectedDatabase,
+    ]);
+
+} catch (RuntimeException $e) {
+    respond(409, [
+        'status' => 'error',
+        'error' => $e->getMessage(),
+        'database' => $expectedDatabase,
     ]);
 
 } catch (Throwable $e) {
