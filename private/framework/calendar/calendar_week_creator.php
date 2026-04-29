@@ -47,6 +47,33 @@ function create_calendar_event_entity(PDO $pdo, int $eventId): string
     return $entityId;
 }
 
+function find_calendar_week_for_book(
+    PDO $pdo,
+    string $projectionEntityId,
+    int $weekIndex
+): ?array {
+    $stmt = $pdo->prepare("
+        SELECT ce.*
+        FROM sxnzlfun_chrysalis.calendar_events ce
+        INNER JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
+            ON cepm.calendar_event_id = ce.id
+        WHERE ce.week_index = :week_index
+          AND ce.parent_event_id IS NULL
+          AND ce.layer_id = 'calendar_layer_week'
+          AND cepm.projection_entity_id = :projection_entity_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':week_index' => $weekIndex,
+        ':projection_entity_id' => $projectionEntityId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
 function create_calendar_week_for_book(
     PDO $pdo,
     string $bookCode,
@@ -62,29 +89,17 @@ function create_calendar_week_for_book(
 
     $projectionEntityId = resolve_book_projection_entity_id($bookCode);
 
-    $duplicate = $pdo->prepare("
-        SELECT ce.id
-        FROM sxnzlfun_chrysalis.calendar_events ce
-        INNER JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
-            ON cepm.calendar_event_id = ce.id
-        WHERE ce.week_index = :week_index
-          AND ce.parent_event_id IS NULL
-          AND cepm.projection_entity_id = :projection_entity_id
-        LIMIT 1
-    ");
-
-    $duplicate->execute([
-        ':week_index' => $weekIndex,
-        ':projection_entity_id' => $projectionEntityId,
-    ]);
-
-    if ($duplicate->fetchColumn() !== false) {
-        throw new RuntimeException(
-            "Calendar week already exists for book_code {$bookCode}, week_index {$weekIndex}"
-        );
-    }
-
     $startedTransaction = false;
+
+    $existing = find_calendar_week_for_book(
+        $pdo,
+        $projectionEntityId,
+        $weekIndex
+    );
+
+    if ($existing !== null) {
+        return $existing;
+    }
 
     try {
         if (!$pdo->inTransaction()) {
@@ -185,6 +200,20 @@ function create_calendar_week_for_book(
             $pdo->rollBack();
         }
 
-        throw $e;
+        $existing = find_calendar_week_for_book(
+            $pdo,
+            $projectionEntityId,
+            $weekIndex
+        );
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        throw new RuntimeException(
+            'Failed to create calendar week: ' . $e->getMessage(),
+            0,
+            $e
+        );
     }
 }
