@@ -87,7 +87,7 @@ if ($parentEventId !== null && (!is_int($parentEventId) || $parentEventId < 1)) 
 $summary = trim($summary);
 $chronologyAddress = trim($chronologyAddress);
 
-$pdo = makePdo();
+$pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {

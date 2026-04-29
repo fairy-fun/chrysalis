@@ -131,18 +131,24 @@ function getJsonBody(): array
     return $decoded;
 }
 
-function getDatabaseConfig(): array
+function getDatabaseConfig(string $role = 'read'): array
 {
     $config = getConfig();
 
-    if (!isset($config['db']) || !is_array($config['db'])) {
+    $configKey = match ($role) {
+        'read' => 'db',
+        'write' => 'db_write',
+        default => null,
+    };
+
+    if ($configKey === null || !isset($config[$configKey]) || !is_array($config[$configKey])) {
         respond(500, [
             'status' => 'error',
-            'error' => 'Database configuration is missing',
+            'error' => 'Database configuration is missing for role: ' . $role,
         ]);
     }
 
-    $db = $config['db'];
+    $db = $config[$configKey];
 
     $host = trim((string) ($db['host'] ?? ''));
     $portRaw = $db['port'] ?? null;
@@ -186,9 +192,9 @@ function getDatabaseConfig(): array
     ];
 }
 
-function makePdo(): PDO
+function makePdo(string $role = 'read'): PDO
 {
-    $db = getDatabaseConfig();
+    $db = getDatabaseConfig($role);
 
     $dsn = "mysql:host={$db['host']};dbname={$db['name']};charset={$db['charset']}";
     if ($db['port'] !== null) {
