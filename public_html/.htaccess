@@ -1,3 +1,0 @@
-RewriteEngine On
-RewriteRule ^authorize$ /pecherie/mcp/index.php/authorize [L,QSA]
-RewriteRule ^token$ /pecherie/mcp/index.php/token [L,QSA]
