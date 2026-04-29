@@ -70,6 +70,43 @@ function normalise_create_prose_draft_request(): array
             }
         }
 
+        if (isset($body['annotations']) && is_array($body['annotations'])) {
+            foreach ($body['annotations'] as $index => $annotation) {
+                if (!is_array($annotation)) {
+                    throw new InvalidArgumentException('annotations[' . $index . '] must be an object');
+                }
+
+                foreach (['span_start', 'span_end'] as $spanField) {
+                    if (
+                        isset($body['annotations'][$index][$spanField])
+                        && is_string($body['annotations'][$index][$spanField])
+                    ) {
+                        if (!ctype_digit($body['annotations'][$index][$spanField])) {
+                            throw new InvalidArgumentException('annotations[' . $index . '].' . $spanField . ' must be an integer');
+                        }
+
+                        $body['annotations'][$index][$spanField] = (int) $body['annotations'][$index][$spanField];
+                    }
+                }
+
+                if (
+                    array_key_exists('subject_entity_id', $body['annotations'][$index])
+                    && $body['annotations'][$index]['subject_entity_id'] === ''
+                ) {
+                    $body['annotations'][$index]['subject_entity_id'] = null;
+                }
+
+                foreach (['span_start', 'span_end'] as $spanField) {
+                    if (
+                        array_key_exists($spanField, $body['annotations'][$index])
+                        && $body['annotations'][$index][$spanField] === ''
+                    ) {
+                        $body['annotations'][$index][$spanField] = null;
+                    }
+                }
+            }
+        }
+
         if (array_key_exists('author_entity_id', $body) && $body['author_entity_id'] === '') {
             $body['author_entity_id'] = null;
         }
@@ -106,6 +143,7 @@ try {
         'database' => $expectedDatabase,
         'prose' => $result['prose'],
         'projection' => $result['projection'],
+        'annotations' => $result['annotations'],
     ]);
 
 } catch (InvalidArgumentException $e) {

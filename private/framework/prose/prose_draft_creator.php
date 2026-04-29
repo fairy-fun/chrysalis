@@ -37,6 +37,17 @@ function prose_required_positive_int(array $source, string $key): int
     return $value;
 }
 
+function prose_required_zero_or_positive_int(array $source, string $key): int
+{
+    $value = $source[$key] ?? null;
+
+    if (!is_int($value) || $value < 0) {
+        throw new InvalidArgumentException($key . ' must be a zero-or-positive integer');
+    }
+
+    return $value;
+}
+
 function prose_required_boolean_int(array $source, string $key): int
 {
     $value = $source[$key] ?? null;
@@ -50,16 +61,24 @@ function prose_required_boolean_int(array $source, string $key): int
 
 function prose_entity_exists(PDO $pdo, string $entityId): bool
 {
-    $stmt = $pdo->prepare("\n        SELECT COUNT(*)\n        FROM sxnzlfun_chrysalis.entities\n        WHERE entity_id = :entity_id\n    ");
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.entities
+        WHERE id = :id
+    ");
 
-    $stmt->execute([':entity_id' => $entityId]);
+    $stmt->execute([':id' => $entityId]);
 
     return (int) $stmt->fetchColumn() === 1;
 }
 
 function prose_classval_exists(PDO $pdo, string $classvalId): bool
 {
-    $stmt = $pdo->prepare("\n        SELECT COUNT(*)\n        FROM sxnzlfun_chrysalis.classvals\n        WHERE id = :id\n    ");
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.classvals
+        WHERE id = :id
+    ");
 
     $stmt->execute([':id' => $classvalId]);
 
@@ -68,7 +87,11 @@ function prose_classval_exists(PDO $pdo, string $classvalId): bool
 
 function prose_calendar_target_exists(PDO $pdo, string $targetEntityId): bool
 {
-    $stmt = $pdo->prepare("\n        SELECT COUNT(*)\n        FROM sxnzlfun_chrysalis.calendar_events\n        WHERE entity_id = :entity_id\n    ");
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.calendar_events
+        WHERE entity_id = :entity_id
+    ");
 
     $stmt->execute([':entity_id' => $targetEntityId]);
 
@@ -77,13 +100,16 @@ function prose_calendar_target_exists(PDO $pdo, string $targetEntityId): bool
 
 function prose_draft_entity_exists(PDO $pdo, string $entityId): bool
 {
-    $stmt = $pdo->prepare("\n        SELECT COUNT(*)\n        FROM sxnzlfun_chrysalis.prose_drafts\n        WHERE entity_id = :entity_id\n    ");
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.prose_drafts
+        WHERE entity_id = :entity_id
+    ");
 
     $stmt->execute([':entity_id' => $entityId]);
 
     return (int) $stmt->fetchColumn() > 0;
 }
-
 
 function prose_export_target_exists(
     PDO $pdo,
@@ -106,6 +132,154 @@ function prose_export_target_exists(
     return (int) $stmt->fetchColumn() > 0;
 }
 
+function prose_normalise_annotations(array $body): array
+{
+    if (!array_key_exists('annotations', $body) || $body['annotations'] === null) {
+        return [];
+    }
+
+    if (!is_array($body['annotations'])) {
+        throw new InvalidArgumentException('annotations must be an array');
+    }
+
+    return $body['annotations'];
+}
+
+function prose_body_length(string $proseBody): int
+{
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($proseBody, 'UTF-8');
+    }
+
+    return strlen($proseBody);
+}
+
+function prose_validate_annotation(
+    PDO $pdo,
+    array $annotation,
+    int $index,
+    int $proseLength
+): array {
+    $prefix = 'annotations[' . $index . '].';
+
+    $subjectEntityId = prose_optional_string_or_null($annotation, 'subject_entity_id');
+    $annotationTypeId = prose_required_string($annotation, 'annotation_type_id');
+    $annotationValueId = prose_required_string($annotation, 'annotation_value_id');
+    $sourceTypeId = prose_required_string($annotation, 'source_type_id');
+
+    $hasSpanStart = array_key_exists('span_start', $annotation) && $annotation['span_start'] !== null;
+    $hasSpanEnd = array_key_exists('span_end', $annotation) && $annotation['span_end'] !== null;
+
+    if ($hasSpanStart !== $hasSpanEnd) {
+        throw new InvalidArgumentException($prefix . 'span_start and span_end must both be supplied or both be null');
+    }
+
+    $spanStart = null;
+    $spanEnd = null;
+
+    if ($hasSpanStart && $hasSpanEnd) {
+        $spanStart = prose_required_zero_or_positive_int($annotation, 'span_start');
+        $spanEnd = prose_required_zero_or_positive_int($annotation, 'span_end');
+
+        if ($spanEnd <= $spanStart) {
+            throw new InvalidArgumentException($prefix . 'span_end must be greater than span_start');
+        }
+
+        if ($spanEnd > $proseLength) {
+            throw new InvalidArgumentException($prefix . 'span_end exceeds prose_body length');
+        }
+    }
+
+    if (!prose_classval_exists($pdo, $annotationTypeId)) {
+        throw new InvalidArgumentException($prefix . 'invalid annotation_type_id: ' . $annotationTypeId);
+    }
+
+    if (!prose_classval_exists($pdo, $sourceTypeId)) {
+        throw new InvalidArgumentException($prefix . 'invalid source_type_id: ' . $sourceTypeId);
+    }
+
+    if (!prose_entity_exists($pdo, $annotationValueId)) {
+        throw new InvalidArgumentException($prefix . 'invalid annotation_value_id: ' . $annotationValueId);
+    }
+
+    if ($subjectEntityId !== null && !prose_entity_exists($pdo, $subjectEntityId)) {
+        throw new InvalidArgumentException($prefix . 'invalid subject_entity_id: ' . $subjectEntityId);
+    }
+
+    return [
+        'subject_entity_id' => $subjectEntityId,
+        'annotation_type_id' => $annotationTypeId,
+        'annotation_value_id' => $annotationValueId,
+        'span_start' => $spanStart,
+        'span_end' => $spanEnd,
+        'source_type_id' => $sourceTypeId,
+    ];
+}
+
+function prose_validate_annotations(PDO $pdo, array $annotations, string $proseBody): array
+{
+    $validated = [];
+    $proseLength = prose_body_length($proseBody);
+
+    foreach ($annotations as $index => $annotation) {
+        if (!is_array($annotation)) {
+            throw new InvalidArgumentException('annotations[' . $index . '] must be an object');
+        }
+
+        $validated[] = prose_validate_annotation($pdo, $annotation, (int) $index, $proseLength);
+    }
+
+    return $validated;
+}
+
+function insert_prose_annotations(
+    PDO $pdo,
+    string $proseEntityId,
+    array $annotations
+): int {
+    if ($annotations === []) {
+        return 0;
+    }
+
+    $insert = $pdo->prepare("
+        INSERT INTO sxnzlfun_chrysalis.prose_annotation_spans (
+            prose_entity_id,
+            subject_entity_id,
+            annotation_type_id,
+            annotation_value_id,
+            span_start,
+            span_end,
+            source_type_id
+        ) VALUES (
+            :prose_entity_id,
+            :subject_entity_id,
+            :annotation_type_id,
+            :annotation_value_id,
+            :span_start,
+            :span_end,
+            :source_type_id
+        )
+    ");
+
+    $inserted = 0;
+
+    foreach ($annotations as $annotation) {
+        $insert->execute([
+            ':prose_entity_id' => $proseEntityId,
+            ':subject_entity_id' => $annotation['subject_entity_id'],
+            ':annotation_type_id' => $annotation['annotation_type_id'],
+            ':annotation_value_id' => $annotation['annotation_value_id'],
+            ':span_start' => $annotation['span_start'],
+            ':span_end' => $annotation['span_end'],
+            ':source_type_id' => $annotation['source_type_id'],
+        ]);
+
+        $inserted++;
+    }
+
+    return $inserted;
+}
+
 function create_prose_draft(PDO $pdo, array $body): array
 {
     $entityId = prose_required_string($body, 'entity_id');
@@ -125,6 +299,8 @@ function create_prose_draft(PDO $pdo, array $body): array
     $roleId = prose_required_string($projection, 'role_id');
     $projectionOrder = prose_required_positive_int($projection, 'projection_order');
     $isExportTarget = prose_required_boolean_int($projection, 'is_export_target');
+
+    $annotations = prose_normalise_annotations($body);
 
     if ($isExportTarget === 1 && prose_export_target_exists($pdo, $projectionTypeId, $targetEntityId)) {
         throw new RuntimeException(
@@ -157,6 +333,8 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid author_entity_id: ' . $authorEntityId);
     }
 
+    $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
+
     $startedTransaction = false;
 
     try {
@@ -165,7 +343,21 @@ function create_prose_draft(PDO $pdo, array $body): array
             $startedTransaction = true;
         }
 
-        $insertDraft = $pdo->prepare("\n            INSERT INTO sxnzlfun_chrysalis.prose_drafts (\n                entity_id,\n                title,\n                prose_body,\n                draft_status_id,\n                author_entity_id\n            ) VALUES (\n                :entity_id,\n                :title,\n                :prose_body,\n                :draft_status_id,\n                :author_entity_id\n            )\n        ");
+        $insertDraft = $pdo->prepare("
+            INSERT INTO sxnzlfun_chrysalis.prose_drafts (
+                entity_id,
+                title,
+                prose_body,
+                draft_status_id,
+                author_entity_id
+            ) VALUES (
+                :entity_id,
+                :title,
+                :prose_body,
+                :draft_status_id,
+                :author_entity_id
+            )
+        ");
 
         $insertDraft->execute([
             ':entity_id' => $entityId,
@@ -181,7 +373,23 @@ function create_prose_draft(PDO $pdo, array $body): array
             throw new RuntimeException('Failed to create prose draft');
         }
 
-        $insertProjection = $pdo->prepare("\n            INSERT INTO sxnzlfun_chrysalis.prose_projections (\n                prose_draft_id,\n                projection_type_id,\n                target_entity_id,\n                role_id,\n                projection_order,\n                is_export_target\n            ) VALUES (\n                :prose_draft_id,\n                :projection_type_id,\n                :target_entity_id,\n                :role_id,\n                :projection_order,\n                :is_export_target\n            )\n        ");
+        $insertProjection = $pdo->prepare("
+            INSERT INTO sxnzlfun_chrysalis.prose_projections (
+                prose_draft_id,
+                projection_type_id,
+                target_entity_id,
+                role_id,
+                projection_order,
+                is_export_target
+            ) VALUES (
+                :prose_draft_id,
+                :projection_type_id,
+                :target_entity_id,
+                :role_id,
+                :projection_order,
+                :is_export_target
+            )
+        ");
 
         $insertProjection->execute([
             ':prose_draft_id' => $proseDraftId,
@@ -191,6 +399,8 @@ function create_prose_draft(PDO $pdo, array $body): array
             ':projection_order' => $projectionOrder,
             ':is_export_target' => $isExportTarget,
         ]);
+
+        $insertedAnnotations = insert_prose_annotations($pdo, $entityId, $validatedAnnotations);
 
         if ($startedTransaction) {
             $pdo->commit();
@@ -205,6 +415,9 @@ function create_prose_draft(PDO $pdo, array $body): array
                 'target_entity_id' => $targetEntityId,
                 'projection_type_id' => $projectionTypeId,
                 'role_id' => $roleId,
+            ],
+            'annotations' => [
+                'inserted' => $insertedAnnotations,
             ],
         ];
 
