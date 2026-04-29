@@ -25,11 +25,11 @@ function suggestNextCharacterBeat(
                AND nto2.projection_entity_id <=> nto1.projection_entity_id
                AND nto2.sequence_index > nto1.sequence_index
                AND nto2.sequence_index <= nto1.sequence_index + 3
-            WHERE nto1.subject_entity_id = :subject_entity_id
-              AND nto1.theme_entity_id = :current_theme_entity_id
+            WHERE nto1.subject_entity_id = :subject_entity_id_subject
+              AND nto1.theme_entity_id = :current_theme_entity_id_subject
               AND (
-                    :projection_entity_id IS NULL
-                    OR nto1.projection_entity_id = :projection_entity_id
+                    :projection_entity_id_subject IS NULL
+                    OR nto1.projection_entity_id = :projection_entity_id_subject_value
                   )
             GROUP BY nto2.theme_entity_id
 
@@ -44,11 +44,11 @@ function suggestNextCharacterBeat(
             JOIN sxnzlfun_chrysalis.narrative_theme_observations nto2
                 ON nto2.sequence_index > nto1.sequence_index
                AND nto2.sequence_index <= nto1.sequence_index + 3
-            WHERE nto1.theme_entity_id = :current_theme_entity_id
-              AND nto1.subject_entity_id <> :subject_entity_id
+            WHERE nto1.theme_entity_id = :current_theme_entity_id_global
+              AND nto1.subject_entity_id <> :subject_entity_id_global
               AND (
-                    :projection_entity_id IS NULL
-                    OR nto1.projection_entity_id = :projection_entity_id
+                    :projection_entity_id_global IS NULL
+                    OR nto1.projection_entity_id = :projection_entity_id_global_value
                   )
             GROUP BY nto2.theme_entity_id
         ) candidate
@@ -66,13 +66,22 @@ function suggestNextCharacterBeat(
 
     $stmt = $pdo->prepare($sql);
 
-    $stmt->bindValue(':subject_entity_id', $characterEntityId);
-    $stmt->bindValue(':current_theme_entity_id', $currentThemeEntityId);
+    $stmt->bindValue(':subject_entity_id_subject', $characterEntityId);
+    $stmt->bindValue(':subject_entity_id_global', $characterEntityId);
+
+    $stmt->bindValue(':current_theme_entity_id_subject', $currentThemeEntityId);
+    $stmt->bindValue(':current_theme_entity_id_global', $currentThemeEntityId);
 
     if ($projectionEntityId === null) {
-        $stmt->bindValue(':projection_entity_id', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_entity_id_subject', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_entity_id_subject_value', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_entity_id_global', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_entity_id_global_value', null, PDO::PARAM_NULL);
     } else {
-        $stmt->bindValue(':projection_entity_id', $projectionEntityId);
+        $stmt->bindValue(':projection_entity_id_subject', $projectionEntityId);
+        $stmt->bindValue(':projection_entity_id_subject_value', $projectionEntityId);
+        $stmt->bindValue(':projection_entity_id_global', $projectionEntityId);
+        $stmt->bindValue(':projection_entity_id_global_value', $projectionEntityId);
     }
 
     $stmt->execute();
