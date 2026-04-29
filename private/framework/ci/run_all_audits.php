@@ -21,6 +21,7 @@ require __DIR__ . '/../audit/audit_domain_entity_mirror.php';
 require __DIR__ . '/../audit/audit_reference_endpoint_contract.php';
 require __DIR__ . '/../audit/audit_performance_routine_entity_identity.php';
 require __DIR__ . '/../audit/audit_traversal_root_entity_identity.php';
+require __DIR__ . '/../audit/audit_calendar_event_hierarchy_integrity.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -44,6 +45,7 @@ $audits = [
     'domain entity mirror' => fn () => assert_domain_entity_mirror($pdo, $schemaName),
     'reference endpoint contract' => fn () => assert_reference_endpoint_contract($pdo, $schemaName),
     'performance routine entity identity' => fn () => assert_performance_routine_entity_identity($pdo, $schemaName),
+    'calendar event hierarchy' => fn () => assert_calendar_event_hierarchy($pdo, $schemaName),
 ];
 
 foreach ($audits as $auditName => $runAudit) {
