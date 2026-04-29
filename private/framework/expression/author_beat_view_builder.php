@@ -3,6 +3,7 @@
 require_once __DIR__ . '/character_beat_label_suggester.php';
 require_once __DIR__ . '/character_next_beat_suggester.php';
 require_once __DIR__ . '/character_prediction_drift_auditor.php';
+require_once __DIR__ . '/prose_annotation_suggester.php';
 
 function buildAuthorBeatView(
     PDO $pdo,
@@ -11,7 +12,8 @@ function buildAuthorBeatView(
     string $mode,
     string $authorMode = 'STABLE',
     ?float $patternWeight = null,
-    ?float $driftWeight = null
+    ?float $driftWeight = null,
+    ?string $proseEntityId = null
 ): array {
     if (!in_array($mode, ['READ_BASELINE', 'PROPOSE_FORWARD'], true)) {
         return [
@@ -334,6 +336,16 @@ function buildAuthorBeatView(
         }
     }
 
+    $proseAnnotationReview = null;
+
+    if ($proseEntityId !== null) {
+        $proseAnnotationReview = reviewProseAnnotationSuggestions(
+            $pdo,
+            $proseEntityId,
+            $characterEntityId
+        );
+    }
+
     return [
         'status' => 'ok',
         'character_entity_id' => $characterEntityId,
@@ -387,5 +399,9 @@ function buildAuthorBeatView(
             'heading' => 'Shay Beat Sequence',
             'lines' => $lines,
         ],
+
+        'prose_entity_id' => $proseEntityId,
+
+        'prose_annotation_review' => $proseAnnotationReview,
     ];
 }
