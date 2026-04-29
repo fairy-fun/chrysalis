@@ -138,6 +138,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/create_calendar_event.php';
         break;
 
+    case 'createProseDraft':
+        require __DIR__ . '/prose/create_prose_draft.php';
+        break;
+
     case 'resolveProseCalendarTarget':
         require __DIR__ . '/prose/resolve_prose_calendar_target.php';
         break;
