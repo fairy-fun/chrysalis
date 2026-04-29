@@ -97,35 +97,42 @@ function create_calendar_week_for_book(
             $startedTransaction = true;
         }
 
+        $eventId = next_calendar_event_id($pdo);
+
         $insert = $pdo->prepare(
             "INSERT INTO sxnzlfun_chrysalis.calendar_events (
-                entity_id,
-                summary,
-                week_index,
-                day_index,
-                time_index,
-                event_index,
-                subevent_index,
-                chronology_address,
-                parent_event_id,
-                real_date_start_id,
-                created_at
-            ) VALUES (
-                '__pending_calendar_event__',
-                :summary,
-                :week_index,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                :chronology_address,
-                NULL,
-                :real_date_start_id,
-                NOW()
-            )"
+            entity_id,
+            layer_id,
+            event_id,
+            summary,
+            week_index,
+            day_index,
+            time_index,
+            event_index,
+            subevent_index,
+            chronology_address,
+            parent_event_id,
+            real_date_start_id,
+            created_at
+        ) VALUES (
+            '__pending_calendar_event__',
+            'calendar_layer_week',
+            :event_id,
+            :summary,
+            :week_index,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            :chronology_address,
+            NULL,
+            :real_date_start_id,
+            NOW()
+        )"
         );
 
         $insert->execute([
+            ':event_id' => $eventId,
             ':summary' => $weekLabel,
             ':week_index' => $weekIndex,
             ':chronology_address' => (string) $weekIndex,
@@ -137,18 +144,48 @@ function create_calendar_week_for_book(
         if ($id <= 0) {
             throw new RuntimeException('Failed to create calendar week');
         }
+        $eventId = next_calendar_event_id($pdo);
+        $entityId = 'calendar_event:' . $eventId;
 
-        $entityId = 'calendar_event:' . $id;
-
-        $update = $pdo->prepare(
-            "UPDATE sxnzlfun_chrysalis.calendar_events
-             SET entity_id = :entity_id
-             WHERE id = :id"
+        $insert = $pdo->prepare(
+            "INSERT INTO sxnzlfun_chrysalis.calendar_events (
+        entity_id,
+        layer_id,
+        event_id,
+        summary,
+        week_index,
+        day_index,
+        time_index,
+        event_index,
+        subevent_index,
+        chronology_address,
+        parent_event_id,
+        real_date_start_id,
+        created_at
+    ) VALUES (
+        :entity_id,
+        'calendar_layer_week',
+        :event_id,
+        :summary,
+        :week_index,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        :chronology_address,
+        NULL,
+        :real_date_start_id,
+        NOW()
+    )"
         );
 
-        $update->execute([
+        $insert->execute([
             ':entity_id' => $entityId,
-            ':id' => $id,
+            ':event_id' => $eventId,
+            ':summary' => $weekLabel,
+            ':week_index' => $weekIndex,
+            ':chronology_address' => (string) $weekIndex,
+            ':real_date_start_id' => $realDateStartId,
         ]);
 
         $membership = $pdo->prepare(
