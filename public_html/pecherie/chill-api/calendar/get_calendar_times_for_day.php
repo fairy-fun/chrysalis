@@ -21,6 +21,8 @@ if (!is_string($parentDayEntityId) || trim($parentDayEntityId) === '') {
     ]);
 }
 
+$parentDayEntityId = trim($parentDayEntityId);
+
 $pdo = makePdo('read');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
