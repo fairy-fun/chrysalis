@@ -86,12 +86,12 @@ function find_calendar_layer_event_for_time(
     $stmt = $pdo->prepare("
         SELECT ce.*
         FROM sxnzlfun_chrysalis.calendar_events ce
-        INNER JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
+        LEFT JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
             ON cepm.calendar_event_id = ce.id
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.event_index = :event_index
           AND ce.layer_id = 'calendar_layer_event'
-          AND cepm.projection_entity_id = :projection_entity_id
+          AND COALESCE(ce.projection_entity_id, cepm.projection_entity_id) = :projection_entity_id
         LIMIT 1
     ");
 
@@ -106,14 +106,19 @@ function find_calendar_layer_event_for_time(
     return is_array($row) ? $row : null;
 }
 
-function create_calendar_layer_event(
+function create_calendar_event(
     PDO $pdo,
     string $parentTimeEntityId,
     int $eventIndex,
-    string $summary
+    ?string $eventLabel = null
 ): array {
     $parentTimeEntityId = trim($parentTimeEntityId);
-    $summary = trim($summary);
+
+    $eventLabel = trim((string) ($eventLabel ?? ''));
+
+    if ($eventLabel === '') {
+        $eventLabel = 'Event ' . $eventIndex;
+    }
 
     if ($parentTimeEntityId === '') {
         throw new InvalidArgumentException('parent_time_entity_id must be non-empty');
@@ -121,10 +126,6 @@ function create_calendar_layer_event(
 
     if ($eventIndex < 1) {
         throw new InvalidArgumentException('event_index must be positive');
-    }
-
-    if ($summary === '') {
-        throw new InvalidArgumentException('summary must be non-empty');
     }
 
     $parentTime = resolve_parent_time_for_calendar_layer_event($pdo, $parentTimeEntityId);
@@ -196,7 +197,7 @@ function create_calendar_layer_event(
             ':entity_id' => $entityId,
             ':projection_entity_id' => $projectionEntityId,
             ':event_id' => $eventId,
-            ':summary' => $summary,
+            ':summary' => $eventLabel,
             ':week_index' => $weekIndex,
             ':day_index' => $dayIndex,
             ':time_index' => $timeIndex,
