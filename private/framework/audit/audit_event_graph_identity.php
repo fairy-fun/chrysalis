@@ -7,22 +7,22 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
     $violations = [];
 
     $sql = "
-            SELECT COUNT(*) AS bad_count
-            FROM calendar_events AS ce
-            LEFT JOIN entities AS e
-                ON e.id = ce.subject_entity_id
-            WHERE ce.subject_entity_id IS NULL
-               OR e.id IS NULL
-               OR e.entity_type_id <> 'entity_type_calendar_event'
-        ";
+        SELECT COUNT(*) AS bad_count
+        FROM calendar_events AS ce
+        LEFT JOIN entities AS e
+            ON e.id = ce.entity_id
+        WHERE ce.entity_id IS NULL
+           OR e.id IS NULL
+           OR e.entity_type_id <> 'entity_type_calendar_event'
+    ";
 
     $badCalendarEventLinks = (int) $pdo->query($sql)->fetchColumn();
 
     if ($badCalendarEventLinks > 0) {
         $violations[] = [
-            'violation_code' => 'invalid_calendar_event_subject_entity',
+            'violation_code' => 'invalid_calendar_event_entity',
             'bad_count' => $badCalendarEventLinks,
-            'rule' => 'calendar_events.subject_entity_id must resolve to entities.id with entity_type_id = entity_type_calendar_event',
+            'rule' => 'calendar_events.entity_id must resolve to entities.id with entity_type_id = entity_type_calendar_event',
         ];
     }
 
