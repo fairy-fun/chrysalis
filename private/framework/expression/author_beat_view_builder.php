@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/character_beat_label_suggester.php';
 require_once __DIR__ . '/character_next_beat_suggester.php';
+require_once __DIR__ . '/character_prediction_drift_auditor.php';
 
 function buildAuthorBeatView(
     PDO $pdo,
@@ -55,6 +56,22 @@ function buildAuthorBeatView(
         );
     }
 
+    $driftAudit = [];
+
+    if ($mode === 'PROPOSE_FORWARD' && $lastTheme) {
+        foreach (($nextBeatResult['suggestions'] ?? []) as $suggestion) {
+            if (empty($suggestion['theme_entity_id'])) {
+                continue;
+            }
+
+            $driftAudit[] = auditCharacterPredictionDrift(
+                $pdo,
+                $suggestion['theme_entity_id'],
+                $lastTheme
+            );
+        }
+    }
+
     return [
         'status' => 'ok',
         'character_entity_id' => $characterEntityId,
@@ -72,6 +89,10 @@ function buildAuthorBeatView(
 
         'suggested_next_beats' => $mode === 'PROPOSE_FORWARD'
             ? ($nextBeatResult['suggestions'] ?? [])
+            : [],
+
+        'drift_audit' => $mode === 'PROPOSE_FORWARD'
+            ? $driftAudit
             : [],
 
         'author_view' => [
