@@ -113,6 +113,7 @@ function create_calendar_week_for_book(
         $insert = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
                 entity_id,
+                projection_entity_id,
                 layer_id,
                 event_id,
                 summary,
@@ -127,6 +128,7 @@ function create_calendar_week_for_book(
                 created_at
             ) VALUES (
                 :entity_id,
+                :projection_entity_id,
                 'calendar_layer_week',
                 :event_id,
                 :summary,
@@ -144,6 +146,7 @@ function create_calendar_week_for_book(
 
         $insert->execute([
             ':entity_id' => $entityId,
+            ':projection_entity_id' => $projectionEntityId,
             ':event_id' => $eventId,
             ':summary' => $weekLabel,
             ':week_index' => $weekIndex,
