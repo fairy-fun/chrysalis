@@ -18,7 +18,7 @@ declare(strict_types=1);
  *     fail('Message', 400)
  */
 
-const APP_DEBUG = false;
+const APP_DEBUG = true;
 
 ini_set('display_errors', APP_DEBUG ? '1' : '0');
 error_reporting(E_ALL);
