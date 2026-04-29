@@ -59,15 +59,27 @@ function buildAuthorBeatView(
     $driftAudit = [];
     $rankedNextBeats = $nextBeatResult['suggestions'] ?? [];
 
+    // --- RAW ORDER CAPTURE ---
+    $rawOrderedBeats = $rankedNextBeats;
+
+    $rawRankMap = [];
+    foreach ($rawOrderedBeats as $i => $beat) {
+        if (!empty($beat['theme_entity_id'])) {
+            $rawRankMap[$beat['theme_entity_id']] = $i + 1;
+        }
+    }
+
     if ($mode === 'PROPOSE_FORWARD' && $lastTheme) {
         foreach ($rankedNextBeats as $index => $suggestion) {
             if (empty($suggestion['theme_entity_id'])) {
                 continue;
             }
 
+            $themeId = $suggestion['theme_entity_id'];
+
             $audit = auditCharacterPredictionDrift(
                 $pdo,
-                $suggestion['theme_entity_id'],
+                $themeId,
                 $lastTheme
             );
 
@@ -81,6 +93,8 @@ function buildAuthorBeatView(
 
             $rankedNextBeats[$index]['drift'] = $audit;
             $rankedNextBeats[$index]['drift_adjusted_score'] = $score * $scoreMultiplier;
+            $rankedNextBeats[$index]['raw_score_rank'] = $rawRankMap[$themeId] ?? null;
+
             $driftAudit[] = $audit;
         }
 
@@ -116,6 +130,17 @@ function buildAuthorBeatView(
 
             return $rightGlobalHits <=> $leftGlobalHits;
         });
+
+        // --- DRIFT RANK ASSIGNMENT ---
+        foreach ($rankedNextBeats as $i => &$beat) {
+            $beat['drift_adjusted_rank'] = $i + 1;
+
+            // Optional: disagreement signal
+            if (isset($beat['raw_score_rank'], $beat['drift_adjusted_rank'])) {
+                $beat['rank_delta'] = $beat['raw_score_rank'] - $beat['drift_adjusted_rank'];
+            }
+        }
+        unset($beat);
     }
 
     return [
