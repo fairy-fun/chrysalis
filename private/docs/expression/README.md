@@ -405,7 +405,7 @@ entity_theme_collective_execution
 One event → one theme
 Do NOT invent new themes casually
 Prefer reuse of existing system states
-5. Narrative Observation (LEARNING LAYER)
+### 5. Narrative Observation (LEARNING LAYER)
 
 This is what powers prediction.
 ```sql
