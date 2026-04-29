@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../entities/entity_creator.php';
 require_once __DIR__ . '/../procedures/calendar_event_id.php';
 
-function create_calendar_event_entity(PDO $pdo, int $eventId): string
+function create_calendar_layer_event_entity(PDO $pdo, int $eventId): string
 {
     if ($eventId < 1) {
         throw new InvalidArgumentException('eventId must be positive');
@@ -18,7 +18,7 @@ function create_calendar_event_entity(PDO $pdo, int $eventId): string
     return $entityId;
 }
 
-function resolve_parent_time_for_calendar_event(
+function resolve_parent_time_for_calendar_layer_event(
     PDO $pdo,
     string $parentTimeEntityId
 ): array {
@@ -77,7 +77,7 @@ function resolve_parent_time_for_calendar_event(
     return $row;
 }
 
-function find_calendar_event_for_time(
+function find_calendar_layer_event_for_time(
     PDO $pdo,
     int $timeCalendarEventId,
     int $eventIndex,
@@ -90,7 +90,7 @@ function find_calendar_event_for_time(
             ON cepm.calendar_event_id = ce.id
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.event_index = :event_index
-          AND ce.layer_id = 'calendar_event'
+          AND ce.layer_id = 'calendar_layer_event'
           AND cepm.projection_entity_id = :projection_entity_id
         LIMIT 1
     ");
@@ -106,7 +106,7 @@ function find_calendar_event_for_time(
     return is_array($row) ? $row : null;
 }
 
-function create_calendar_event(
+function create_calendar_layer_event(
     PDO $pdo,
     string $parentTimeEntityId,
     int $eventIndex,
@@ -127,7 +127,7 @@ function create_calendar_event(
         throw new InvalidArgumentException('summary must be non-empty');
     }
 
-    $parentTime = resolve_parent_time_for_calendar_event($pdo, $parentTimeEntityId);
+    $parentTime = resolve_parent_time_for_calendar_layer_event($pdo, $parentTimeEntityId);
 
     $timeCalendarEventId = (int) $parentTime['id'];
     $weekIndex = (int) $parentTime['week_index'];
@@ -136,7 +136,7 @@ function create_calendar_event(
     $parentChronologyAddress = trim((string) $parentTime['chronology_address']);
     $projectionEntityId = trim((string) $parentTime['projection_entity_id']);
 
-    $existing = find_calendar_event_for_time(
+    $existing = find_calendar_layer_event_for_time(
         $pdo,
         $timeCalendarEventId,
         $eventIndex,
@@ -156,7 +156,7 @@ function create_calendar_event(
         }
 
         $eventId = next_calendar_event_id($pdo);
-        $entityId = create_calendar_event_entity($pdo, $eventId);
+        $entityId = create_calendar_layer_event_entity($pdo, $eventId);
 
         $chronologyAddress = $parentChronologyAddress . '.' . $eventIndex;
 
@@ -178,7 +178,7 @@ function create_calendar_event(
             ) VALUES (
                 :entity_id,
                 :projection_entity_id,
-                'calendar_event',
+                'calendar_layer_event',
                 :event_id,
                 :summary,
                 :week_index,
@@ -254,7 +254,7 @@ function create_calendar_event(
             $pdo->rollBack();
         }
 
-        $existing = find_calendar_event_for_time(
+        $existing = find_calendar_layer_event_for_time(
             $pdo,
             $timeCalendarEventId,
             $eventIndex,
