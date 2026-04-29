@@ -59,6 +59,11 @@ function buildAuthorBeatView(
     $driftAudit = [];
     $rankedNextBeats = $nextBeatResult['suggestions'] ?? [];
     $highTensionCandidates = [];
+    $recommendedPaths = [
+        'stable' => null,
+        'exploratory' => null,
+        'disruptive' => null,
+    ];
 
     // --- RAW ORDER CAPTURE ---
     $rawOrderedBeats = $rankedNextBeats;
@@ -175,6 +180,17 @@ function buildAuthorBeatView(
 
             return $rightAdjustedScore <=> $leftAdjustedScore;
         });
+
+        $recommendedPaths['stable'] = $rankedNextBeats[0] ?? null;
+
+        foreach ($rankedNextBeats as $beat) {
+            if (($beat['tension_label'] ?? null) === 'RARE_BUT_ALIGNED') {
+                $recommendedPaths['exploratory'] = $beat;
+                break;
+            }
+        }
+
+        $recommendedPaths['disruptive'] = $highTensionCandidates[0] ?? null;
     }
 
     return [
@@ -199,6 +215,14 @@ function buildAuthorBeatView(
         'high_tension_candidates' => $mode === 'PROPOSE_FORWARD'
             ? $highTensionCandidates
             : [],
+
+        'recommended_paths' => $mode === 'PROPOSE_FORWARD'
+            ? $recommendedPaths
+            : [
+                'stable' => null,
+                'exploratory' => null,
+                'disruptive' => null,
+            ],
 
         'drift_audit' => $mode === 'PROPOSE_FORWARD'
             ? $driftAudit
