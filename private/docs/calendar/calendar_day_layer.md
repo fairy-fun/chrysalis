@@ -1,5 +1,5 @@
 # Calendar System — Day Layer
-
+> “See *Calendar Invariants* for system-wide rules.”
 ## Overview
 
 Day-level calendar events represent the second layer in the hierarchy:

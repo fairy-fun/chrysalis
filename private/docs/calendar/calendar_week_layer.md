@@ -1,5 +1,5 @@
 # Calendar System — Week Layer
-
+> “See *Calendar Invariants* for system-wide rules.”
 ## Overview
 ```text
 Week-level calendar events are the **root layer** of the calendar hierarchy:
