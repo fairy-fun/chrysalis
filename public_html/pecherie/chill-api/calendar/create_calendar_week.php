@@ -5,6 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
+require_once __DIR__ . '/../../../../private/framework/procedures/calendar_event_id.php';
 require_once __DIR__ . '/../../../../private/framework/calendar/calendar_week_creator.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {

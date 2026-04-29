@@ -149,34 +149,34 @@ function create_calendar_week_for_book(
 
         $insert = $pdo->prepare(
             "INSERT INTO sxnzlfun_chrysalis.calendar_events (
-        entity_id,
-        layer_id,
-        event_id,
-        summary,
-        week_index,
-        day_index,
-        time_index,
-        event_index,
-        subevent_index,
-        chronology_address,
-        parent_event_id,
-        real_date_start_id,
-        created_at
-    ) VALUES (
-        :entity_id,
-        'calendar_layer_week',
-        :event_id,
-        :summary,
-        :week_index,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        :chronology_address,
-        NULL,
-        :real_date_start_id,
-        NOW()
-    )"
+            entity_id,
+            layer_id,
+            event_id,
+            summary,
+            week_index,
+            day_index,
+            time_index,
+            event_index,
+            subevent_index,
+            chronology_address,
+            parent_event_id,
+            real_date_start_id,
+            created_at
+        ) VALUES (
+            :entity_id,
+            'calendar_layer_week',
+            :event_id,
+            :summary,
+            :week_index,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            :chronology_address,
+            NULL,
+            :real_date_start_id,
+            NOW()
+        )"
         );
 
         $insert->execute([
