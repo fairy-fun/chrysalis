@@ -18,6 +18,7 @@ return [
         'public_html/pecherie/chill-api/prose',
         'public_html/pecherie/chill-api/reference',
         'public_html/pecherie/chill-api/music',
+        'public_html/pecherie/chill-api/dreams',
     ],
 
     'visible_files' => [
@@ -71,6 +72,7 @@ return [
         'addProseAnnotations' => 'public_html/pecherie/chill-api/prose/add_prose_annotations.php',
         'getProseAnnotations' => 'public_html/pecherie/chill-api/prose/get_prose_annotations.php',
         'getProseTrainingView' => 'public_html/pecherie/chill-api/prose/get_prose_training_view.php',
+        'createDreamJournalEntry' => 'public_html/pecherie/chill-api/dreams/create_dream_journal_entry.php',
     ],
 ];
 

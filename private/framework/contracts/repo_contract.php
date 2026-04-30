@@ -125,6 +125,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'createDreamJournalEntry' => [
+            'handler' => 'public_html/pecherie/chill-api/dreams/create_dream_journal_entry.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'listYears' => [
             'handler' => 'public_html/pecherie/chill-api/reference/list_years.php',
             'method' => 'GET',
