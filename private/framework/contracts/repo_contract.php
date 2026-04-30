@@ -105,6 +105,17 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+
+        'getProseAnnotations' => [
+            'handler' => 'public_html/pecherie/chill-api/prose/get_prose_annotations.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'getProseTrainingView' => [
+            'handler' => 'public_html/pecherie/chill-api/prose/get_prose_training_view.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'resolveProseCalendarTarget' => [
             'handler' => 'public_html/pecherie/chill-api/prose/resolve_prose_calendar_target.php',
             'behaviour_tested' => false,
