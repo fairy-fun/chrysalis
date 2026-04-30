@@ -59,8 +59,8 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid journal_entity_id: ' . $journalEntityId);
     }
 
-    if (!prose_classval_exists($pdo, 'dream_journal')) {
-        throw new InvalidArgumentException('Invalid projection_type_id: dream_journal');
+    if (!prose_classval_exists($pdo, 'projection_type_dream_journal')) {
+        throw new InvalidArgumentException('Invalid projection_type_id: projection_type_dream_journal');
     }
 
     $startedTransaction = false;
@@ -160,7 +160,7 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
                 is_export_target
             ) VALUES (
                 :prose_draft_id,
-                'dream_journal',
+                'projection_type_dream_journal',
                 :target_entity_id,
                 'primary',
                 :projection_order,
@@ -199,7 +199,7 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
                 'title' => $title,
             ],
             'projection' => [
-                'projection_type_id' => 'dream_journal',
+                'projection_type_id' => 'projection_type_dream_journal',
                 'target_entity_id' => $journalEntityId,
                 'role_id' => 'primary',
             ],
