@@ -122,7 +122,7 @@ object_entity_id  = triggering entity or condition
 
 Trigger facts do not replace limbic state facts. They explain them.
 
-Example:
+### Example:
 
 ```sql
 INSERT INTO entity_linked_facts (
