@@ -6,10 +6,6 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
-
-echo json_encode(['hit' => 'index']);
-exit;
-
 function api_error(int $statusCode, string $message): never
 {
     http_response_code($statusCode);
