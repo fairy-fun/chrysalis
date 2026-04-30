@@ -98,9 +98,9 @@ This system models:
 event → induced state → stored fact → queryable trajectory
 
 NOT:
-
+```text
 character personality or traits
-
+```
 ## Future Extensions
 
 Causal attribution (who/what triggered state)
