@@ -94,9 +94,9 @@ Inserts must be explicit and manual
 ## Design Principle
 
 This system models:
-
+```text
 event → induced state → stored fact → queryable trajectory
-
+```
 NOT:
 ```text
 character personality or traits
