@@ -201,6 +201,10 @@ switch ($operation) {
         require __DIR__ . '/dreams/get_dream_journal_entries.php';
         break;
 
+    case 'getDreamAnnotations':
+        require __DIR__ . '/dreams/get_dream_annotations.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }

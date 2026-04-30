@@ -135,6 +135,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'getDreamAnnotations' => [
+            'handler' => 'public_html/pecherie/chill-api/dreams/get_dream_annotations.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'listYears' => [
             'handler' => 'public_html/pecherie/chill-api/reference/list_years.php',
             'method' => 'GET',
