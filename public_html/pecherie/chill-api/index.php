@@ -157,6 +157,10 @@ switch ($operation) {
         require __DIR__ . '/prose/get_prose_training_view.php';
         break;
 
+    case 'addProseAnnotations':
+        require __DIR__ . '/prose/add_prose_annotations.php';
+        break;
+
     case 'auditTraversalStepChainIntegrity':
         require __DIR__ . '/audit/traversal_step_chain_integrity.php';
         break;

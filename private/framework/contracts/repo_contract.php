@@ -105,7 +105,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
-
+        'addProseAnnotations' => [
+            'handler' => 'public_html/pecherie/chill-api/prose/add_prose_annotations.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'getProseAnnotations' => [
             'handler' => 'public_html/pecherie/chill-api/prose/get_prose_annotations.php',
             'behaviour_tested' => false,

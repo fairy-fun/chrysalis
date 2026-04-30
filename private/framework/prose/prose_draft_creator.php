@@ -145,6 +145,22 @@ function prose_draft_entity_exists(PDO $pdo, string $entityId): bool
     return (int) $stmt->fetchColumn() > 0;
 }
 
+function prose_body_for_entity(PDO $pdo, string $entityId): ?string
+{
+    $stmt = $pdo->prepare("
+        SELECT prose_body
+        FROM sxnzlfun_chrysalis.prose_drafts
+        WHERE entity_id = :entity_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([':entity_id' => $entityId]);
+
+    $body = $stmt->fetchColumn();
+
+    return is_string($body) ? $body : null;
+}
+
 function prose_export_target_exists(
     PDO $pdo,
     string $projectionTypeId,
@@ -312,6 +328,54 @@ function insert_prose_annotations(
     }
 
     return $inserted;
+}
+
+function add_prose_annotations(PDO $pdo, array $body): array
+{
+    $entityId = prose_required_string($body, 'entity_id');
+
+    $proseBody = prose_body_for_entity($pdo, $entityId);
+
+    if ($proseBody === null) {
+        throw new InvalidArgumentException('Prose not found: ' . $entityId);
+    }
+
+    $annotations = prose_normalise_annotations($body);
+
+    if ($annotations === []) {
+        throw new InvalidArgumentException('annotations must contain at least one annotation');
+    }
+
+    $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
+
+    $startedTransaction = false;
+
+    try {
+        if (!$pdo->inTransaction()) {
+            $pdo->beginTransaction();
+            $startedTransaction = true;
+        }
+
+        $insertedAnnotations = insert_prose_annotations($pdo, $entityId, $validatedAnnotations);
+
+        if ($startedTransaction) {
+            $pdo->commit();
+        }
+
+        return [
+            'prose_entity_id' => $entityId,
+            'annotations' => [
+                'inserted' => $insertedAnnotations,
+            ],
+        ];
+
+    } catch (Throwable $e) {
+        if ($startedTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        throw $e;
+    }
 }
 
 function create_prose_draft(PDO $pdo, array $body): array
