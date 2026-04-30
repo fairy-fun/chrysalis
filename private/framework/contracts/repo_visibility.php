@@ -72,3 +72,4 @@ return [
         'getProseTrainingView' => 'public_html/pecherie/chill-api/prose/get_prose_training_view.php',
     ],
 ];
+
