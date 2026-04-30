@@ -85,6 +85,23 @@ function prose_classval_exists(PDO $pdo, string $classvalId): bool
     return (int) $stmt->fetchColumn() === 1;
 }
 
+function prose_classval_exists_for_type(PDO $pdo, string $classvalId, string $classvalTypeId): bool
+{
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.classvals
+        WHERE id = :id
+          AND classval_type_id = :classval_type_id
+    ");
+
+    $stmt->execute([
+        ':id' => $classvalId,
+        ':classval_type_id' => $classvalTypeId,
+    ]);
+
+    return (int) $stmt->fetchColumn() === 1;
+}
+
 function prose_calendar_target_exists(PDO $pdo, string $targetEntityId): bool
 {
     $stmt = $pdo->prepare("
@@ -190,11 +207,11 @@ function prose_validate_annotation(
         }
     }
 
-    if (!prose_classval_exists($pdo, $annotationTypeId)) {
+    if (!prose_classval_exists_for_type($pdo, $annotationTypeId, 'cvt_prose_annotation_type')) {
         throw new InvalidArgumentException($prefix . 'invalid annotation_type_id: ' . $annotationTypeId);
     }
 
-    if (!prose_classval_exists($pdo, $sourceTypeId)) {
+    if (!prose_classval_exists_for_type($pdo, $sourceTypeId, 'cvt_prose_annotation_source_type')) {
         throw new InvalidArgumentException($prefix . 'invalid source_type_id: ' . $sourceTypeId);
     }
 

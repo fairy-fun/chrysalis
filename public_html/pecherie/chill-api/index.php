@@ -146,6 +146,14 @@ switch ($operation) {
         require __DIR__ . '/prose/resolve_prose_calendar_target.php';
         break;
 
+    case 'getProseAnnotations':
+        require __DIR__ . '/prose/get_prose_annotations.php';
+        break;
+
+    case 'getProseTrainingView':
+        require __DIR__ . '/prose/get_prose_training_view.php';
+        break;
+
     case 'auditTraversalStepChainIntegrity':
         require __DIR__ . '/audit/traversal_step_chain_integrity.php';
         break;
