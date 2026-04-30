@@ -73,6 +73,7 @@ return [
         'getProseAnnotations' => 'public_html/pecherie/chill-api/prose/get_prose_annotations.php',
         'getProseTrainingView' => 'public_html/pecherie/chill-api/prose/get_prose_training_view.php',
         'createDreamJournalEntry' => 'public_html/pecherie/chill-api/dreams/create_dream_journal_entry.php',
+        'getDreamJournalEntries' => 'public_html/pecherie/chill-api/dreams/get_dream_journal_entries.php',
     ],
 ];
 

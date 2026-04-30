@@ -197,6 +197,10 @@ switch ($operation) {
         require __DIR__ . '/dreams/create_dream_journal_entry.php';
         break;
 
+    case 'getDreamJournalEntries':
+        require __DIR__ . '/dreams/get_dream_journal_entries.php';
+        break;
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
