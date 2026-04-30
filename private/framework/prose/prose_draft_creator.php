@@ -355,9 +355,9 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid projection_type_id: ' . $projectionTypeId);
     }
 
-    if (!prose_classval_exists($pdo, $roleId)) {
+    /*if (!prose_classval_exists($pdo, $roleId)) {
         throw new InvalidArgumentException('Invalid projection.role_id: ' . $roleId);
-    }
+    }*/
 
     if (!prose_calendar_target_exists($pdo, $targetEntityId)) {
         throw new InvalidArgumentException('Invalid projection.target_entity_id: ' . $targetEntityId);
