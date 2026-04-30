@@ -111,7 +111,7 @@ Recovery dependency mapping (self vs co-regulation)
 
 Trigger facts explain what induced the observed limbic state.
 
-Pattern:
+#### Pattern:
 
 ```text
 subject_entity_id = character
