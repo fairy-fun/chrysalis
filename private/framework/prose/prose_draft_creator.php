@@ -72,6 +72,23 @@ function prose_entity_exists(PDO $pdo, string $entityId): bool
     return (int) $stmt->fetchColumn() === 1;
 }
 
+function prose_entity_exists_for_type(PDO $pdo, string $entityId, string $entityTypeId): bool
+{
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.entities
+        WHERE id = :id
+          AND entity_type_id = :entity_type_id
+    ");
+
+    $stmt->execute([
+        ':id' => $entityId,
+        ':entity_type_id' => $entityTypeId,
+    ]);
+
+    return (int) $stmt->fetchColumn() === 1;
+}
+
 function prose_classval_exists(PDO $pdo, string $classvalId): bool
 {
     $stmt = $pdo->prepare("
@@ -330,7 +347,7 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new RuntimeException('Duplicate prose draft entity_id: ' . $entityId);
     }
 
-    if (!prose_classval_exists($pdo, $draftStatusId)) {
+    if (!prose_entity_exists_for_type($pdo, $draftStatusId, 'entity_type_status')) {
         throw new InvalidArgumentException('Invalid draft_status_id: ' . $draftStatusId);
     }
 
