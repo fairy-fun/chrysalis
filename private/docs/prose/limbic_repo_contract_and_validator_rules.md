@@ -1,21 +1,37 @@
 ## Limbic Repo Contract & Validator Rules
 
-This document defines **write boundaries and enforcement rules** for all limbic-related data.
+This document defines write boundaries and enforcement rules for all limbic-related data.
+
+> The system may infer beyond the prose.
+> It may not persist beyond the prose without explicit author confirmation.
 
 ---
 
 ## Write Boundary
 
 ```text
-entity_linked_facts_event           = canonical truth only
-entity_limbic_state_suggestions_event = inferred/uncertain states
-entity_state_transitions_event      = curated, meaningful state changes
-entity_coregulation_event           = regulatory interactions
+entity_linked_facts_event             = canonical prose-backed truth only
+entity_limbic_state_suggestions_event = inferred/uncertain states only
+entity_state_transitions_event        = curated, meaningful state changes
+entity_coregulation_event             = regulatory interactions
 ```
-
 These layers must remain strictly separated.
 
+Suggestion persistence is the only exception to the general “no derived persistence” rule. Stored suggestions are non-canonical, non-authoritative, and must never be treated as truth.
+
 ---
+
+## Core Separation
+
+```text
+facts        = what is canonically true
+suggestions  = what is inferred or possible
+coregulation = what affects others
+transitions  = what meaningfully changes
+```
+Confidence is not evidence.
+
+___
 
 ## API Contracts
 
@@ -39,12 +55,16 @@ POST /limbic/suggestions
 * allow inference
 * require `basis_type`
 * require `confidence`
+* require `subject_entity_id`
+* require `context_entity_id`
+* require `suggested_object_entity_id`
 * must NOT insert into fact tables
+* must NOT treat confidence as truth
 
 ---
 
 ### 2. Fact Insert
-POST /limbic/facts
+`POST /limbic/facts`
 ```json
 {
   "subject_entity_id": "CHAR-SHAY-001",
@@ -58,35 +78,53 @@ POST /limbic/facts
 #### Validator Rules
 
 * must insert into `entity_linked_facts_event`
+* require `subject_entity_id`
+* require `context_entity_id`
+* require `object_entity_id`
 * require `source_document`
-* reject if derived from inference
+* reject inference-only inserts 
+* reject confidence-only justification 
+* fact must be justifiable from prose-backed evidence
 
-#### Shay Constraint (POV-Bounded)
+A fact must be grounded in observable or narratively available evidence. Inference alone is not sufficient, regardless of confidence.
 
-If:
+#### POV-Bounded Character Constraint
+
+For POV-bounded characters, including:
 
 ```text
 subject_entity_id = Shay
 ```
 
-Then reject unless:
+Reject fact inserts unless the evidence is prose-backed.
 
-* evidence is prose-backed
-* notes reflect internal state evidence
+Valid evidence may include:
+```text
+explicit internal narration
+physiological description
+physiological settling
+explicit regulation signals
+directly narrated internal state
+```
 
-Explicitly invalid signals:
+Invalid evidence includes:
 
 ```text
 others calming down
+the room stabilising
 Shay stabilising the room
-steady tone or competence
+Shay stabilising another character
+steady tone
+competence
+successful social performance
 scene de-escalation
 ```
+External regulation does not imply internal regulation.
 
 ---
 
 ### 3. Suggestion → Fact Promotion
-POST /limbic/suggestions/{id}/promote
+`POST /limbic/suggestions/{id}/promote`
 ```json
 {
   "source_document": "prose:book1_scene_40",
@@ -97,12 +135,13 @@ POST /limbic/suggestions/{id}/promote
 #### Validator Rules
 
 * requires explicit endpoint call
-* must create fact row
+  must create one fact row in entity_linked_facts_event
 * must update suggestion:
 
     * `promoted_at`
     * `promoted_to_fact_id`
 * must NOT auto-promote
+* must re-run fact validation before insert 
 
 ---
 
@@ -121,12 +160,17 @@ POST /limbic/transitions
 
 #### Validator Rules
 
-* require both `from` and `to`
-* verify both exist as facts for subject
-* reject inferred or missing states
+* require subject_entity_id
+* require context_entity_id 
+* require from_object_entity_id 
+* require to_object_entity_id 
+* require source_document 
+* verify both states already exist as facts for the same subject 
+* reject inferred or missing states 
+* do not create missing state facts 
+* transitions must respect event ordering for the subject
 
-For Shay:
-
+For POV-bounded characters:
 ```text
 no automatic transition creation
 requires explicit author approval
@@ -135,7 +179,7 @@ requires explicit author approval
 ---
 
 ### 5. Coregulation Insert
-POST /limbic/coregulation
+`POST /limbic/coregulation`
 ```json
 {
   "source_entity_id": "CHAR-SHAY-001",
@@ -151,11 +195,16 @@ POST /limbic/coregulation
 
 * source = regulator
 * target = affected subject
+* require source_entity_id
+* require target_entity_id
+* require context_entity_id
+* require regulation_type_id
+* coregulation does not imply symmetry
 
 If `caused_transition_id` is present:
 
 * must reference existing transition
-* transition.subject_entity_id == target_entity_id
+* `transition.subject_entity_id` == target_entity_id
 
 ---
 
@@ -171,11 +220,15 @@ The system must NOT infer Shay’s internal regulation from:
 * successful de-escalation
 * behavioural control
 * perceived competence
+* steady tone
+* scene stabilisation
 
 These may produce:
 
 ```text
-coregulation events (Shay → others)
+entity_coregulation_event
+source_entity_id = CHAR-MAIN-001
+target_entity_id = another_character
 ```
 
 They must NOT produce:
@@ -195,6 +248,8 @@ The API must NOT:
 * derive and store transitions automatically
 * treat confidence as truth
 * bypass POV constraints
+* infer internal regulation from external performance
+* collapse suggestions, facts, transitions, or coregulation into one layer
 
 ---
 
