@@ -1,5 +1,4 @@
 # Prose Annotation & Projection Contract (Phase 1)
-
 ## Purpose
 
 This document defines the **currently implemented and supported schema surface** for:
@@ -205,7 +204,7 @@ Each prose entry should include:
 The system encodes narrative state via:
 
 | Layer      | Meaning           |
-| ---------- | ----------------- |
+|------------|-------------------|
 | Voice      | Who is perceiving |
 | Limbic     | Internal state    |
 | Expression | External behavior |
