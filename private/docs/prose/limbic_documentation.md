@@ -155,7 +155,7 @@ INSERT INTO entity_linked_facts_event (
 Do not use:
 
 ```text
-INSERT INTO entity_linked_facts(...)
+INSERT INTO entity_linked_facts_event (...)
 ```
 
 That targets the compatibility view and is not a valid write path.
