@@ -2,6 +2,14 @@
 
 _(Shay as constrained interior, others as observable systems)_
 
+Limbic state is an event-scoped interpretive layer derived from:
+- observed behaviour in prose
+- annotation signals
+- expression outputs (affect/cognition/control)
+- prior accepted event-scoped facts
+
+It is never stored directly without explicit author confirmation.
+
 ## 1. Core Principle
 
 The system must distinguish between:
@@ -16,6 +24,14 @@ And critically:
 ``` text
 POV characters have restricted inferential access to their own internal state
 ```
+
+POV characters do not produce direct limbic facts.
+
+Their internal experience remains:
+- prose-only
+- annotation-driven
+- suggestion-inferred (but never automatically accepted)
+
 ## 2. Shay as a Bounded POV Entity
 
 ###    2.1 Profile Tag
