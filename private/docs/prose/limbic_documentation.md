@@ -86,17 +86,17 @@ object_entity_id  = entity_limbic_<state>
 
 ### Relevant Columns
 
-| Column | Description |
-|---|---|
-| `linked_fact_id` | Auto-generated ID |
-| `subject_entity_id` | Character ID |
-| `context_entity_id` | Event ID, e.g. `calendar_event:33` |
-| `fact_type_id` | Fact type |
-| `object_entity_id` | Limbic state entity |
-| `source_document` | Source attribution |
-| `notes` | Optional reasoning or interpretation |
-| `created_at` | Automatic timestamp |
-| `updated_at` | Automatic timestamp |
+| Column              | Description                          |
+|---------------------|--------------------------------------|
+| `linked_fact_id`    | Auto-generated ID                    |
+| `subject_entity_id` | Character ID                         |
+| `context_entity_id` | Event ID, e.g. `calendar_event:33`   |
+| `fact_type_id`      | Fact type                            |
+| `object_entity_id`  | Limbic state entity                  |
+| `source_document`   | Source attribution                   |
+| `notes`             | Optional reasoning or interpretation |
+| `created_at`        | Automatic timestamp                  |
+| `updated_at`        | Automatic timestamp                  |
 
 The table handles `linked_fact_id`, `created_at`, and `updated_at` automatically.
 
@@ -114,13 +114,13 @@ entity_type_limbic_state
 
 ### Limbic State Entities
 
-| Entity | Meaning |
-|---|---|
-| `entity_limbic_hyperarousal` | Activated, elevated energy, stress response |
-| `entity_limbic_hypoarousal` | Shutdown, dissociation, low energy |
-| `entity_limbic_window_regulated` | Within regulation window; controlled |
-| `entity_limbic_threat_activated` | Threat detection engaged |
-| `entity_limbic_co_regulated` | Stabilised through another character or relational input |
+| Entity                           | Meaning                                                  |
+|----------------------------------|----------------------------------------------------------|
+| `entity_limbic_hyperarousal`     | Activated, elevated energy, stress response              |
+| `entity_limbic_hypoarousal`      | Shutdown, dissociation, low energy                       |
+| `entity_limbic_window_regulated` | Within regulation window; controlled                     |
+| `entity_limbic_threat_activated` | Threat detection engaged                                 |
+| `entity_limbic_co_regulated`     | Stabilised through another character or relational input |
 
 ### Fact Type
 
@@ -165,6 +165,7 @@ That targets the compatibility view and is not a valid write path.
 ## Example Inserts
 
 ### Example Inserts (With Evidence Discipline)
+All examples below assume prose-supported evidence unless explicitly stated otherwise.
 
 ```sql
 INSERT INTO entity_linked_facts_event (
@@ -203,6 +204,77 @@ ON DUPLICATE KEY UPDATE
     notes = VALUES(notes),
     source_document = VALUES(source_document);
 ```
+
+### Trigger Example With Evidence Discipline
+
+Trigger facts explain what induced an observed state. They still require evidence discipline.
+
+```sql
+INSERT INTO entity_linked_facts_event (
+    subject_entity_id,
+    context_entity_id,
+    fact_type_id,
+    object_entity_id,
+    notes,
+    source_document
+) VALUES (
+    'CHAR-MAIN-001',
+    'calendar_event:33',
+    'fact_type_event_limbic_trigger',
+    'CHAR-KAI-001',
+    'Kai is present in the triggering exchange; Shay’s threat appraisal is prose-supported in this event.',
+    'prose:book1_scene_33'
+);
+```
+
+For Shay, do not use trigger facts to smuggle inferred internal state into the fact layer.
+
+A trigger fact may say:
+
+```text
+Kai is part of the context that activates Shay.
+```
+
+It may not say:
+
+```text
+Shay is regulated because Kai calmed the room.
+```
+
+### Paired Suggestion Example
+
+When Shay’s internal state is plausible but not prose-confirmed, store it as a suggestion.
+
+```sql
+INSERT INTO entity_limbic_state_suggestions_event (
+    subject_entity_id,
+    context_entity_id,
+    suggested_object_entity_id,
+    basis_type,
+    supporting_entities,
+    confidence,
+    notes
+) VALUES (
+    'CHAR-MAIN-001',
+    'calendar_event:40',
+    'entity_limbic_window_regulated',
+    'behavioral_inference',
+    JSON_ARRAY('CHAR-KAI-001', 'scene_deescalation'),
+    0.35,
+    'Shay appears externally steady and helps stabilize the room, but the prose does not confirm internal regulation.'
+);
+```
+
+This suggestion must not be promoted to a fact unless prose evidence confirms Shay’s internal state.
+
+For Shay:
+
+```text
+external steadiness ≠ internal regulation
+successful de-escalation ≠ regulated nervous system
+other characters calming down ≠ Shay is calm
+```
+
 
 #### Shay Constraint Reminder
 
@@ -330,7 +402,7 @@ INSERT INTO entity_linked_facts_event (
     'fact_type_event_limbic_trigger',
     'CHAR-KAI-001',
     'Suspected Kai involvement produces threat activation.',
-    'manual:shay_analysis'
+    'prose:book1_scene_33'
 );
 ```
 
@@ -483,13 +555,13 @@ ORDER BY CAST(SUBSTRING_INDEX(t1.context_entity_id, ':', -1) AS UNSIGNED);
 
 Transition interpretation is derived and optional.
 
-| Transition | Possible interpretation |
-|---|---|
-| threat → hyperarousal | escalation |
-| hyperarousal → regulated | recovery |
-| threat → regulated | controlled override |
-| regulated → hyperarousal | destabilisation |
-| hypoarousal → regulated | re-engagement |
+| Transition               | Possible interpretation |
+|--------------------------|-------------------------|
+| threat → hyperarousal    | escalation              |
+| hyperarousal → regulated | recovery                |
+| threat → regulated       | controlled override     |
+| regulated → hyperarousal | destabilisation         |
+| hypoarousal → regulated  | re-engagement           |
 
 Do not persist these labels as base facts.
 
@@ -524,7 +596,7 @@ INSERT INTO entity_linked_facts_event (
 A possible co-regulation signal exists when:
 
 ```text
-Character A: activated/hypoaroused/threatened → regulated/co-regulated
+Character A: activated/ hypoaroused /threatened → regulated/co-regulated
 near or within an event where Character B performs a stabilising action
 ```
 
