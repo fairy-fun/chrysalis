@@ -330,6 +330,86 @@ A transition is defined as:
 
 for the same character across sequential known limbic observations.
 
+### Materialized Transitions (Narrative Significance Rule)
+
+By default, limbic transitions are **derived**, not stored.
+
+However, the system may materialize transitions into:
+
+```text
+entity_state_transitions_event
+```
+
+when they are **narratively or causally significant**.
+
+#### Core Rule
+
+Only materialize transitions that carry **story meaning**, not just state change.
+
+```text
+Do not store every observed transition.
+Store only transitions that matter.
+```
+
+#### What Qualifies as “Narratively Meaningful”
+
+A transition may be stored if it meets one or more of:
+
+* marks a **turning point** in a scene or interaction
+* reflects a **successful or failed regulation attempt**
+* is tied to **another character’s action (co-regulation or destabilisation)**
+* represents a **non-trivial internal shift** (e.g. override, collapse, recovery)
+* is explicitly emphasized in the prose or analysis
+
+#### What Should NOT Be Stored
+
+Do not materialize transitions that are:
+
+* routine fluctuations between adjacent states
+* mechanically inferred from sequential events
+* lacking causal or narrative context
+* redundant with already stored transitions
+
+```text
+Bad: storing every (event_n → event_n+1) change
+Good: storing the one transition that explains why the scene changed
+```
+
+#### Relationship to Coregulation
+
+Materialized transitions may optionally be linked from:
+
+```text
+entity_coregulation_event.caused_transition_id
+```
+
+This indicates that a co-regulation (or attempted regulation) event
+**caused or contributed to the transition**.
+
+Not all transitions have causes.
+Not all co-regulation produces transitions.
+
+#### Shay POV Constraint
+
+For Shay (pov_bounded):
+
+* transitions must be based on **prose-supported endpoint states**
+* transitions must be **explicitly approved before storage**
+* no inferred or “bridged” transitions may be materialized
+
+#### Design Principle
+
+```text
+Derived transitions = complete but noisy
+Materialized transitions = sparse but meaningful
+```
+
+The system preserves both:
+
+* derivation for analysis
+* materialization for narrative truth
+
+
 ### Robust Transition Query
 
 This query handles sparse event IDs, such as `calendar_event:34` followed by `calendar_event:40`.

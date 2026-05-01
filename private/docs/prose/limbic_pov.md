@@ -536,3 +536,4 @@ the system thinking ahead of the prose
 But they must remain clearly separated from:
 
 what the story has actually committed to.
+
