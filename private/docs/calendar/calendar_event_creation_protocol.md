@@ -355,3 +355,138 @@ Following this protocol guarantees:
 ---
 
 **This is the canonical method for event creation.**
+
+
+## Narrative Constraints
+
+These rules govern the semantic validity of events and subevents.
+They are mandatory and enforced at the API layer.
+
+---
+
+### 1. Event Definition (Depth 4)
+
+An event MUST represent a narrative state change.
+
+A state change includes at least one of:
+- change in character state
+- change in knowledge
+- change in relationship
+- change in stakes
+- change in environment or situation
+
+Events that do not produce a state change are INVALID and MUST NOT be created.
+
+---
+
+### 2. Event Atomicity
+
+Events MUST be narratively atomic.
+
+This means:
+- an event represents a single coherent unit of change
+- events MUST NOT bundle multiple unrelated changes
+- events MUST NOT be used as containers for loosely related actions
+
+If multiple independent changes occur, they MUST be split into separate events.
+
+---
+
+### 3. Subevent Definition (Depth 5)
+
+Subevents MUST decompose a parent event.
+
+They exist to describe HOW an event unfolds, not to introduce new narrative structure.
+
+Subevents MUST:
+- belong to exactly one parent event
+- remain semantically dependent on that event
+
+Subevents MUST NOT:
+- introduce independent narrative threads
+- function as parallel events
+- exist without a clearly defined parent event purpose
+
+---
+
+### 4. Hierarchical Integrity (Narrative)
+
+The hierarchy MUST reflect narrative containment:
+
+- Events define WHAT changes
+- Subevents define HOW the change occurs
+
+If a subevent introduces a new "what", it is incorrectly classified and MUST be promoted to an event.
+
+---
+
+### 5. Event Purpose Requirement
+
+Each event MUST have a defined narrative purpose before creation.
+
+Minimum required definition:
+- what changes
+- why it matters
+
+Events created without a defined purpose are INVALID.
+
+---
+
+### 6. Granularity Control
+
+Event granularity MUST remain consistent within a timeline.
+
+Disallowed patterns:
+- mixing high-level events with extremely granular events at the same depth
+- over-fragmentation into excessive subevents
+- collapsing complex sequences into a single vague event
+
+Granularity drift MUST be corrected by:
+- splitting overly broad events
+- merging trivial or non-impactful events
+
+---
+
+### 7. Prose Attachment Constraint
+
+Prose MUST NOT be attached to structurally unstable nodes.
+
+A node is considered unstable if:
+- its chronology_address is subject to change
+- its parent linkage is not finalized
+- its role in the narrative is undefined
+
+Prose attachment is ONLY allowed after:
+- event purpose is defined
+- hierarchy placement is confirmed
+- structural indices are stable
+
+---
+
+### 8. Projection Requirement
+
+Events MUST NOT be created in isolation.
+
+All event creation MUST occur within a projection workflow:
+
+1. Skeleton Mapping
+2. Event Commitment
+3. Subevent Expansion
+4. Prose Attachment
+
+Creating events outside this sequence is INVALID.
+
+---
+
+### 9. Anti-Patterns (Disallowed)
+
+The following are explicitly disallowed:
+
+- Events without state change
+- Subevents acting as independent events
+- Attaching prose before structure stabilizes
+- Creating events without defined purpose
+- Over-expanding subevents without narrative necessity
+- Using events as generic containers
+
+Violations MUST be rejected at the API layer.
