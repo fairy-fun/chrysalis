@@ -739,6 +739,61 @@ Do not promote a suggestion to a fact unless the prose confirms:
 
 ---
 
+### Promotion Authority
+
+Suggestions are not automatically promoted to facts.
+
+```text
+Only the author may promote a suggestion to a fact.
+```
+
+The system may:
+
+* generate suggestions
+* attach reasoning and confidence
+* surface candidates for promotion
+
+The system may not:
+
+* convert suggestions into facts
+* infer internal state as canonical truth
+* bypass POV constraints
+
+### Promotion Flow
+
+```text
+suggestion → (author review) → fact
+```
+
+Promotion requires:
+
+* explicit author approval
+* prose-supported evidence (for POV-bounded characters such as Shay)
+
+### Traceability
+
+When a suggestion is promoted:
+
+* the resulting fact should retain a reference to its origin
+* the suggestion should be marked as promoted
+
+This preserves:
+
+```text
+what was inferred
+what was accepted
+what became canon
+```
+
+### Design Principle
+
+```text
+The system proposes.
+The author decides.
+The database records the decision.
+```
+
+
 ## What Not To Store
 
 Do not create persistent facts like:
