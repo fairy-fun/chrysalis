@@ -9,7 +9,7 @@ function apply_entity_event_theme_link_proposal(PDO $pdo, array $proposal): arra
 {
     $validation = validate_entity_event_theme_link_proposal($pdo, $proposal);
 
-    if (($validation['ok'] ?? false) !== true) {
+    if (($validation['ok'] ?? false) !== true || !isset($validation['normalised']) || !is_array($validation['normalised'])) {
         return [
             'status' => 'rejected',
             'validation' => $validation,
