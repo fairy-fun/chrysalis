@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/entity_event_theme_link_validator.php';
+require_once __DIR__ . '/../facts/apply_fact.php';
 
 function apply_entity_event_theme_link_proposal(PDO $pdo, array $proposal): array
 {
@@ -18,43 +19,21 @@ function apply_entity_event_theme_link_proposal(PDO $pdo, array $proposal): arra
     $row = $validation['normalised'];
     $contextEntityId = $row['context_entity_id'] ?? $row['subject_entity_id'];
 
-    $stmt = $pdo->prepare(<<<SQL
-INSERT INTO sxnzlfun_chrysalis.entity_linked_facts_event (
-    subject_entity_id,
-    context_entity_id,
-    fact_type_id,
-    object_entity_id,
-    source_document,
-    notes
-)
-VALUES (
-    :subject_entity_id,
-    :context_entity_id,
-    :fact_type_id,
-    :object_entity_id,
-    :source_document,
-    :notes
-)
-ON DUPLICATE KEY UPDATE
-    linked_fact_id = linked_fact_id
-SQL);
+    $result = apply_event_fact(
+        $pdo,
+        $row['subject_entity_id'],
+        $contextEntityId,
+        $row['fact_type_id'],
+        $row['object_entity_id'],
+        $row['source_document'] ?? null,
+        $row['notes'] ?? null
+    );
 
-    $stmt->execute([
-        'subject_entity_id' => $row['subject_entity_id'],
-        'context_entity_id' => $contextEntityId,
-        'fact_type_id' => $row['fact_type_id'],
-        'object_entity_id' => $row['object_entity_id'],
-        'source_document' => $row['source_document'] ?? null,
-        'notes' => $row['notes'] ?? null,
-    ]);
-
-    return [
-        'status' => $stmt->rowCount() > 0 ? 'applied' : 'duplicate',
-        'fact_id' => (int)$pdo->lastInsertId(),
-        'fact' => array_merge($row, [
+    return array_merge($result, [
+        'fact' => array_merge($result['fact'] ?? [], $row, [
             'context_entity_id' => $contextEntityId,
         ]),
-    ];
+    ]);
 }
 
 function applyEntityEventThemeSuggestions(PDO $pdo, array $proposals): array
