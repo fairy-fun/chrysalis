@@ -62,27 +62,31 @@ But now:
 ### 3.1 Two Evidence Modes
 
 Add conceptual layer (can live in `notes` or later structured):
-
+``` text
 evidence_mode:
 - prose_explicit
 - prose_close_pov
 - inferred_external
+```
+
 ### 3.2 POV Constraint Overlay
+``` text
   IF subject = Shay
   THEN evidence_mode MUST NOT be inferred_external
-
+```
 For other characters:
-
+``` text
 inferred_external = allowed
-4. Transitions: From Derived → Semi-First-Class
+```
+## 4. Transitions: From Derived → Semi-First-Class
 
-Your limbic doc says:
+The limbic doc says:
 
 transitions are derived, not stored
 
 But your system is evolving beyond that. The correct refinement is:
 
-4.1 Dual Nature of Transitions
+### 4.1 Dual Nature of Transitions
 derived_transition = default (query-time)
 materialized_transition = optional (when narratively or causally important)
 
