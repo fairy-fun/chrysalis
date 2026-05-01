@@ -1,51 +1,206 @@
-## repo contract
+## Limbic Repo Contract & Validator Rules
 
-Limbic write boundary:
+This document defines **write boundaries and enforcement rules** for all limbic-related data.
 
-1. entity_linked_facts_event
-   Canonical event-scoped facts only.
+---
 
-2. entity_limbic_state_suggestions_event
-   Inferred/uncertain states only.
-   Never treated as truth.
+## Write Boundary
 
-3. entity_state_transitions_event
-   Materialised meaningful state changes only.
-   Requires existing from/to facts.
+```text
+entity_linked_facts_event           = canonical truth only
+entity_limbic_state_suggestions_event = inferred/uncertain states
+entity_state_transitions_event      = curated, meaningful state changes
+entity_coregulation_event           = regulatory interactions
+```
 
-4. entity_coregulation_event
-   Regulatory interaction between characters.
-   May point to a caused transition.
+These layers must remain strictly separated.
 
-## validator rules
+---
 
-FACT INSERT
-- reject if basis_type is inference
-- require source_document
-- require context_entity_id
-- require object_entity_id
-- if subject is POV-bounded, require prose-backed evidence
+## API Contracts
 
-SUGGESTION INSERT
-- allow inference
-- require basis_type
-- require confidence
-- must not write fact rows
+### 1. Suggestion Insert
+POST /limbic/suggestions
 
-PROMOTION
-- require explicit endpoint/action
-- create fact
-- mark suggestion promoted
-- set promoted_to_fact_id
-- no automatic promotion
+```json
+{
+  "subject_entity_id": "CHAR-SHAY-001",
+  "context_entity_id": "calendar_event:40",
+  "suggested_object_entity_id": "entity_limbic_window_regulated",
+  "basis_type": "behavioral_inference",
+  "supporting_entities": ["CHAR-KAI-001", "scene_deescalation"],
+  "confidence": 0.35,
+  "notes": "Externally steady, but prose does not confirm internal regulation."
+}
+```
 
-TRANSITION INSERT
-- require from_object_entity_id
-- require to_object_entity_id
-- verify both are existing facts for same subject/context trajectory
-- do not invent missing states
+#### Validator Rules
 
-COREGULATION INSERT
-- source = regulator
-- target = regulated subject
-- if caused_transition_id exists, transition.subject_entity_id must equal target_entity_id
+* allow inference
+* require `basis_type`
+* require `confidence`
+* must NOT insert into fact tables
+
+---
+
+### 2. Fact Insert
+POST /limbic/facts
+```json
+{
+  "subject_entity_id": "CHAR-SHAY-001",
+  "context_entity_id": "calendar_event:40",
+  "object_entity_id": "entity_limbic_threat_activated",
+  "source_document": "prose:book1_scene_40",
+  "notes": "Prose-supported internal threat activation."
+}
+```
+
+#### Validator Rules
+
+* must insert into `entity_linked_facts_event`
+* require `source_document`
+* reject if derived from inference
+
+#### Shay Constraint (POV-Bounded)
+
+If:
+
+```text
+subject_entity_id = Shay
+```
+
+Then reject unless:
+
+* evidence is prose-backed
+* notes reflect internal state evidence
+
+Explicitly invalid signals:
+
+```text
+others calming down
+Shay stabilising the room
+steady tone or competence
+scene de-escalation
+```
+
+---
+
+### 3. Suggestion → Fact Promotion
+POST /limbic/suggestions/{id}/promote
+```json
+{
+  "source_document": "prose:book1_scene_40",
+  "notes": "Author approved promotion based on prose evidence."
+}
+```
+
+#### Validator Rules
+
+* requires explicit endpoint call
+* must create fact row
+* must update suggestion:
+
+    * `promoted_at`
+    * `promoted_to_fact_id`
+* must NOT auto-promote
+
+---
+
+### 4. Transition Insert
+POST /limbic/transitions
+```json
+{
+  "subject_entity_id": "CHAR-SHAY-001",
+  "context_entity_id": "calendar_event:40",
+  "from_object_entity_id": "entity_limbic_threat_activated",
+  "to_object_entity_id": "entity_limbic_window_regulated",
+  "source_document": "prose:book1_scene_40",
+  "notes": "Author-approved meaningful transition."
+}
+```
+
+#### Validator Rules
+
+* require both `from` and `to`
+* verify both exist as facts for subject
+* reject inferred or missing states
+
+For Shay:
+
+```text
+no automatic transition creation
+requires explicit author approval
+```
+
+---
+
+### 5. Coregulation Insert
+POST /limbic/coregulation
+```json
+{
+  "source_entity_id": "CHAR-SHAY-001",
+  "target_entity_id": "CHAR-KAI-001",
+  "context_entity_id": "calendar_event:40",
+  "regulation_type_id": "entity_regulation_type_stabilise",
+  "caused_transition_id": 12,
+  "notes": "Shay stabilizes Kai; does not imply Shay is internally regulated."
+}
+```
+
+#### Validator Rules
+
+* source = regulator
+* target = affected subject
+
+If `caused_transition_id` is present:
+
+* must reference existing transition
+* transition.subject_entity_id == target_entity_id
+
+---
+
+## CPTSD Constraint (Shay Critical Rule)
+
+```text
+external regulation ≠ internal regulation
+```
+
+The system must NOT infer Shay’s internal regulation from:
+
+* others calming down
+* successful de-escalation
+* behavioural control
+* perceived competence
+
+These may produce:
+
+```text
+coregulation events (Shay → others)
+```
+
+They must NOT produce:
+
+```text
+Shay = entity_limbic_window_regulated (fact)
+```
+
+---
+
+## Prohibited Behaviors
+
+The API must NOT:
+
+* write inferred states into `entity_linked_facts_event`
+* auto-promote suggestions
+* derive and store transitions automatically
+* treat confidence as truth
+* bypass POV constraints
+
+---
+
+## Design Principle
+
+```text
+The system may think beyond the prose.
+It may not write beyond the prose.
+```
