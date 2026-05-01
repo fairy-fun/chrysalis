@@ -659,6 +659,86 @@ notes   = stabilised by another character's presence, voice, pacing, containment
 
 ---
 
+## Limbic State Suggestions
+
+The system supports a separate suggestion layer for inferred or uncertain limbic states.
+
+Suggestions are stored in:
+
+```text
+entity_limbic_state_suggestions_event
+```
+
+They are **not facts** and must not be treated as canonical truth.
+
+### Purpose
+
+Suggestions allow the system to:
+
+* capture plausible interpretations
+* explore inferred internal states
+* support analysis without violating POV constraints
+
+This is especially critical for POV-bounded characters such as Shay.
+
+### Structural Requirements
+
+```text
+subject_entity_id
+context_entity_id
+suggested_object_entity_id
+basis_type
+confidence
+```
+
+are required.
+
+```text
+Suggestions may be uncertain.
+They may not be structurally vague.
+```
+
+### Suggestion vs Fact
+
+```text
+Suggestion = allowed inference
+Fact       = requires prose evidence
+```
+
+If a state is inferred from:
+
+* behaviour (e.g. stabilising others)
+* dialogue tone
+* scene outcome
+
+then it belongs in the suggestion layer.
+
+It must not be written to:
+
+```text
+entity_linked_facts_event
+```
+
+unless supported by explicit prose evidence.
+
+### Shay Constraint
+
+For Shay:
+
+```text
+external regulation ≠ internal regulation
+```
+
+Do not promote a suggestion to a fact unless the prose confirms:
+
+* internal settling
+* physiological change
+* reduced hypervigilance
+* restored sense of safety or control
+
+
+---
+
 ## What Not To Store
 
 Do not create persistent facts like:
