@@ -253,6 +253,18 @@ The API must NOT:
 
 ---
 
+## DB Enforcement Status
+### Database guarantees:
+- required entity references exist
+- source_document exists for facts/transitions
+
+### Validator guarantees:
+- no inference-only facts
+- POV-bounded evidence rules
+- no auto-promotion
+- transition from/to are accepted facts for same subject
+- coregulation transition target alignment
+
 ## Design Principle
 
 ```text
