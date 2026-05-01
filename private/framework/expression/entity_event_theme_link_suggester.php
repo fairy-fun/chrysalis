@@ -29,7 +29,7 @@ JOIN sxnzlfun_chrysalis.expression_theme_inference_rules rule
     ON rule.attribute_type_id = o.attribute_type_id
    AND rule.output_value_classval_id = o.output_value_classval_id
    AND rule.is_active = 1
-LEFT JOIN sxnzlfun_chrysalis.entity_linked_facts existing
+LEFT JOIN sxnzlfun_chrysalis.entity_linked_facts_event existing
     ON existing.subject_entity_id = r.context_entity_id
    AND existing.fact_type_id = 'fact_type_event_theme'
    AND existing.object_entity_id = rule.theme_entity_id

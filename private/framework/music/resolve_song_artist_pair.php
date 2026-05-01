@@ -43,7 +43,7 @@ function resolve_song_artist_pair(PDO $pdo, string $songEntityId): array
 SELECT
     elf.subject_entity_id AS song_entity_id,
     elf.object_entity_id AS artist_entity_id
-FROM sxnzlfun_chrysalis.entity_linked_facts elf
+FROM sxnzlfun_chrysalis.entity_linked_facts_global elf
 WHERE elf.subject_entity_id = :song_entity_id
   AND elf.fact_type_id = :fact_type_id
 ORDER BY elf.object_entity_id ASC

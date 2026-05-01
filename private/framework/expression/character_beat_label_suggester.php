@@ -19,7 +19,7 @@ function suggestCharacterBeatLabels(
         JOIN calendar_event_participants cep
             ON cep.event_id = ce.id
            AND cep.entity_id = :character_entity_id
-        JOIN entity_linked_facts elf
+        JOIN entity_linked_facts_event elf
             ON elf.subject_entity_id = ce.entity_id
            AND elf.fact_type_id = 'fact_type_event_theme'
         LEFT JOIN theme_author_labels tal
