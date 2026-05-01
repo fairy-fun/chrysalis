@@ -15,6 +15,7 @@ function suggest_entity_event_theme_link(PDO $pdo, ?string $contextEntityId = nu
     $stmt = $pdo->prepare(<<<SQL
 SELECT
     r.context_entity_id AS subject_entity_id,
+    r.context_entity_id AS context_entity_id,
     'fact_type_event_theme' AS fact_type_id,
     rule.theme_entity_id AS object_entity_id,
     o.attribute_type_id,
@@ -31,6 +32,7 @@ JOIN sxnzlfun_chrysalis.expression_theme_inference_rules rule
    AND rule.is_active = 1
 LEFT JOIN sxnzlfun_chrysalis.entity_linked_facts_event existing
     ON existing.subject_entity_id = r.context_entity_id
+   AND existing.context_entity_id = r.context_entity_id
    AND existing.fact_type_id = 'fact_type_event_theme'
    AND existing.object_entity_id = rule.theme_entity_id
 WHERE existing.linked_fact_id IS NULL
@@ -51,6 +53,7 @@ SQL);
         $proposals[] = [
             'proposal_type' => 'entity_event_theme_link',
             'subject_entity_id' => $row['subject_entity_id'],
+            'context_entity_id' => $row['context_entity_id'],
             'fact_type_id' => $row['fact_type_id'],
             'object_entity_id' => $row['object_entity_id'],
             'match_status' => 'suggested',
@@ -63,7 +66,7 @@ SQL);
                 'leaf_event_only' => true,
             ],
             'proposed_action' => [
-                'table' => 'entity_linked_facts',
+                'table' => 'entity_linked_facts_event',
                 'operation' => 'insert_if_missing',
             ],
             'sql_text' => null,
