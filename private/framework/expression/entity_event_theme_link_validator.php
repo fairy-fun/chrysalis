@@ -5,6 +5,7 @@ declare(strict_types=1);
 function validate_entity_event_theme_link_proposal(PDO $pdo, array $proposal): array
 {
     $subjectEntityId = trim((string)($proposal['subject_entity_id'] ?? ''));
+    $contextEntityId = $subjectEntityId;
     $factTypeId = trim((string)($proposal['fact_type_id'] ?? ''));
     $objectEntityId = trim((string)($proposal['object_entity_id'] ?? ''));
 
@@ -46,14 +47,16 @@ SQL);
 
     $dup = $pdo->prepare(<<<SQL
 SELECT COUNT(*) AS count
-FROM sxnzlfun_chrysalis.entity_linked_facts
+FROM sxnzlfun_chrysalis.entity_linked_facts_event
 WHERE subject_entity_id = :subject_entity_id
+  AND context_entity_id = :context_entity_id
   AND fact_type_id = :fact_type_id
   AND object_entity_id = :object_entity_id
 SQL);
 
     $dup->execute([
         'subject_entity_id' => $subjectEntityId,
+        'context_entity_id' => $contextEntityId,
         'fact_type_id' => $factTypeId,
         'object_entity_id' => $objectEntityId,
     ]);
