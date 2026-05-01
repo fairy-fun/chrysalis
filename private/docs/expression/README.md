@@ -271,10 +271,10 @@ Function:
 auditCharacterPredictionDrift(PDO $pdo, predicted, actual)
 ```
 Returns:
-```json
+```text
 {
 "audit_category": "EXACT_MATCH | NEAR_MATCH | DIVERGENCE",
-"score_multiplier": 1.00 | 0.50 | 0.00
+"score_multiplier": [1.00 , 0.50 , 0.00]
 }
 ```
 ### System Role Summary
@@ -379,20 +379,22 @@ Everything looks “correct” but silently fails
 
 Apply exactly one theme:
 ```sql
-INSERT INTO entity_linked_facts (
-subject_entity_id,
-fact_type_id,
-object_entity_id,
-notes,
-source_document
+INSERT INTO entity_linked_facts_event (
+   subject_entity_id,
+   context_entity_id,
+   fact_type_id,
+   object_entity_id,
+   notes,
+   source_document
 )
 VALUES (
-'calendar_event:<id>',
-'fact_type_event_theme',
-'<theme_entity_id>',
-'<optional explanation>',
-'<source>'
-);
+          'calendar_event:<id>',
+          'calendar_event:<id>',
+          'fact_type_event_theme',
+          '<theme_entity_id>',
+          '<optional explanation>',
+          '<source>'
+       );
 ```
 
 Example:
@@ -436,28 +438,30 @@ suggested_next_beats will be EMPTY
 System cannot learn transitions
 🔍 DEBUG CHECK (RUN THIS FIRST IF SOMETHING BREAKS)
 ```sql
+
 SELECT
-ce.id,
-ce.entity_id,
-cep.entity_id AS participant_entity_id,
-cepm.projection_entity_id,
-elf.object_entity_id AS theme_entity_id,
-nto.theme_entity_id AS observation_theme
+   ce.id,
+   ce.entity_id,
+   cep.entity_id AS participant_entity_id,
+   cepm.projection_entity_id,
+   elf.object_entity_id AS theme_entity_id,
+   nto.theme_entity_id AS observation_theme
 FROM calendar_events ce
-LEFT JOIN calendar_event_participants cep
-ON cep.event_id = ce.id
-AND cep.entity_id = 'CHAR-MAIN-001'
-LEFT JOIN calendar_event_projection_membership cepm
-ON cepm.calendar_event_id = ce.id
-AND cepm.projection_entity_id = 'book_projection_BOOK-001'
-LEFT JOIN entity_linked_facts elf
-ON elf.subject_entity_id = ce.entity_id
-AND elf.fact_type_id = 'fact_type_event_theme'
-LEFT JOIN narrative_theme_observations nto
-ON nto.source_entity_id = ce.entity_id
-AND nto.subject_entity_id = 'CHAR-MAIN-001'
-AND nto.projection_entity_id = 'book_projection_BOOK-001'
-WHERE ce.id = <event_id>;
+        LEFT JOIN calendar_event_participants cep
+                  ON cep.event_id = ce.id
+                     AND cep.entity_id = 'CHAR-MAIN-001'
+        LEFT JOIN calendar_event_projection_membership cepm
+                  ON cepm.calendar_event_id = ce.id
+                     AND cepm.projection_entity_id = 'book_projection_BOOK-001'
+        LEFT JOIN entity_linked_facts elf
+                  ON elf.subject_entity_id = ce.entity_id
+                     AND elf.fact_type_id = 'fact_type_event_theme'
+        LEFT JOIN narrative_theme_observations nto
+                  ON nto.source_entity_id = ce.entity_id
+                     AND nto.subject_entity_id = 'CHAR-MAIN-001'
+                     AND nto.projection_entity_id = 'book_projection_BOOK-001'
+WHERE ce.id = ?;
+
 ```
 
 
@@ -643,20 +647,22 @@ The event still needs the normal four-part linkage:
 Example event theme fact:
 
 ```sql
-INSERT INTO sxnzlfun_chrysalis.entity_linked_facts (
-    subject_entity_id,
-    fact_type_id,
-    object_entity_id,
-    notes,
-    source_document
+INSERT INTO sxnzlfun_chrysalis.entity_linked_facts_event (
+   subject_entity_id,
+   context_entity_id,
+   fact_type_id,
+   object_entity_id,
+   notes,
+   source_document
 )
 VALUES (
-    'calendar_event:<id>',
-    'fact_type_event_theme',
-    'entity_theme_stability_transfer',
-    'Derived from prose: partner transition shifts stability/control between actors.',
-    'prose_subbeat_<chronology_address>'
-);
+          'calendar_event:<id>',
+          'calendar_event:<id>',
+          'fact_type_event_theme',
+          'entity_theme_stability_transfer',
+          'Derived from prose: partner transition shifts stability/control between actors.',
+          'prose_subbeat_<chronology_address>'
+       );
 ```
 
 Example observation:
