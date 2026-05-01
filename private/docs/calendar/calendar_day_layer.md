@@ -209,6 +209,71 @@ W.D.T
 * `D` → day_index
 * `T` → time_index
 
+#### Required Fields
+
+```
+layer_id            = 'calendar_layer_time'
+parent_event_id     = <day.id>
+time_index          = 1..N
+time_label_id       = <classval id>
+event_id            = allocated via sequence
+entity_id           = 'calendar_event:<event_id>'
+chronology_address  = '<W>.<D>.<T>'
+summary             = ''
+```
+
+Time Label Assignment
+
+Each time node maps to a canonical label:
+
+calendar_events.time_label_id
+
+Defined in:
+
+calendar_time_label_classvals
+
+Ordered by:
+
+calendar_time_label_classvals.sort_order
+Canonical Time Labels
+1 → Pre-dawn
+2 → Early Morning
+3 → Morning
+4 → Lunch
+5 → Afternoon
+6 → Evening
+7 → Night
+8 → Late Night
+Creation Procedure
+Resolve or create parent day (W.D)
+Determine time_index
+Resolve time_label_id
+Allocate event_id and entity_id
+Insert time-layer row
+Inherit projection membership from parent
+Relationship to Events
+Events (depth 4) are created under time nodes
+Subevents (depth 5) are created under events
+Day (W.D)
+→ Time (W.D.T)
+→ Event (W.D.T.E)
+→ Subevent (W.D.T.E.S)
+Rendering Contract
+Time groups are ordered by label sort order
+Events are grouped under their time node
+
+Example:
+
+Saturday (Week 2)
+
+Late Night
+- Event A
+  Status
+  Entity-first pattern enforced
+  Day-level uniqueness enforced
+  Chronology address queryable
+  Idempotent creation defined
+
 Examples:
 
 ```
