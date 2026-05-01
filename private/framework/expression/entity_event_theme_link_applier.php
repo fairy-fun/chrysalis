@@ -25,9 +25,7 @@ INSERT INTO sxnzlfun_chrysalis.entity_linked_facts_event (
     fact_type_id,
     object_entity_id,
     source_document,
-    notes,
-    created_at,
-    updated_at
+    notes
 )
 VALUES (
     :subject_entity_id,
@@ -35,9 +33,7 @@ VALUES (
     :fact_type_id,
     :object_entity_id,
     :source_document,
-    :notes,
-    NOW(),
-    NOW()
+    :notes
 )
 ON DUPLICATE KEY UPDATE
     linked_fact_id = linked_fact_id
