@@ -12,13 +12,25 @@ require_once __DIR__ . '/../classval/classval_domains.php';
 function validate_entity_linked_facts_fact_type_validity(PDO $pdo): array
 {
     $sql = "
-        SELECT elf.fact_type_id
-        FROM entity_linked_facts AS elf
+        SELECT fact_scope, fact_type_id
+        FROM (
+            SELECT
+                'global' AS fact_scope,
+                elf.fact_type_id
+            FROM entity_linked_facts_global AS elf
+
+            UNION ALL
+
+            SELECT
+                'event' AS fact_scope,
+                elf.fact_type_id
+            FROM entity_linked_facts_event AS elf
+        ) AS facts
         LEFT JOIN classvals AS cv
-            ON cv.id = elf.fact_type_id
+            ON cv.id = facts.fact_type_id
            AND cv.classval_type_id = :classval_type_id
         WHERE cv.id IS NULL
-        GROUP BY elf.fact_type_id
+        GROUP BY fact_scope, fact_type_id
     ";
 
     $stmt = $pdo->prepare($sql);
@@ -30,7 +42,11 @@ function validate_entity_linked_facts_fact_type_validity(PDO $pdo): array
     $errors = [];
 
     foreach ($rows as $row) {
-        $errors[] = 'Unknown fact_type_id (invalid or wrong domain): ' . (string)$row['fact_type_id'];
+        $errors[] =
+            'Unknown fact_type_id in ' .
+            (string)$row['fact_scope'] .
+            ' facts: ' .
+            (string)$row['fact_type_id'];
     }
 
     return [
