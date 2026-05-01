@@ -175,13 +175,13 @@ trigger = what induced state (fact-level)
 ```
 Now:
 
-|Layer	|Table	| Meaning          |
-|-------|-------|------------------|
-|State	|entity_linked_facts_event	| what is true     |
-|Trigger	| entity_linked_facts_event	| what contributed |
-|Transition	|entity_state_transitions_event	| what changed     |
-|Co-regulation	|entity_coregulation_event	| who influenced   |
-|Causality link	|FK	|which influence caused which change|
+| Layer	          | Table	                          | Meaning                             |
+|-----------------|---------------------------------|-------------------------------------|
+| State	          | entity_linked_facts_event	      | what is true                        |
+| Trigger	        | entity_linked_facts_event	      | what contributed                    |
+| Transition	     | entity_state_transitions_event	 | what changed                        |
+| Co-regulation	  | entity_coregulation_event	      | who influenced                      |
+| Causality link	 | FK	                             | which influence caused which change |
 
 ## 9. Writing-System Consequence (This is the big shift)
 
