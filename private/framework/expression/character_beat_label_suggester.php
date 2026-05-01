@@ -1,12 +1,12 @@
 <?php
 
+declare(strict_types=1);
 
 function suggestCharacterBeatLabels(
-    PDO     $pdo,
-    string  $characterEntityId,
+    PDO $pdo,
+    string $characterEntityId,
     ?string $projectionEntityId = null
-): array
-{
+): array {
     $sql = "
         SELECT
             ce.id AS calendar_event_id,
@@ -21,6 +21,7 @@ function suggestCharacterBeatLabels(
            AND cep.entity_id = :character_entity_id
         JOIN entity_linked_facts_event elf
             ON elf.subject_entity_id = ce.entity_id
+           AND elf.context_entity_id = ce.entity_id
            AND elf.fact_type_id = 'fact_type_event_theme'
         LEFT JOIN theme_author_labels tal
             ON tal.theme_entity_id = elf.object_entity_id
@@ -34,9 +35,11 @@ function suggestCharacterBeatLabels(
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':character_entity_id', $characterEntityId);
+
     if ($projectionEntityId) {
         $stmt->bindValue(':projection_entity_id', $projectionEntityId);
     }
+
     $stmt->execute();
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -44,8 +47,6 @@ function suggestCharacterBeatLabels(
     $proposals = [];
 
     foreach ($rows as $row) {
-        $theme = $row['theme_entity_id'];
-
         $proposals[] = [
             'calendar_event_id' => (int)$row['calendar_event_id'],
             'event_entity_id' => $row['event_entity_id'],
