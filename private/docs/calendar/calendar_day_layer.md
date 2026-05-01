@@ -186,3 +186,156 @@ Apply the same pattern to:
 - Subevent layer → (parent_event_id, subevent_index)
 
 (with appropriate scoping)
+
+## Time Layer (Depth 3) — Day Subdivision
+
+### Overview
+
+The time layer subdivides a calendar day into ordered narrative containers.
+
+Each node at depth 3 represents a **time segment within a day**, providing structure for grouping events.
+
+Time nodes do not carry narrative meaning themselves. They exist to organize events temporally and support human-readable views.
+
+---
+
+### Address Structure
+
+```
+W.D.T
+```
+
+* `W` → week_index
+* `D` → day_index
+* `T` → time_index
+
+Examples:
+
+```
+3.1.1 → Week 3, Day 1, Time 1
+3.1.2 → Week 3, Day 1, Time 2
+```
+
+---
+
+### Time Labels
+
+Each time node MUST map to a canonical time label via:
+
+```
+calendar_events.time_label_id
+```
+
+Time labels are defined in:
+
+```
+calendar_time_label_classvals
+```
+
+---
+
+### Canonical Time Label Set (Ordered)
+
+Time labels are globally standardized and MUST follow this exact order:
+
+```
+1 → Pre-dawn
+2 → Early Morning
+3 → Morning
+4 → Lunch
+5 → Afternoon
+6 → Evening
+7 → Night
+8 → Late Night
+```
+
+Ordering is enforced via:
+
+```
+calendar_time_label_classvals.sort_order
+```
+
+This ordering is authoritative and MUST be used for all time-based rendering and grouping.
+
+---
+
+### Structural Rules
+
+* Time nodes exist at **depth 3 only**
+
+* Time nodes MUST belong to a valid day (`W.D`)
+
+* Time nodes MUST have:
+
+    * a valid `time_index`
+    * a valid `time_label_id`
+
+* Time nodes MUST NOT:
+
+    * contain narrative summaries
+    * be used as events
+    * carry narrative meaning
+
+---
+
+### Relationship to Events
+
+* Events (depth 4) MUST belong to a time node
+* Subevents (depth 5) MUST belong to events, not time nodes
+
+Hierarchy:
+
+```
+Day (W.D)
+  → Time (W.D.T)
+      → Event (W.D.T.E)
+          → Subevent (W.D.T.E.S)
+```
+
+---
+
+### Usage Rules
+
+* Time nodes SHOULD only be created when needed
+* Do NOT create all possible time slots by default
+* Empty time nodes are allowed but SHOULD be intentional
+
+---
+
+### Rendering Contract (Human Readable)
+
+When displaying a day, time nodes define grouping:
+
+Example:
+
+```
+Sunday (Week 3)
+
+Pre-dawn
+  - —
+
+Early Morning
+  - Event A
+
+Morning
+  - Event B
+
+Afternoon
+  - Event C
+```
+
+* Events MUST be grouped by `time_index`
+* Time groups MUST be ordered by `sort_order`
+* Empty groups MAY be omitted unless explicitly required
+
+---
+
+### Anti-Patterns (Disallowed)
+
+* Using time nodes as narrative containers
+* Skipping time labels or leaving them NULL
+* Inconsistent or custom time label sets
+* Encoding time meaning in event summaries instead of labels
+* Creating unnecessary empty time nodes
+
+Violations MUST be rejected at the API layer.
