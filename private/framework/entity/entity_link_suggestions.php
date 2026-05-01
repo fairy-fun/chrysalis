@@ -24,17 +24,17 @@ function build_link_entity_sql(
     string $objectEntityId
 ): string {
     return
-        'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts ' .
-        '(subject_entity_id, fact_type_id, object_entity_id, notes, source_document, created_at, updated_at) ' .
+        'INSERT INTO sxnzlfun_chrysalis.entity_linked_facts_global ' .
+        '(subject_entity_id, fact_type_id, object_entity_id, notes, source_document) ' .
         'SELECT ' .
         quote_sql_string($pdo, $subjectEntityId) . ', ' .
         quote_sql_string($pdo, $factTypeId) . ', ' .
         quote_sql_string($pdo, $objectEntityId) . ', ' .
-        'NULL, NULL, NOW(), NOW() ' .
+        'NULL, NULL ' .
         'FROM DUAL ' .
         'WHERE NOT EXISTS (' .
         'SELECT 1 ' .
-        'FROM sxnzlfun_chrysalis.entity_linked_facts elf ' .
+        'FROM sxnzlfun_chrysalis.entity_linked_facts_global elf ' .
         'WHERE elf.subject_entity_id = ' . quote_sql_string($pdo, $subjectEntityId) . ' ' .
         'AND elf.fact_type_id = ' . quote_sql_string($pdo, $factTypeId) . ' ' .
         'AND elf.object_entity_id = ' . quote_sql_string($pdo, $objectEntityId) .
