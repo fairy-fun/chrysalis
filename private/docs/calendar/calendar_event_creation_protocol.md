@@ -36,6 +36,56 @@ entities.id = calendar_events.entity_id
 
 ---
 
+#### 2.1. Event vs Subevent Structure
+
+The event layer contains **two hierarchical depths**:
+
+| Depth | Meaning   | Example Address |
+|------|----------|----------------|
+| 4    | Event    | `1.3.5.1`      |
+| 5    | Subevent | `1.3.5.1.1`    |
+
+Rules:
+
+- Depth 4 = **top-level event within a time block**
+- Depth 5 = **child event (subevent) of a depth-4 event**
+- Subevents must reference a **parent event**, not a time layer
+
+---
+
+#### 2.2 Index Derivation (Critical)
+
+The following fields are **derived from `chronology_address`** and must NOT be manually assigned:
+
+- `week_index`
+- `day_index`
+- `time_index`
+- `event_index`
+- `subevent_index`
+
+Derivation:
+
+chronology_address = W.D.T.E(.S)
+
+```text 
+| Segment | Meaning |
+|--------|--------|
+
+| W      | week_index |
+| D      | day_index |
+| T      | time_index |
+| E      | event_index |
+| S      | subevent_index (optional) |
+```
+
+Examples:
+```text 
+1.3.5.1 → event_index = 1
+1.3.5.1.2 → event_index = 1, subevent_index = 2
+```
+> `chronology_address` is the **only source of truth** for structural position.
+
+
 ### 3. Identity Model
 
 Each event has:
@@ -81,7 +131,22 @@ VALUES ('calendar_event:327', 'entity_type_calendar_event');
 
 ### Step 3 — Insert into `calendar_events`
 
-Template:
+You must construct a valid `chronology_address`.
+
+#### For a top-level event:
+```text
+chronology_address = parent_time_address + '.' + EVENT_INDEX
+```
+
+#### For a subevent:
+```text
+chronology_address = parent_event_address + '.' + SUBEVENT_INDEX
+```
+
+
+---
+
+### Insert Template (Minimal Safe Form)
 
 ```text
 INSERT INTO calendar_events (
@@ -89,53 +154,42 @@ INSERT INTO calendar_events (
   event_id,
   layer_id,
   summary,
-  parent_event_id,
-  week_index,
-  day_index,
-  time_index,
-  event_index
+  chronology_address,
+  parent_event_id
 )
-SELECT
+VALUES (
   'calendar_event:EVENT_ID',
   EVENT_ID,
   'calendar_layer_event',
   'DESCRIPTIVE SUMMARY',
-  ce.id,
-  ce.week_index,
-  ce.day_index,
-  ce.time_index,
-  EVENT_INDEX
-FROM calendar_events ce
-WHERE ce.entity_id = 'PARENT_TIME_LAYER_ENTITY_ID';
+  'CHRONOLOGY_ADDRESS',
+  PARENT_EVENT_ID
+);
 ```
+#### Important
+* week_index, day_index, time_index, event_index, subevent_index
+→ must NOT be manually set
+* These are derived fields
+* Manual assignment can corrupt constraints
 
-Example:
+### Parent Linkage Rules
 
-```sql
-INSERT INTO calendar_events (
-  entity_id,
-  event_id,
-  layer_id,
-  summary,
-  parent_event_id,
-  week_index,
-  day_index,
-  time_index,
-  event_index
-)
-SELECT
-  'calendar_event:327',
-  327,
-  'calendar_layer_event',
-  'Narrative anchor for Early morning',
-  ce.id,
-  ce.week_index,
-  ce.day_index,
-  ce.time_index,
-  1
-FROM calendar_events ce
-WHERE ce.entity_id = 'calendar_event:322';
-```
+- Depth 4 events:
+    - parent must be a **time-layer row**
+- Depth 5 events (subevents):
+    - parent must be a **depth-4 event**
+
+Parent must always match:
+
+parent.chronology_address =
+SUBSTRING_INDEX(child.chronology_address, '.', depth - 1)
+
+
+Any mismatch creates:
+- orphaned rows
+- constraint violations
+- invalid projections
+
 ---
 
 ## Attaching Prose
@@ -196,6 +250,62 @@ Guarantees:
 > Prose can only attach to event-layer rows
 
 ---
+### Event Uniqueness Constraint
+
+UNIQUE(event_unique_parent_id, event_unique_index)
+
+
+This enforces:
+
+> Only one event index per parent
+
+Important:
+
+- This constraint is enforced via **generated columns**
+- It cannot be bypassed with partial updates
+- All writes must be **structurally valid at commit time**
+
+---
+
+### Implication for Writes
+
+You cannot:
+
+- change `parent_event_id` independently
+- change `event_index` independently
+
+Because both affect generated uniqueness keys.
+
+All mutations must be **coherent and complete**.
+
+
+## Repair Doctrine (Critical Operational Rule)
+
+In case of corruption:
+
+1. Treat `chronology_address` as ground truth
+2. Derive all index fields from it
+3. Rebuild parent linkage from it
+4. Rebuild constraints last
+
+Never:
+
+- trust stored index columns
+- trust parent linkage
+- mutate partial structure under active constraints
+
+---
+
+### Safe Repair Pattern
+
+1. Disable or drop conflicting indexes
+2. Rebuild structure from `chronology_address`
+3. Validate uniqueness
+4. Re-enable constraints
+
+---
+
+This is the only safe recovery method.
 
 ## Migration Rule (Important)
 
