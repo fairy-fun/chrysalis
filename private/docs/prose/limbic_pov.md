@@ -254,3 +254,285 @@ This design avoids three common failure modes:
 ### 3. Treating all characters symmetrically
 
 → broken intentionally (correctly)
+
+# Limbic System — POV Constraints & Suggestion Layer
+
+File: private/docs/prose/limbic_pov.md
+
+## Overview
+
+This document defines POV-aware constraints on the limbic system model, with a specific focus on:
+``` text
+Shay as a bounded POV character (Books 1–3)
+```
+It extends:
+``` text
+private/docs/prose/limbic_documentation.md
+```
+without modifying its core rules.
+
+
+## Core Principle
+
+The system must distinguish between:
+``` text
+observed state   → prose-grounded, storable
+inferred state   → model-generated, non-storable (for POV-bound subjects)
+causal influence → interaction-driven, independently storable
+```
+## Shay as POV-Bounded Entity
+### Profile Constraint
+``` text
+entity: character:Shay
+
+profile_constraint:
+type: pov_bounded
+scope: books_1_3
+rule: internal_state_requires_prose_evidence
+```
+___
+
+## Hard Boundary Rule
+``` text
+No inferred limbic state for Shay may be stored as a fact.
+```
+
+This includes inferences derived from:
+
+* other characters’ reactions
+* scene tone
+* dialogue patterns
+* narrative expectations
+___
+
+## Suggestion vs Fact Model
+### Required Separation
+``` text
+SUGGESTION ≠ FACT
+```
+| Layer	      | Table	                                 | Meaning                          |
+|-------------|----------------------------------------|----------------------------------|
+| Fact	       | entity_linked_facts_event	             | Canonical, prose-supported truth |
+| Suggestion	 | entity_limbic_state_suggestions_event	 | Model inference, not committed   |
+
+## Suggestion Layer
+### Purpose
+
+Allow the system to reason about Shay’s likely internal state **without violating POV constraints.**
+
+### Table
+``` sql
+entity_limbic_state_suggestions_event
+```
+### Semantics
+suggestion:
+- may be wrong
+- may contradict future prose
+- must never be auto-promoted to fact
+___
+
+## Promotion Rule
+
+A suggestion becomes a fact only if:
+
+explicit or sufficiently grounded prose evidence appears
+
+Pipeline:
+
+suggestion → WAIT → prose support → fact insert
+
+Never:
+
+suggestion → direct fact
+Evidence Modes
+
+All limbic facts conceptually fall into:
+
+- prose_explicit
+- prose_close_pov
+- inferred_external
+  Enforcement
+  IF subject = Shay
+  THEN inferred_external is not allowed for stored facts
+  ## CPTSD Constraint: Delayed Regulation
+  ### Critical Rule
+  Shay regulating others is NOT evidence that Shay is regulated.
+  ### Decoupling Principle
+  external regulation capacity
+  ≠
+  internal limbic state
+  ### Disallowed Inferences for Shay
+
+Do NOT infer Shay is regulated from:
+
+others calming down around her
+Shay speaking steadily or clearly
+Shay organizing or structuring a situation
+Shay de-escalating conflict
+reduction of external tension
+
+These support:
+
+Shay → source of co-regulation (valid)
+
+But NOT:
+
+Shay → internally regulated (invalid unless prose-supported)
+Valid Evidence for Shay Regulation
+
+Shay may be considered regulated only when supported by prose signals such as:
+
+physiological settling (breath, body)
+reduction in threat anticipation
+cessation of hypervigilance (“waiting for the other shoe to drop”)
+internal quieting
+restored agency or choicefulness
+explicit narrative confirmation
+Co-Regulation Model Interaction
+Allowed
+Shay → coregulation → other_character → transition
+
+This is fully valid even when Shay’s internal state is unknown.
+
+Restricted
+other_character reacts → infer Shay state → store
+
+Disallowed.
+
+Shay as Target
+coregulation → Shay → transition
+
+Allowed ONLY if:
+
+the resulting Shay transition is prose-supported
+
+Otherwise:
+
+store coregulation event WITHOUT transition
+Transitions
+From Limbic Documentation
+
+Transitions are derived, not stored by default
+
+Extended Rule
+Transitions may be materialized when:
+- causality is being explicitly modeled
+- narrative significance exists
+  Shay Constraint
+  A Shay transition may only be stored if BOTH states are prose-supported.
+
+No inferred bridging.
+
+Trigger Facts vs Co-Regulation
+Concept	Table	Role
+Limbic state	entity_linked_facts_event	what is true
+Trigger	entity_linked_facts_event	what contributed
+Transition	entity_state_transitions_event	what changed
+Co-regulation	entity_coregulation_event	who influenced
+Suggestion	entity_limbic_state_suggestions_event	what is hypothesized
+Writing-System Effect
+
+This model intentionally creates asymmetry:
+
+Shay
+low explicit internal state
+high constraint
+suggestion-rich shadow layer
+Other Characters
+high observable state
+high inferential flexibility
+full transition modeling
+Narrative Outcome
+External emotional clarity
++
+Internal POV restraint
+
+Shay becomes:
+
+a causal center with constrained interior visibility
+Enforcement Summary
+Required System Rules
+1. Shay facts require prose evidence
+2. Shay inferred states → suggestions only
+3. No auto-promotion from suggestion → fact
+4. External regulation ≠ internal regulation (CPTSD rule)
+5. Shay transitions require prose-supported endpoints
+   Design Intent
+
+This is not just data hygiene.
+
+It ensures:
+
+the system does not over-interpret the POV character
+trauma dynamics (delayed settling, hypervigilance) are preserved
+causality remains expressive without corrupting interior truth
+Final Principle
+The system may think beyond the prose.
+It may not write beyond the prose.
+
+Pre-Enforcement Operating Mode
+
+Append this section to limbic_pov.md:
+
+Pre-Enforcement Operating Mode
+
+This system is currently not enforced at the database or CI level.
+
+All rules in this document are therefore:
+
+normative (must be followed)
+but not yet programmatically enforced
+Practical Implication
+
+The system operates in two layers:
+
+1. Storage layer (permissive)
+2. Modeling discipline (strict)
+
+Meaning:
+
+The database can accept invalid writes
+The process must not produce them
+Required Behavioral Discipline
+
+Until enforcement exists, the following must be treated as manual invariants:
+
+- Do not insert inferred Shay limbic states into entity_linked_facts_event
+- Always route Shay inferences into the suggestion layer
+- Do not materialize Shay transitions without prose evidence
+- Do not equate external regulation with internal regulation
+
+Violations will not fail technically—they will corrupt the model.
+
+Soft-Gating Pattern (Interim)
+
+Before inserting any Shay limbic fact, require an explicit check:
+
+evidence_check:
+- Is this directly supported by prose?
+- Can it be pointed to in text?
+
+If the answer is not clearly yes:
+
+→ write to suggestion table instead
+Annotation Requirement
+
+All Shay limbic facts should include:
+
+notes:
+- short justification
+- reference to scene, line, or narrative signal
+
+This acts as a human-auditable substitute for CI.
+
+Suggestion Visibility Rule
+
+Suggestions must remain visible and queryable.
+
+They are not second-class—they are:
+
+the system thinking ahead of the prose
+
+But they must remain clearly separated from:
+
+what the story has actually committed to.
