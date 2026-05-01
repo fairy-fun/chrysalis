@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Ensure every subject and object entity reference resolves.
+ * Ensure every subject, object, and event context entity reference resolves.
  *
  * @return array{ok:bool, errors:list<string>}
  */
@@ -85,6 +85,32 @@ function validate_entity_linked_facts_entity_fk_integrity(PDO $pdo): array
             . (string)$row['subject_entity_id']
             . ', fact_type_id='
             . (string)$row['fact_type_id'];
+    }
+
+    $contextSql = "
+        SELECT
+            elf.subject_entity_id,
+            elf.context_entity_id,
+            elf.fact_type_id,
+            elf.object_entity_id
+        FROM entity_linked_facts_event AS elf
+        LEFT JOIN entities AS e
+            ON e.id = elf.context_entity_id
+        WHERE e.id IS NULL
+    ";
+
+    $contextRows = $pdo->query($contextSql)->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($contextRows as $row) {
+        $errors[] =
+            'Orphaned context_entity_id='
+            . (string)$row['context_entity_id']
+            . ' in event facts for subject_entity_id='
+            . (string)$row['subject_entity_id']
+            . ', fact_type_id='
+            . (string)$row['fact_type_id']
+            . ', object_entity_id='
+            . (string)$row['object_entity_id'];
     }
 
     return [
