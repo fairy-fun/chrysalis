@@ -16,18 +16,27 @@ function apply_entity_event_theme_link_proposal(PDO $pdo, array $proposal): arra
     }
 
     $row = $validation['normalised'];
+    $contextEntityId = $row['context_entity_id'] ?? $row['subject_entity_id'];
 
     $stmt = $pdo->prepare(<<<SQL
-INSERT INTO sxnzlfun_chrysalis.entity_linked_facts (
+INSERT INTO sxnzlfun_chrysalis.entity_linked_facts_event (
     subject_entity_id,
+    context_entity_id,
     fact_type_id,
     object_entity_id,
-    created_at
+    source_document,
+    notes,
+    created_at,
+    updated_at
 )
 VALUES (
     :subject_entity_id,
+    :context_entity_id,
     :fact_type_id,
     :object_entity_id,
+    :source_document,
+    :notes,
+    NOW(),
     NOW()
 )
 ON DUPLICATE KEY UPDATE
@@ -36,14 +45,19 @@ SQL);
 
     $stmt->execute([
         'subject_entity_id' => $row['subject_entity_id'],
+        'context_entity_id' => $contextEntityId,
         'fact_type_id' => $row['fact_type_id'],
         'object_entity_id' => $row['object_entity_id'],
+        'source_document' => $row['source_document'] ?? null,
+        'notes' => $row['notes'] ?? null,
     ]);
 
     return [
         'status' => $stmt->rowCount() > 0 ? 'applied' : 'duplicate',
         'fact_id' => (int)$pdo->lastInsertId(),
-        'fact' => $row,
+        'fact' => array_merge($row, [
+            'context_entity_id' => $contextEntityId,
+        ]),
     ];
 }
 
