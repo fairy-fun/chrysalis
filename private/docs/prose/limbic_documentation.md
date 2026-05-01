@@ -154,8 +154,8 @@ INSERT INTO entity_linked_facts_event (
 
 Do not use:
 
-```sql
-INSERT INTO entity_linked_facts (...)
+```text
+INSERT INTO entity_linked_facts(...)
 ```
 
 That targets the compatibility view and is not a valid write path.
@@ -163,6 +163,8 @@ That targets the compatibility view and is not a valid write path.
 ---
 
 ## Example Inserts
+
+### Example Inserts (With Evidence Discipline)
 
 ```sql
 INSERT INTO entity_linked_facts_event (
@@ -178,29 +180,69 @@ INSERT INTO entity_linked_facts_event (
     'calendar_event:33',
     'fact_type_event_character_limbic_state',
     'entity_limbic_threat_activated',
-    'manual:shay_analysis',
-    'Summoned; room goes quiet; suspects Kai; threat system activates.'
+    'prose:book1_scene_33',
+    'Room goes quiet; attention narrows; immediate threat appraisal triggered.'
 ),
 (
     'CHAR-MAIN-001',
     'calendar_event:34',
     'fact_type_event_character_limbic_state',
     'entity_limbic_hyperarousal',
-    'manual:shay_analysis',
-    'Escalation into full activation.'
+    'prose:book1_scene_34',
+    'Breathing sharpens; physiological activation escalates beyond baseline.'
 ),
 (
     'CHAR-MAIN-001',
     'calendar_event:40',
     'fact_type_event_character_limbic_state',
     'entity_limbic_window_regulated',
-    'manual:shay_event_40_analysis',
-    'Challenged by Kai; remains controlled and regulated.'
+    'prose:book1_scene_40',
+    'Maintains control under pressure; no loss of behavioural or cognitive regulation observed.'
 )
 ON DUPLICATE KEY UPDATE
     notes = VALUES(notes),
     source_document = VALUES(source_document);
 ```
+
+#### Shay Constraint Reminder
+
+For Shay (pov_bounded):
+
+```text
+source_document must reference prose evidence
+```
+
+Do not use:
+
+```text
+manual:analysis
+inferred:state
+scene_outcome:interpretation
+```
+
+unless storing a **suggestion**, not a fact.
+
+#### Suggestion vs Fact
+
+If the state is inferred from:
+
+* others calming down
+* Shay stabilising the room
+* tone of voice or competence
+
+then it must be written to:
+
+```text
+entity_limbic_state_suggestions_event
+```
+
+not `entity_linked_facts_event`.
+
+```text
+Suggestion = allowed inference
+Fact = requires textual evidence
+```
+
 
 The event table enforces uniqueness across:
 
