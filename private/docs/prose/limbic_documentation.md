@@ -806,6 +806,9 @@ entity_limbic_transition_*
 
 Unless the source explicitly supports a specific event-scoped relationship, keep those readings derived and optional.
 
+Suggestions may be persisted only in the dedicated suggestion table.
+They are never facts, never canonical truth, and never promoted without explicit author action.
+
 ---
 
 ## Outcome
