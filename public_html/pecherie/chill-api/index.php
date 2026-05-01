@@ -193,6 +193,10 @@ switch ($operation) {
         require __DIR__ . '/expression/apply_entity_event_theme_link.php';
         break;
 
+    case 'applyLimbicFact':
+        require __DIR__ . '/limbic/apply_limbic_fact.php';
+        break;
+
     case 'createDreamJournalEntry':
         require __DIR__ . '/dreams/create_dream_journal_entry.php';
         break;

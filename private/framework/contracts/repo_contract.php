@@ -214,9 +214,16 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
         ],
 
+        'applyLimbicFact' => [
+            'handler' => 'public_html/pecherie/chill-api/limbic/apply_limbic_fact.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+
         'suggestEntityEventThemeLink' => [
             'handler' => 'public_html/pecherie/chill-api/expression/suggest_entity_event_theme_link.php',
             'behaviour_tested' => false,
         ],
+
     ],
 ];

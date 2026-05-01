@@ -19,6 +19,7 @@ return [
         'public_html/pecherie/chill-api/reference',
         'public_html/pecherie/chill-api/music',
         'public_html/pecherie/chill-api/dreams',
+        'public_html/pecherie/chill-api/limbic',
     ],
 
     'visible_files' => [
@@ -67,6 +68,7 @@ return [
         'runExpressionPipeline' => 'public_html/pecherie/chill-api/expression/run_expression_pipeline.php',
         'suggestEntityEventThemeLink' => 'public_html/pecherie/chill-api/expression/suggest_entity_event_theme_link.php',
         'applyEntityEventThemeLink' => 'public_html/pecherie/chill-api/expression/apply_entity_event_theme_link.php',
+        'applyLimbicFact' => 'public_html/pecherie/chill-api/limbic/apply_limbic_fact.php',
         'resolveProseCalendarTarget' => 'public_html/pecherie/chill-api/prose/resolve_prose_calendar_target.php',
         'createProseDraft' => 'public_html/pecherie/chill-api/prose/create_prose_draft.php',
         'addProseAnnotations' => 'public_html/pecherie/chill-api/prose/add_prose_annotations.php',
