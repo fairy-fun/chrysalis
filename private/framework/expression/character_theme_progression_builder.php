@@ -49,6 +49,7 @@ JOIN sxnzlfun_chrysalis.calendar_event_participants cep
    AND cep.entity_id = :character_entity_id
 JOIN sxnzlfun_chrysalis.entity_linked_facts_event elf
     ON elf.subject_entity_id = ce.entity_id
+   AND elf.context_entity_id = ce.entity_id
    AND elf.fact_type_id = 'fact_type_event_theme'
 WHERE NOT EXISTS (
     SELECT 1
