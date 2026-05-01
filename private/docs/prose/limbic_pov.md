@@ -82,9 +82,9 @@ inferred_external = allowed
 
 The limbic doc says:
 
-transitions are derived, not stored
+> transitions are derived, not stored
 
-But your system is evolving beyond that. The correct refinement is:
+But our system is evolving beyond that. The correct refinement is:
 
 ### 4.1 Dual Nature of Transitions
 derived_transition = default (query-time)
@@ -93,102 +93,123 @@ materialized_transition = optional (when narratively or causally important)
 Stored in:
 
 entity_state_transitions_event
-4.2 Transition Validity Rule
+### 4.2 Transition Validity Rule
 
 A transition is valid if:
-
+``` text
 state(t1) and state(t2) both exist as event facts
-4.3 POV Constraint on Transitions
+```
+### 4.3 POV Constraint on Transitions
 
 For Shay:
-
+``` text
 A transition may only exist if BOTH endpoints are prose-supported.
-
+```
 No gap-filling like:
-
+``` text
 others reacted → Shay must have escalated → insert transition
-
+```
 Not allowed.
 
-5. Co-Regulation as Causal Layer
+---
 
-You’ve already separated:
+## 5. Co-Regulation as Causal Layer
 
+We’ve already separated:
+``` text
 transition = what changed
 coregulation = who influenced it
-
+```
 Now we formalize interaction with POV constraints.
 
-6. Correct Linkage (Finalized)
-   6.1 Direction
+---
+
+## 6. Correct Linkage (Finalized)
+   ### 6.1 Direction
+``` text
    entity_coregulation_event
    → may cause →
    entity_state_transitions_event
-   6.2 Schema
+```
+### 6.2 Schema
+``` sql
    entity_coregulation_event.caused_transition_id NULL
-   6.3 Semantics
-   Case	Meaning
-   NULL	influence attempt / ambient regulation
-   SET	contributed to this specific transition
-7. Critical POV Interaction Rule
+```
+### 6.3 Semantics
+| Case	 | Meaning |
+|-------|---------| 
+   | NULL	| influence attempt / ambient regulation |
+   | SET	| contributed to this specific transition|
+
+---
+
+## 7. Critical POV Interaction Rule
 
 This is where your system becomes writer-aware, not just data-aware.
 
-7.1 Asymmetry
-* Shay → can cause transitions in others
-* Others → cannot define Shay’s internal state without prose
-7.2 Allowed Pattern
+### 7.1 Asymmetry
+``` text
+Shay → can cause transitions in others
+Others → cannot define Shay’s internal state without prose
+```
+### 7.2 Allowed Pattern
+``` text
 Shay (action/silence/presence)
 → coregulation_event
 → causes →
 Other Character transition
-7.3 Restricted Pattern
+```
+### 7.3 Restricted Pattern
+``` text
 Other Character reacts to Shay
 → infer Shay limbic state
 → create transition
 
 ❌ DISALLOWED
-8. Trigger Facts vs Co-Regulation vs Causality
+```
+## 8. Trigger Facts vs Co-Regulation vs Causality
 
 From the limbic doc:
-
+``` text
 trigger = what induced state (fact-level)
-
+```
 Now:
 
-Layer	Table	Meaning
-State	entity_linked_facts_event	what is true
-Trigger	entity_linked_facts_event	what contributed
-Transition	entity_state_transitions_event	what changed
-Co-regulation	entity_coregulation_event	who influenced
-Causality link	FK	which influence caused which change
-9. Writing-System Consequence (This is the big shift)
+|Layer	|Table	| Meaning          |
+|-------|-------|------------------|
+|State	|entity_linked_facts_event	| what is true     |
+|Trigger	| entity_linked_facts_event	| what contributed |
+|Transition	|entity_state_transitions_event	| what changed     |
+|Co-regulation	|entity_coregulation_event	| who influenced   |
+|Causality link	|FK	|which influence caused which change|
+
+## 9. Writing-System Consequence (This is the big shift)
 
 This model enforces:
 
-9.1 Shay becomes a gravitational POV center
+### 9.1 Shay becomes a gravitational POV center
 Her interiority is sparse and precise
 Her external impact is rich and traceable
-9.2 Other characters become readable systems
+### 9.2 Other characters become readable systems
 They can:
-escalate
-regulate
-destabilize
-mirror
+* escalate
+* regulate
+* destabilize
+* mirror
 
 in response to Shay—even when Shay remains opaque
 
-9.3 Resulting Narrative Texture
+### 9.3 Resulting Narrative Texture
 
-You get:
-
+We get:
+``` text
 high external emotional resolution
 +
 selective internal opacity
-
+```
 Which is exactly what strong POV-limited prose does.
 
-10. What You Must Not Break
+## 10. What We Must Not Break
 
 From limbic documentation:
 
@@ -200,33 +221,36 @@ Do not store ALL transitions by default
 DO store transitions when:
 - causality is being explicitly modeled
 - narrative significance exists
-11. Minimal Next Step (Concrete)
+- suggestion is accepted
+---
+## 11. Minimal Next Step (Concrete)
 
 Implement:
-
+``` sql
 ALTER TABLE entity_coregulation_event
 ADD COLUMN caused_transition_id BIGINT NULL;
+```
 
-And add one enforcement rule in your pipeline:
-
+And add one enforcement rule in our pipeline:
+``` text
 IF subject = Shay
 AND evidence_mode = inferred_external
 THEN reject write
-
+```
 That alone will enforce the POV boundary across the system.
 
-12. Why This Works
+## 12. Why This Works
 
 This design avoids three common failure modes:
 
-1. Over-psychologizing the POV character
+### 1. Over-psychologizing the POV character
 
 → prevented by evidence constraint
 
-2. Flattening causality
+### 2. Flattening causality
 
 → solved by explicit co-regulation → transition link
 
-3. Treating all characters symmetrically
+### 3. Treating all characters symmetrically
 
 → broken intentionally (correctly)
