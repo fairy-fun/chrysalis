@@ -2,6 +2,24 @@
 
 declare(strict_types=1);
 
+function assert_not_legacy_fact_table(string $sql): void
+{
+    $pattern = '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+(?:`?[\w]+`?\.)?`?entity_linked_facts`?\b/i';
+
+    if (preg_match($pattern, $sql) === 1) {
+        throw new RuntimeException(
+            'Write attempted against entity_linked_facts compatibility view. ' .
+            'Use entity_linked_facts_event or entity_linked_facts_global.'
+        );
+    }
+}
+
+function prepare_fact_write(PDO $pdo, string $sql): PDOStatement
+{
+    assert_not_legacy_fact_table($sql);
+    return $pdo->prepare($sql);
+}
+
 function apply_event_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -11,11 +29,16 @@ function apply_event_fact(
     ?string $sourceDocument = null,
     ?string $notes = null
 ): array {
-    if ($subjectEntityId === '' || $contextEntityId === '' || $factTypeId === '' || $objectEntityId === '') {
+    if (
+        $subjectEntityId === '' ||
+        $contextEntityId === '' ||
+        $factTypeId === '' ||
+        $objectEntityId === ''
+    ) {
         throw new InvalidArgumentException('All core fields are required for event fact');
     }
 
-    $stmt = $pdo->prepare(<<<SQL
+    $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_event (
     subject_entity_id,
     context_entity_id,
@@ -65,11 +88,15 @@ function apply_global_fact(
     ?string $sourceDocument = null,
     ?string $notes = null
 ): array {
-    if ($subjectEntityId === '' || $factTypeId === '' || $objectEntityId === '') {
+    if (
+        $subjectEntityId === '' ||
+        $factTypeId === '' ||
+        $objectEntityId === ''
+    ) {
         throw new InvalidArgumentException('All core fields are required for global fact');
     }
 
-    $stmt = $pdo->prepare(<<<SQL
+    $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_global (
     subject_entity_id,
     fact_type_id,
@@ -105,14 +132,4 @@ SQL);
             'object_entity_id' => $objectEntityId,
         ],
     ];
-}
-
-function assert_not_legacy_fact_table(string $sql): void
-{
-    if (stripos($sql, 'entity_linked_facts ') !== false &&
-        stripos($sql, 'entity_linked_facts_event') === false &&
-        stripos($sql, 'entity_linked_facts_global') === false
-    ) {
-        throw new RuntimeException('Write attempted against legacy entity_linked_facts view');
-    }
 }
