@@ -96,25 +96,35 @@ function resolve_prose_target_calendar_node(
         throw new RuntimeException('Missing entity_type_id for resolved calendar node');
     }
 
-    // ⚠️ Transitional consistency check
-    $expectedMap = [
-        'calendar_layer_week'  => 'entity_type_calendar_week',
-        'calendar_layer_day'   => 'entity_type_calendar_day',
-        'calendar_layer_time'  => 'entity_type_calendar_time',
-        'calendar_layer_event' => 'entity_type_calendar_event',
-    ];
+    /*
+     * Phase 14:
+     * entity_type_id is authoritative.
+     * layer_id must agree with the expected structural mapping.
+     */
+        $expectedLayerMap = [
+            'entity_type_calendar_week'  => 'calendar_layer_week',
+            'entity_type_calendar_day'   => 'calendar_layer_day',
+            'entity_type_calendar_time'  => 'calendar_layer_time',
+            'entity_type_calendar_event' => 'calendar_layer_event',
+        ];
 
-    if (isset($expectedMap[$row['layer_id']])) {
-        $expectedType = $expectedMap[$row['layer_id']];
+        $entityTypeId = $row['entity_type_id'];
 
-        if ($row['entity_type_id'] !== $expectedType) {
+        if (!isset($expectedLayerMap[$entityTypeId])) {
             throw new RuntimeException(
-                'Calendar node mismatch: layer_id ' . $row['layer_id'] .
-                ' expects ' . $expectedType .
-                ', got ' . $row['entity_type_id']
+                'Invalid projection target: unsupported calendar entity_type_id ' . $entityTypeId
             );
         }
-    }
+
+        $expectedLayerId = $expectedLayerMap[$entityTypeId];
+
+        if (($row['layer_id'] ?? null) !== $expectedLayerId) {
+            throw new RuntimeException(
+                'Calendar node mismatch: entity_type_id ' . $entityTypeId .
+                ' must map to ' . $expectedLayerId .
+                ', got ' . ($row['layer_id'] ?? 'NULL')
+            );
+        }
 
     return $row;
 }
