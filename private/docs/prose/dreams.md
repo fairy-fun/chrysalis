@@ -30,10 +30,10 @@ Annotations = meaning
 ## entities
 
 ```sql
-entities (
-  id VARCHAR(64) PRIMARY KEY,
-  entity_type_id VARCHAR(64)
-)
+CREATE TABLE entities (
+    id VARCHAR(64) PRIMARY KEY,
+    entity_type_id VARCHAR(64)
+);
 ```
 
 * No label column
@@ -269,3 +269,44 @@ dream_journal:tiffany_rose
 Every `dream_journal:*` must correspond to an existing `entity_type_character`.
 
 Team membership implies character existence, but does not replace it.
+
+## Dream Journal Identity (Enforced)
+
+Dream journals are **deterministically derived from character identity**.
+
+### Rule
+
+For any dream:
+
+- `dreamer_entity_id = X`
+- `journal_entity_id MUST equal dream_journal:X`
+
+### Example
+
+Correct:
+
+dreamer_entity_id: CHAR-MAIN-012
+journal_entity_id: dream_journal:CHAR-MAIN-012
+
+
+Incorrect:
+
+dream_journal:tm_tiffany_rose
+dream_journal:tiffany_rose
+dream_journal:CHAR-MAIN-999
+
+
+### Invariant
+
+A dream journal **cannot exist independently** of its character.
+
+It is a 1:1 mapping:
+
+character ↔ dream_journal
+
+
+### Enforcement
+
+This is enforced at creation time in:
+
+create_dream_journal_entry(...)

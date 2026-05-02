@@ -269,7 +269,7 @@ These must be added explicitly to classval tables before use.
 
 ---
 
-### Target Entity Domain Validation
+### Target Entity Domain Validation & Identity Constraints
 
 All writes to `sxnzlfun_chrysalis.prose_projections` MUST go through:
 
@@ -296,8 +296,19 @@ Specifically:
     - MUST be rejected
     - Throws `Unsupported target_entity_id domain`
 
-Note: For `dream_journal:*` targets, the suffix must be a canonical character ID (`CHAR-MAIN-*`).  
-See: `dreams.md` → Dream Journal Identity
+Note: For `dream_journal:*` targets, the target must match the dreamer's identity exactly.
+
+Format:
+dream_journal:<character_id>
+
+Example:
+dream_journal:CHAR-MAIN-012
+
+This is enforced at creation time:
+dreamer_entity_id = X
+journal_entity_id MUST equal dream_journal:X
+
+See: `dreams.md` → Dream Journal Identity (Enforced)
 
 #### Design Principle
 
