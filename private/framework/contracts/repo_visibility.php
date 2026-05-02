@@ -9,6 +9,7 @@ return [
         'private/framework/support',
         'private/docs',
         'private/docs/calendar',
+        'private/framework/calendar',
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
