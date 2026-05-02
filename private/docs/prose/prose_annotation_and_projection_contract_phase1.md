@@ -319,6 +319,110 @@ Target validation is **domain-scoped, not table-scoped**.
 
 This allows prose projections to support multiple domains (calendar, dream journal, future types) without coupling all writes to a single domain's rules.
 
+### Target Entity Domain Validation & Guard Routing (Phase 1 Extension)
+
+#### Context
+
+Projection writes are now fully centralised through:
+
+```text
+insert_prose_projection(...)
+```
+
+#### Guard Routing Model
+
+Validation is applied conditionally based on the target_entity_id prefix.
+
+prose_projection_guard_target_if_needed(...)
+
+This function is invoked inside the projection writer before any insert.
+
+##### Supported Target Domains
+
+###### 1. Calendar Events
+
+   calendar_event:{event_id}
+
+Validation:
+
+require_calendar_event_projection_target_node(...)
+
+Enforces:
+
+target resolves to a real calendar_layer_event
+entity_id matches calendar_event:{event_id}
+structural integrity constraints are satisfied
+
+This is a strict structural guard.
+
+---
+
+
+###### 2. Dream Journals
+
+   dream_journal:{entity_id}
+
+Validation:
+
+require_dream_journal_projection_target_entity(...)
+
+Enforces:
+
+entity exists in entities
+entity_type_id = dream_journal
+
+This is a type-level guard (no structural resolution).
+---
+
+#### Guard Dispatch Rule
+
+target_entity_id prefix determines validation path
+
+Current routing:
+
+calendar_event:*   → calendar guard
+dream_journal:*    → dream journal guard
+Domain Policy (Current)
+
+Only explicitly supported domains are allowed.
+
+Unsupported target_entity_id domains → rejected
+
+This prevents:
+
+silent projection into undefined domains
+future schema drift without explicit contract updates
+Write Flow (Final)
+insert_prose_projection(...)
+→ prose_projection_guard_target_if_needed(...)
+→ clear_existing_export_target(...) (if needed)
+→ INSERT prose_projections
+Export Target Rule (Clarified)
+Exactly one export target per (projection_type_id, target_entity_id)
+
+Enforcement is centralised:
+
+existing export targets are automatically cleared
+caller-level duplicate checks are removed
+Non-Goals (Important)
+
+The projection writer does NOT:
+
+resolve calendar structure
+infer domain semantics
+validate annotation meaning
+enforce cross-domain rules
+
+It only:
+
+routes validation and performs the write
+Resulting Guarantees
+No direct writes bypass validation
+Calendar projections are structurally safe
+Dream journal projections are type-safe
+Projection domains are explicit and controlled
+
+
 #### Adding a New Target Domain
 
 To introduce a new projection target type:
