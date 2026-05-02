@@ -370,6 +370,55 @@ dream_journal:CHAR-MAIN-012
 
 ---
 
+### Example: Tiffany Rose
+
+Canonical character:
+
+```
+CHAR-MAIN-012
+```
+
+Deterministic dream journal:
+
+```
+dream_journal:CHAR-MAIN-012
+```
+
+Creation:
+
+```sql
+INSERT INTO sxnzlfun_chrysalis.entities (id, entity_type_id)
+VALUES ('dream_journal:CHAR-MAIN-012', 'dream_journal');
+```
+
+Verification:
+
+```sql
+SELECT *
+FROM sxnzlfun_chrysalis.entities
+WHERE id = 'dream_journal:CHAR-MAIN-012';
+```
+
+Result:
+
+* entity exists
+* correctly typed as `dream_journal`
+
+This entity is now the required target for:
+
+* `create_dream_journal_entry(...)`
+* `insert_prose_projection(...)` (dream journal targets)
+
+---
+
+### Notes
+
+* This entity must exist before any dream entries can be created
+* The ID is deterministic and must not vary
+* No alternate journal IDs are allowed for the same character
+
+
+
 ### Creation Rule
 
 A dream journal must exist as an entity:
