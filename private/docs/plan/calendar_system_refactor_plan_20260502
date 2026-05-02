@@ -63,6 +63,7 @@ No direct inserts allowed.
 - ✅ `sequence_index` exists and is populated
 - ✅ parent hierarchy repaired
 - ✅ no orphan nodes
+- ✅ no duplicate siblings
 - ✅ uniqueness constraint enforced:
 
 ```sql
@@ -79,13 +80,15 @@ ON calendar_events (
 
 ## 🛠️ Phase 1 — Introduce Core Ensure Primitive
 
-### Create:
+### File
 
 ```text
 private/framework/calendar/calendar_node_ensurer.php
 ```
 
-### Core Function
+---
+
+### Function
 
 ```php
 function ensure_calendar_node(
@@ -100,27 +103,35 @@ function ensure_calendar_node(
 
 ---
 
-### Canonical Algorithm
+### Canonical Algorithm (Corrected)
 
 ```php
 while (true) {
 
-    $row = find_calendar_node(...);
+    $existing = find_calendar_node(...);
 
-    if ($row !== null) {
-        return $row;
+    if ($existing !== null) {
+        return $existing;
     }
 
-    if ($sequenceIndex === null) {
-        $sequenceIndex = get_next_sequence_index(...);
+    if ($sequenceIndex !== null) {
+        $candidateIndex = $sequenceIndex;
+    } else {
+        $candidateIndex = get_next_sequence_index(...);
     }
 
     try {
-        insert_calendar_node(...);
-        return find_calendar_node(...);
+        $row = insert_calendar_node(..., $candidateIndex, ...);
+        return $row;
 
     } catch (DuplicateKeyException $e) {
-        // another writer won
+
+        if ($sequenceIndex !== null) {
+            // explicit index → retry same index
+            continue;
+        }
+
+        // append mode → recompute index
         continue;
     }
 }
@@ -128,106 +139,112 @@ while (true) {
 
 ---
 
-### Required Helpers
+## 🔒 Critical Rules (Must Be Enforced)
 
-#### 1. Lookup
-
-```php
-find_calendar_node(
-    PDO $pdo,
-    string $projectionEntityId,
-    string $layerId,
-    ?int $parentRowId,
-    int $sequenceIndex
-): ?array
-```
-
-```sql
-WHERE projection_entity_id = ?
-  AND layer_id = ?
-  AND COALESCE(parent_event_id, 0) = COALESCE(?, 0)
-  AND sequence_index = ?
-```
-
----
-
-#### 2. Insert
-
-```php
-insert_calendar_node(...)
-```
-
-Must insert ONLY:
+### 1. Append Mode Safety
 
 ```text
-projection_entity_id
-parent_event_id
-layer_id
-sequence_index
-entity_id
-event_id
-summary
-time_label_id (optional)
+If sequence_index is null:
+  recompute index on EVERY retry
+
+If sequence_index is provided:
+  reuse fixed value
 ```
 
 ---
 
-#### 3. Append Mode
-
-```php
-SELECT MAX(sequence_index)
-FROM calendar_events
-WHERE projection_entity_id = ?
-  AND layer_id = ?
-  AND parent_event_id <=> ?
-```
-
-Then:
+### 2. Payload Behaviour (Explicit)
 
 ```text
-next = max + 1
-```
+Ensure does NOT update existing rows.
 
-Retry on duplicate.
+First writer wins.
+Subsequent calls ignore payload differences.
+```
 
 ---
 
-## 🧩 Phase 2 — Build Layer Wrappers
+### 3. Parent Normalisation
+
+```text
+parent_event_id must be consistently normalised
+
+Use:
+COALESCE(parent_event_id, 0)
+
+Never mix null and 0 inconsistently.
+```
+
+---
+
+### 4. Wrapper Enforcement
+
+Each wrapper must enforce parent layer:
+
+```php
+ensure_calendar_day(...) → parent must be WEEK
+ensure_calendar_time(...) → parent must be DAY
+ensure_calendar_event(...) → parent must be TIME
+```
+
+---
+
+### 5. Write Boundary Rule
+
+```text
+Only calendar_node_ensurer.php may INSERT into calendar_events
+```
+
+---
+
+### 6. No Legacy Reads in Write Paths
+
+Forbidden in any write-related logic:
+
+```text
+❌ WHERE chronology_address = ?
+❌ WHERE event_index = ?
+❌ WHERE week_index/day_index/time_index = ?
+```
+
+---
+
+## 🧩 Phase 2 — Layer Wrappers
 
 Create thin wrappers:
 
 ```php
-ensure_calendar_week($pdo, $projectionId, $index)
-ensure_calendar_day($pdo, $projectionId, $weekId, $index)
-ensure_calendar_time($pdo, $projectionId, $dayId, $index)
-ensure_calendar_event($pdo, $projectionId, $timeId, $index)
+ensure_calendar_week(...)
+ensure_calendar_day(...)
+ensure_calendar_time(...)
+ensure_calendar_event(...)
 ```
 
-Each calls:
+Each must:
 
-```php
-ensure_calendar_node(...)
+```text
+- hardcode layer_id
+- validate parent layer
+- call ensure_calendar_node only
 ```
-
-No independent logic allowed.
 
 ---
 
-## 🔗 Phase 3 — Build Ensure Chain
+## 🔗 Phase 3 — Ensure Chain
 
-### Address-based resolution:
+For address:
 
-```php
-ensure_calendar_event_by_address($pdo, $projectionId, [3,1,2,1])
+```text
+3.1.2.1
 ```
 
-Executes:
+Execute:
 
 ```php
-week  = ensure(..., WEEK,  null, 3)
-day   = ensure(..., DAY,   week.id, 1)
-time  = ensure(..., TIME,  day.id, 2)
-event = ensure(..., EVENT, time.id, 1)
+week  = ensure(WEEK,  null, 3)
+day   = ensure(DAY,   week.id, 1)
+time  = ensure(TIME,  day.id, 2)
+event = ensure(EVENT, time.id, 1)
 ```
 
 ---
@@ -256,29 +273,25 @@ calendar_event_creator.php
 
 ### Required Changes
 
-#### REMOVE:
+#### REMOVE
 
 ```php
 $chronologyAddress = ...
 ```
 
-#### REMOVE:
-
 ```sql
 chronology_address in INSERT
 ```
 
-#### REMOVE:
-
 ```sql
-WHERE chronology_address = ?
-WHERE event_index = ?
-WHERE week_index/day_index/time_index = ?
+WHERE chronology_address
+WHERE event_index
+WHERE week/day/time index logic
 ```
 
 ---
 
-#### REPLACE WITH:
+#### REPLACE WITH
 
 ```php
 ensure_calendar_node(...)
@@ -286,18 +299,9 @@ ensure_calendar_node(...)
 
 ---
 
-### Critical Rule
+## 📡 Phase 5 — Read Layer
 
-```text
-No file may INSERT into calendar_events directly
-except calendar_node_ensurer.php
-```
-
----
-
-## 📡 Phase 5 — Read Layer (Derived Address)
-
-### Create:
+### File
 
 ```text
 calendar_chronology_resolver.php
@@ -311,43 +315,45 @@ calendar_chronology_resolver.php
 build_chronology_address(PDO $pdo, array $node): string
 ```
 
-Walk parent chain:
-
-```text
-collect sequence_index → reverse → join with "."
-```
-
 ---
 
-### Resolver
+### Performance Warning
 
-```php
-resolve_calendar_node_by_address($pdo, $projectionId, "3.1.2.1")
+```text
+This is O(depth) per call.
+
+Do NOT assume it scales for lists.
+Optimise later via:
+- batching
+- caching
+- materialised read model
 ```
 
 ---
 
 ## 🧪 Phase 6 — Concurrency Validation
 
-### Test Cases
+Test:
 
+```text
 - parallel writes to same node
 - parallel append operations
 - repeated ensure calls
+```
 
 Expected:
 
 ```text
-No duplicates
-No crashes
-All callers receive same node
+✔ no duplicates
+✔ no deadlocks
+✔ consistent results
 ```
 
 ---
 
 ## 🔍 Phase 7 — Audit for Violations
 
-### Search for:
+Search repo for:
 
 ```sql
 INSERT INTO calendar_events
@@ -355,25 +361,13 @@ INSERT INTO calendar_events
 
 ```text
 chronology_address usage
-event_index usage in lookup
-week/day/time index usage in lookup
-```
-
----
-
-### These must NOT exist in write paths:
-
-```text
-❌ chronology_address in WHERE
-❌ event_index in WHERE
-❌ manual index computation without retry
+event_index usage
+week/day/time index usage
 ```
 
 ---
 
 ## 🧭 Phase 8 — Migration Safety Check
-
-Run:
 
 ```sql
 SELECT
@@ -395,15 +389,27 @@ Expected:
 
 ---
 
+## ⚠️ Phase 9 — Structural Gaps (Explicit Decisions)
+
+You must define:
+
+```text
+✔ Gaps allowed in sequence_index (RECOMMENDED: YES)
+✔ No automatic shifting of indices
+✔ Reordering requires explicit operation (future work)
+```
+
+---
+
 ## 🚫 Anti-Patterns (Strictly Forbidden)
 
 ```text
 ❌ "check then insert" without retry
-❌ constructing chronology_address during writes
+❌ building chronology_address in writes
 ❌ skipping hierarchy levels
-❌ computing sequence_index in memory only
+❌ computing sequence_index without DB validation
 ❌ direct INSERT outside ensure path
-❌ mixing legacy identity with structural identity
+❌ using legacy identity anywhere in write logic
 ```
 
 ---
@@ -412,28 +418,13 @@ Expected:
 
 ```text
 DB:
-  Defines what is allowed (constraints)
+  Defines allowed state (constraints)
 
 API:
-  Defines how to safely reach that state
+  Defines safe path to that state
 
 ensure_node:
   The ONLY write primitive
-```
-
----
-
-## ✅ Outcome
-
-After this refactor:
-
-```text
-✔ Writes are idempotent
-✔ No duplicate nodes possible
-✔ No hierarchy corruption possible
-✔ Concurrency is safe
-✔ chronology_address becomes pure projection
-✔ System scales across multiple writers safely
 ```
 
 ---
