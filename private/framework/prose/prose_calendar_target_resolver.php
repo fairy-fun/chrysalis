@@ -36,7 +36,9 @@ function resolve_prose_target_calendar_node(
             ce.event_index,
             ce.subevent_index,
             ce.chronology_address,
-            ce.parent_event_id
+            ce.parent_event_id,
+
+            e.entity_type_id
 
         FROM prose_drafts pd
         JOIN prose_projections pp
@@ -44,6 +46,9 @@ function resolve_prose_target_calendar_node(
 
         JOIN calendar_events ce
             ON ce.entity_id = pp.target_entity_id
+
+        JOIN entities e
+            ON e.id = ce.entity_id
 
         WHERE pd.entity_id = :prose_entity_id
     ";
@@ -67,7 +72,6 @@ function resolve_prose_target_calendar_node(
         $sql .= " AND pp.is_export_target = 1";
     }
 
-    // Fetch up to 2 so ambiguity is visible, but absence is allowed.
     $sql .= " ORDER BY pp.projection_order ASC LIMIT 2";
 
     $stmt = $pdo->prepare($sql);
@@ -85,5 +89,32 @@ function resolve_prose_target_calendar_node(
         );
     }
 
-    return $rows[0];
+    $row = $rows[0];
+
+    // ✅ Phase 14: semantic assertion
+    if (!isset($row['entity_type_id']) || !is_string($row['entity_type_id'])) {
+        throw new RuntimeException('Missing entity_type_id for resolved calendar node');
+    }
+
+    // ⚠️ Transitional consistency check
+    $expectedMap = [
+        'calendar_layer_week'  => 'entity_type_calendar_week',
+        'calendar_layer_day'   => 'entity_type_calendar_day',
+        'calendar_layer_time'  => 'entity_type_calendar_time',
+        'calendar_layer_event' => 'entity_type_calendar_event',
+    ];
+
+    if (isset($expectedMap[$row['layer_id']])) {
+        $expectedType = $expectedMap[$row['layer_id']];
+
+        if ($row['entity_type_id'] !== $expectedType) {
+            throw new RuntimeException(
+                'Calendar node mismatch: layer_id ' . $row['layer_id'] .
+                ' expects ' . $expectedType .
+                ', got ' . $row['entity_type_id']
+            );
+        }
+    }
+
+    return $row;
 }
