@@ -94,26 +94,22 @@ function require_calendar_event_projection_target_node(
         !array_key_exists('sequence_index', $row) ||
         $row['sequence_index'] === null ||
         !ctype_digit((string) $row['sequence_index']) ||
-        (int) $row['sequence_index'] <= 0
+        (int)$row['sequence_index'] <= 0
     ) {
         throw new RuntimeException(
             'Invalid projection target: calendar event sequence_index is malformed.'
         );
     }
 
-    $parentEventId = null;
-
     if ($row['parent_event_id'] !== null) {
         if (
-            !ctype_digit((string) $row['parent_event_id']) ||
-            (int) $row['parent_event_id'] <= 0
+            !ctype_digit((string)$row['parent_event_id']) ||
+            (int)$row['parent_event_id'] <= 0
         ) {
             throw new RuntimeException(
                 'Invalid projection target: calendar event parent_event_id is malformed.'
             );
         }
-
-        $parentEventId = (int) $row['parent_event_id'];
     }
 
     return $row;

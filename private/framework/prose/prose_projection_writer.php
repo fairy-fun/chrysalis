@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../calendar/calendar_event_projection_target_guard.php';
+require_once __DIR__ . '/../dreams/dream_journal_projection_target_guard.php';
 
 /**
  * Guard only when target is a calendar event.
