@@ -8,9 +8,16 @@ declare(strict_types=1);
  * Validates that projection targets attach only to real calendar event
  * entities.
  *
- * This guard validates by direct DB lookup.
- * It does not resolve or construct calendar identity.
+ * Semantic authority: entities.entity_type_id.
+ * Structural consistency: calendar_events.layer_id must agree with the
+ * expected event-layer mapping.
  */
+
+if (($row['layer_id'] ?? null) !== 'calendar_layer_event') {
+    throw new RuntimeException(
+        'Invalid projection target: calendar event entity is not mapped to calendar_layer_event.'
+    );
+}
 
 /**
  * @return array<string, mixed>
@@ -36,7 +43,7 @@ function require_calendar_event_projection_target_node(
         );
     }
 
-    $eventId = (int) $rawEventId;
+    $eventId = (int)$rawEventId;
 
     if ($eventId <= 0) {
         throw new InvalidArgumentException(
@@ -87,9 +94,16 @@ function require_calendar_event_projection_target_node(
         );
     }
 
-    if (($row['layer_id'] ?? null) !== 'calendar_layer_event') {
+    /*
+     * Transitional structural invariant only.
+     *
+     * entity_type_id is authoritative for semantic validity.
+     * layer_id is retained here only as a defensive consistency check and must
+     * not be treated as the semantic source of truth.
+     */
+    if (array_key_exists('layer_id', $row) && $row['layer_id'] !== 'calendar_layer_event') {
         throw new RuntimeException(
-            'Invalid projection target: projections may only target calendar_layer_event nodes.'
+            'Invariant violation: entity_type_calendar_event mapped to unexpected calendar layer.'
         );
     }
 
@@ -106,7 +120,7 @@ function require_calendar_event_projection_target_node(
     if (
         !array_key_exists('sequence_index', $row) ||
         $row['sequence_index'] === null ||
-        !ctype_digit((string) $row['sequence_index']) ||
+        !ctype_digit((string)$row['sequence_index']) ||
         (int)$row['sequence_index'] <= 0
     ) {
         throw new RuntimeException(
