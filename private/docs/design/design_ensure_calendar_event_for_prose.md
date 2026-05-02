@@ -58,16 +58,36 @@ calendar_events
 - projection_entity_id (string)
 - layer_id (string)
 - parent_event_id (nullable FK to calendar_events.id)
-- sequence_index (int)
+- sequence_index (int)  <-- CANONICAL STRUCTURAL INDEX
 - time_label_id (nullable string)
 - summary (text)
 ```
 
-### Required Constraint
+### Canonical Index Rule
 
-Because root week rows use `parent_event_id = NULL`, do not use a plain composite unique constraint on `parent_event_id`.
+```text
+sequence_index is the canonical structural index.
 
-MySQL allows multiple `NULL` values inside a `UNIQUE` constraint, so root week identity must be enforced with a functional unique index:
+Legacy columns:
+- week_index
+- day_index
+- time_index
+- event_index
+
+are deprecated for identity and must not be used for lookup or uniqueness.
+
+For event-layer rows:
+event_index must be kept in sync with sequence_index
+until legacy constraints are removed.
+```
+
+---
+
+## Required Constraint
+
+Because root week rows use `parent_event_id = NULL`, do not use a plain composite unique constraint.
+
+MySQL allows multiple `NULL` values in UNIQUE constraints, so root identity must be enforced with a functional index.
 
 ```sql
 CREATE UNIQUE INDEX uniq_calendar_node_structural
@@ -79,19 +99,12 @@ ON sxnzlfun_chrysalis.calendar_events (
 );
 ```
 
-This enforces structural identity:
-
 ```text
 projection_entity_id + layer_id + parent_scope + sequence_index
+where parent_scope = COALESCE(parent_event_id, 0)
 ```
 
-where:
-
-```text
-parent_scope = COALESCE(parent_event_id, 0)
-```
-
-This preserves the correct meaning that week rows are rooted in the projection, not under a fake calendar event.
+Note: requires MySQL 8+ (functional indexes).
 
 ---
 
@@ -169,10 +182,7 @@ function find_calendar_node(
         FROM sxnzlfun_chrysalis.calendar_events
         WHERE projection_entity_id = :projection_entity_id
           AND layer_id = :layer_id
-          AND (
-            (:parent_event_id IS NULL AND parent_event_id IS NULL)
-            OR parent_event_id = :parent_event_id
-          )
+          AND COALESCE(parent_event_id, 0) = COALESCE(:parent_event_id, 0)
           AND sequence_index = :sequence_index
         LIMIT 1
     ");
@@ -380,21 +390,62 @@ function ensure_calendar_event_for_prose(PDO $pdo, array $body): array
             $started = true;
         }
 
-        $week = find_calendar_node($pdo, $projectionId, 'calendar_layer_week', null, $weekIndex)
-            ?? ($created['week'] = true)
-            && insert_calendar_node($pdo, $projectionId, 'calendar_layer_week', null, $weekIndex, 'Week ' . $weekIndex);
+        // WEEK
+        $week = find_calendar_node($pdo, $projectionId, 'calendar_layer_week', null, $weekIndex);
+        if ($week === null) {
+            $week = insert_calendar_node(
+                $pdo,
+                $projectionId,
+                'calendar_layer_week',
+                null,
+                $weekIndex,
+                'Week ' . $weekIndex
+            );
+            $created['week'] = true;
+        }
 
-        $day = find_calendar_node($pdo, $projectionId, 'calendar_layer_day', $week['id'], $dayIndex)
-            ?? ($created['day'] = true)
-            && insert_calendar_node($pdo, $projectionId, 'calendar_layer_day', $week['id'], $dayIndex, '');
+        // DAY
+        $day = find_calendar_node($pdo, $projectionId, 'calendar_layer_day', $week['id'], $dayIndex);
+        if ($day === null) {
+            $day = insert_calendar_node(
+                $pdo,
+                $projectionId,
+                'calendar_layer_day',
+                $week['id'],
+                $dayIndex,
+                ''
+            );
+            $created['day'] = true;
+        }
 
-        $time = find_calendar_node($pdo, $projectionId, 'calendar_layer_time', $day['id'], $timeIndex)
-            ?? ($created['time'] = true)
-            && insert_calendar_node($pdo, $projectionId, 'calendar_layer_time', $day['id'], $timeIndex, '', $timeLabelId);
+        // TIME
+        $time = find_calendar_node($pdo, $projectionId, 'calendar_layer_time', $day['id'], $timeIndex);
+        if ($time === null) {
+            $time = insert_calendar_node(
+                $pdo,
+                $projectionId,
+                'calendar_layer_time',
+                $day['id'],
+                $timeIndex,
+                '',
+                $timeLabelId
+            );
+            $created['time'] = true;
+        }
 
-        $event = find_calendar_node($pdo, $projectionId, 'calendar_layer_event', $time['id'], $eventIndex)
-            ?? ($created['event'] = true)
-            && insert_calendar_node($pdo, $projectionId, 'calendar_layer_event', $time['id'], $eventIndex, $summary);
+        // EVENT
+        $event = find_calendar_node($pdo, $projectionId, 'calendar_layer_event', $time['id'], $eventIndex);
+        if ($event === null) {
+            $event = insert_calendar_node(
+                $pdo,
+                $projectionId,
+                'calendar_layer_event',
+                $time['id'],
+                $eventIndex,
+                $summary
+            );
+            $created['event'] = true;
+        }
 
         if ($event['layer_id'] !== 'calendar_layer_event') {
             throw new RuntimeException('Resolved target is not an event-layer row');
