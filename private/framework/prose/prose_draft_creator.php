@@ -170,26 +170,7 @@ function prose_body_for_entity(PDO $pdo, string $entityId): ?string
     return is_string($body) ? $body : null;
 }
 
-function prose_export_target_exists(
-    PDO $pdo,
-    string $projectionTypeId,
-    string $targetEntityId
-): bool {
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM sxnzlfun_chrysalis.prose_projections
-        WHERE projection_type_id = :projection_type_id
-          AND target_entity_id = :target_entity_id
-          AND is_export_target = 1
-    ");
 
-    $stmt->execute([
-        ':projection_type_id' => $projectionTypeId,
-        ':target_entity_id' => $targetEntityId,
-    ]);
-
-    return (int) $stmt->fetchColumn() > 0;
-}
 
 function prose_normalise_annotations(array $body): array
 {
@@ -411,13 +392,6 @@ function create_prose_draft(PDO $pdo, array $body): array
     $isExportTarget = prose_required_boolean_int($projection, 'is_export_target');
 
     $annotations = prose_normalise_annotations($body);
-
-    if ($isExportTarget === 1 && prose_export_target_exists($pdo, $projectionTypeId, $targetEntityId)) {
-        throw new RuntimeException(
-            'Export target already exists for projection_type_id=' . $projectionTypeId .
-            ' and target_entity_id=' . $targetEntityId
-        );
-    }
 
     if (prose_draft_entity_exists($pdo, $entityId)) {
         throw new RuntimeException('Duplicate prose draft entity_id: ' . $entityId);
