@@ -483,7 +483,7 @@ function ensure_calendar_event_sequence_row(PDO $pdo): void
     $stmt->execute();
 }
 
-function is_calendar_structural_duplicate_key(PDOException $e): bool
+function is_calendar_structural_duplicate_key(\PDOException $e): bool
 {
     return isset($e->errorInfo[1], $e->errorInfo[2])
         && (int) $e->errorInfo[1] === 1062
