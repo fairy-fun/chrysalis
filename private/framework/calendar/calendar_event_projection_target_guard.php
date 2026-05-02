@@ -66,19 +66,45 @@ function require_calendar_event_projection_target_node(
         );
     }
 
-    $node = require_calendar_node(
-        $pdo,
-        (string) $row['projection_entity_id'],
-        (string) $row['layer_id'],
-        $row['parent_event_id'] === null ? null : (int) $row['parent_event_id'],
-        (int) $row['sequence_index']
-    );
+    if (
+        !isset($row['projection_entity_id']) ||
+        !is_string($row['projection_entity_id']) ||
+        $row['projection_entity_id'] === '' ||
+        !isset($row['layer_id']) ||
+        !is_string($row['layer_id']) ||
+        $row['layer_id'] === '' ||
+        !array_key_exists('sequence_index', $row) ||
+        $row['sequence_index'] === null ||
+        !ctype_digit((string) $row['sequence_index'])
+    ) {
+        throw new RuntimeException(
+            'Invalid projection target: calendar event structural identity is malformed.'
+        );
+    }
 
-    if (($node['layer_id'] ?? null) !== 'calendar_layer_event') {
+    if ($row['layer_id'] !== 'calendar_layer_event') {
         throw new RuntimeException(
             'Invalid projection target: projections may only target calendar_layer_event nodes.'
         );
     }
 
-    return $node;
+    $parentEventId = null;
+
+    if ($row['parent_event_id'] !== null) {
+        if (!ctype_digit((string) $row['parent_event_id']) || (int) $row['parent_event_id'] <= 0) {
+            throw new RuntimeException(
+                'Invalid projection target: calendar event parent identity is malformed.'
+            );
+        }
+
+        $parentEventId = (int) $row['parent_event_id'];
+    }
+
+    return require_calendar_node(
+        $pdo,
+        $row['projection_entity_id'],
+        $row['layer_id'],
+        $parentEventId,
+        (int) $row['sequence_index']
+    );
 }
