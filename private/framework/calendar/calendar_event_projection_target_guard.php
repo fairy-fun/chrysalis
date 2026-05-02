@@ -5,8 +5,8 @@ declare(strict_types=1);
 /**
  * Calendar Event Projection Target Guard
  *
- * Validates that projection targets attach only to real event-layer
- * calendar nodes.
+ * Validates that projection targets attach only to real calendar event
+ * entities.
  *
  * This guard validates by direct DB lookup.
  * It does not resolve or construct calendar identity.
@@ -47,22 +47,23 @@ function require_calendar_event_projection_target_node(
     $stmt = $pdo->prepare(
         '
         SELECT
-            id,
-            entity_id,
-            event_id,
-            projection_entity_id,
-            layer_id,
-            parent_event_id,
-            sequence_index
-        FROM sxnzlfun_chrysalis.calendar_events
-        WHERE event_id = :event_id
-          AND entity_id = :entity_id
+            ce.id,
+            ce.entity_id,
+            ce.event_id,
+            ce.projection_entity_id,
+            ce.layer_id,
+            ce.parent_event_id,
+            ce.sequence_index,
+            e.entity_type_id
+        FROM sxnzlfun_chrysalis.calendar_events ce
+        INNER JOIN sxnzlfun_chrysalis.entities e
+            ON e.id = ce.entity_id
+        WHERE ce.entity_id = :entity_id
         LIMIT 1
         '
     );
 
     $stmt->execute([
-        ':event_id' => $eventId,
         ':entity_id' => $targetEntityId,
     ]);
 
@@ -70,7 +71,19 @@ function require_calendar_event_projection_target_node(
 
     if (!is_array($row)) {
         throw new RuntimeException(
-            'Invalid projection target: calendar event does not exist or entity_id does not match event_id.'
+            'Invalid projection target: calendar event or entity record does not exist.'
+        );
+    }
+
+    if ((int)$row['event_id'] !== $eventId) {
+        throw new RuntimeException(
+            'Invalid projection target: calendar event entity_id does not match event_id.'
+        );
+    }
+
+    if (($row['entity_type_id'] ?? null) !== 'entity_type_calendar_event') {
+        throw new RuntimeException(
+            'Invalid projection target: projections may only target entity_type_calendar_event entities.'
         );
     }
 
