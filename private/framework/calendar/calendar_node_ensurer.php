@@ -159,8 +159,8 @@ function insert_calendar_node(
 
         $entityTypeId = calendar_entity_type_for_layer($layerId);
 
-        if ($entityTypeId !== calendar_entity_type_for_layer($layerId)) {
-            throw new RuntimeException('Calendar layer/entity type mapping mismatch');
+        if ($entityTypeId === '') {
+            throw new RuntimeException('Empty entity type for calendar node');
         }
 
         ensure_entity_row($pdo, $entityId, $entityTypeId);
