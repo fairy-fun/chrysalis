@@ -71,23 +71,24 @@ dream_journal:<CHARACTER_ENTITY_ID>
 }
 ```
 
-Invariants
+#### Invariants
 
 target_entity_id MUST equal:
-
+```
 dream_journal:<CHAR-MAIN-*>
-
+```
 The referenced character must exist:
-
+```
 entities.id = CHAR-MAIN-001
 entities.entity_type_id = entity_type_character
-
+```
 The journal entity must exist:
-
+```
 entities.id = dream_journal:CHAR-MAIN-001
 entities.entity_type_id = dream_journal
-
+```
 No alternate forms are allowed:
-
+```
 ❌ dream_journal:shay
 ❌ dream_journal:tm_*
+```
