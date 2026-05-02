@@ -76,9 +76,7 @@ We are using:
 Examples:
 
 ```text
-dream_journal:shay
-dream:812
-calendar_event:325
+dream_journal:CHAR-MAIN-001
 ```
 
 This is already established in the system and should be followed consistently.
@@ -91,7 +89,7 @@ This is already established in the system and should be followed consistently.
 
 ```sql
 INSERT IGNORE INTO entities (id, entity_type_id)
-VALUES ('dream_journal:shay', 'dream_journal');
+VALUES ('dream_journal:CHAR-MAIN-001', 'dream_journal');
 ```
 
 Represents:
@@ -123,7 +121,7 @@ Attach a dream (via prose) to the journal:
 
 ```text
 projection_type_id = projection_type_dream_journal
-target_entity_id   = dream_journal:shay
+target_entity_id   = dream_journal:CHAR-MAIN-001
 ```
 
 This goes in:
@@ -209,7 +207,7 @@ To implement dream journaling correctly right now:
 
 1. Use existing classval systems (do not replace them)
 2. Use entity IDs with namespacing (`dream:812`)
-3. Use projections for grouping (`dream_journal:shay`)
+3. Use projections for grouping (`dream_journal:CHAR-MAIN-001`)
 4. Keep dreams table structural only
 5. Keep meaning in annotations
 
@@ -225,7 +223,7 @@ Prose:
   prose_draft:812
 
 Projection:
-  projection_type_dream_journal → dream_journal:shay
+  projection_type_dream_journal → dream_journal:CHAR-MAIN-001
 
 Meaning:
   annotation spans
