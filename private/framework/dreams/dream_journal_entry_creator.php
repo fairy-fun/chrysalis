@@ -48,8 +48,16 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
 
     $annotations = prose_normalise_annotations($body);
 
-    if (!prose_entity_exists($pdo, $dreamerEntityId)) {
+    if (!prose_entity_exists_for_type($pdo, $dreamerEntityId, 'entity_type_character')) {
         throw new InvalidArgumentException('Invalid dreamer_entity_id: ' . $dreamerEntityId);
+    }
+
+    $expectedJournalEntityId = 'dream_journal:' . $dreamerEntityId;
+
+    if ($journalEntityId !== $expectedJournalEntityId) {
+        throw new InvalidArgumentException(
+            'journal_entity_id must match dreamer_entity_id. Expected: ' . $expectedJournalEntityId
+        );
     }
 
     if (!prose_entity_exists_for_type($pdo, $journalEntityId, 'dream_journal')) {
