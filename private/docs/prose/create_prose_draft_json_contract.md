@@ -41,3 +41,32 @@ Canonical body:
   "annotations": []
 }
 ```
+---
+
+## Example — Dream Journal Projection (Deterministic Target)
+
+When creating prose for a dream journal entry, the `target_entity_id` must follow the invariant:
+
+```text
+dream_journal:<CHARACTER_ENTITY_ID>
+```
+### Canonical body:
+
+```json
+{
+"operation": "createProseDraft",
+"entity_id": "prose_draft:8ef0615d9b49aed6ef336dc2b8314912",
+"title": "The Boundaries Become Porous",
+"prose_body": "I am walking through a space where the walls feel soft...",
+"draft_status_id": "prose_status_draft",
+"author_entity_id": null,
+"projection": {
+"projection_type_id": "projection_type_dream_journal",
+"target_entity_id": "dream_journal:CHAR-MAIN-001",
+"role_id": "primary",
+"projection_order": 1,
+"is_export_target": 1
+},
+"annotations": []
+}
+```
