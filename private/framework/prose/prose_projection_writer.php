@@ -6,7 +6,7 @@ require_once __DIR__ . '/../calendar/calendar_event_projection_target_guard.php'
 require_once __DIR__ . '/../dreams/dream_journal_projection_target_guard.php';
 
 /**
- * Guard only when target is a calendar event.
+ * Guard supported projection target domains.
  */
 function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityId): void
 {
@@ -16,12 +16,12 @@ function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityI
         throw new InvalidArgumentException('target_entity_id must be non-empty');
     }
 
-    if (
+    /*if (
         !str_starts_with($targetEntityId, 'calendar_event:') &&
         !str_starts_with($targetEntityId, 'dream_journal:')
     ) {
         throw new InvalidArgumentException('Unsupported target_entity_id domain');
-    }
+    }*/
 
     // Calendar domain
     if (str_starts_with($targetEntityId, 'calendar_event:')) {
@@ -71,7 +71,7 @@ function insert_prose_projection(
         throw new InvalidArgumentException('is_export_target must be 0 or 1');
     }
 
-    // 🔒 Guard calendar targets only
+    // 🔒 Guard supported projection target domains
     prose_projection_guard_target_if_needed($pdo, $targetEntityId);
 
     // 🔁 Ensure single export target per (type, target)
