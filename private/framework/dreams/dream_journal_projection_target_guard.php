@@ -1,7 +1,7 @@
 <?php
 
 declare(strict_types=1);
-
+require_once __DIR__ . '/../prose/prose_draft_creator.php';
 /**
  * Ensures the given target_entity_id refers to a valid dream journal entity.
  *
@@ -32,18 +32,7 @@ function require_dream_journal_projection_target_entity(PDO $pdo, string $target
     }
 
     // 🔒 Enforce character existence
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM sxnzlfun_chrysalis.entities
-        WHERE id = :id
-          AND entity_type_id = 'character'
-    ");
-
-    $stmt->execute([
-        ':id' => $characterId
-    ]);
-
-    if ((int)$stmt->fetchColumn() !== 1) {
+    if (!prose_entity_exists_for_type($pdo, $characterId, 'entity_type_character')) {
         throw new InvalidArgumentException(
             'Invalid dream_journal target: character does not exist → ' . $characterId
         );
