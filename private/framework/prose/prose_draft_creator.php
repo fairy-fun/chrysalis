@@ -318,11 +318,9 @@ function insert_prose_annotations(
             ':span_end' => $annotation['span_end'],
             ':source_type_id' => $annotation['source_type_id'],
         ]);
-
-        $inserted++;
     }
 
-    return $inserted;
+    return count($annotations);
 }
 
 function add_prose_annotations(PDO $pdo, array $body): array
@@ -360,7 +358,7 @@ function add_prose_annotations(PDO $pdo, array $body): array
         return [
             'prose_entity_id' => $entityId,
             'annotations' => [
-                'inserted' => $insertedAnnotations,
+                'processed' => $insertedAnnotations,
             ],
         ];
 
