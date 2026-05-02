@@ -22,14 +22,6 @@ function require_dream_journal_projection_target_entity(PDO $pdo, string $target
         );
     }
 
-    $entityId = substr($targetEntityId, strlen('dream_journal:'));
-
-    if ($entityId === '') {
-        throw new InvalidArgumentException(
-            'dream_journal target_entity_id must include an entity id'
-        );
-    }
-
     $stmt = $pdo->prepare("
         SELECT COUNT(*)
         FROM sxnzlfun_chrysalis.entities
@@ -38,7 +30,7 @@ function require_dream_journal_projection_target_entity(PDO $pdo, string $target
     ");
 
     $stmt->execute([
-        ':id' => $entityId
+        ':id' => $targetEntityId
     ]);
 
     if ((int)$stmt->fetchColumn() !== 1) {
