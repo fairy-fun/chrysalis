@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/calendar_event_projection_target_guard.php';
+
 function prose_required_string(array $source, string $key): string
 {
     $value = $source[$key] ?? null;
@@ -136,19 +138,6 @@ function prose_classval_exists_for_type(PDO $pdo, string $classvalId, string $cl
         ':id' => $classvalId,
         ':classval_type_id' => $classvalTypeId,
     ]);
-
-    return (int) $stmt->fetchColumn() === 1;
-}
-
-function prose_calendar_target_exists(PDO $pdo, string $targetEntityId): bool
-{
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM sxnzlfun_chrysalis.calendar_events
-        WHERE entity_id = :entity_id
-    ");
-
-    $stmt->execute([':entity_id' => $targetEntityId]);
 
     return (int) $stmt->fetchColumn() === 1;
 }
@@ -447,9 +436,7 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid projection.role_id: ' . $roleId);
     }*/
 
-    if (!prose_calendar_target_exists($pdo, $targetEntityId)) {
-        throw new InvalidArgumentException('Invalid projection.target_entity_id: ' . $targetEntityId);
-    }
+    require_calendar_event_projection_target_node($pdo, $targetEntityId);
 
     if ($authorEntityId !== null && !prose_entity_exists($pdo, $authorEntityId)) {
         throw new InvalidArgumentException('Invalid author_entity_id: ' . $authorEntityId);
