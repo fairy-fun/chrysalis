@@ -1,5 +1,7 @@
 # Prose ↔ Calendar Integration Contract (Phase 1.5)
 
+> Note: Calendar integration is one projection domain. Validation rules are defined centrally in the projection writer.
+
 ## Purpose
 
 Define the **correct orchestration boundary** between:
@@ -15,6 +17,38 @@ This document ensures:
 - no schema responsibilities bleed across layers
 
 ---
+
+## ⚠️ Projection Target Validation Boundary
+
+Calendar-backed prose projections use `target_entity_id = calendar_event:*`.
+
+However, **calendar validation is NOT applied globally to all prose projections**.
+
+All projection writes MUST go through:
+
+`private/framework/prose/prose_projection_writer.php`
+
+Which enforces:
+
+- Calendar validation ONLY for `calendar_event:*`
+- No validation for non-calendar domains (e.g. `dream_journal:*`)
+- Rejection of unsupported domains
+
+👉 See:
+`prose_annotation_and_projection_contract_phase1.md` → "Target Entity Domain Rules"
+
+### Critical Rule
+
+Do NOT:
+
+- Apply calendar validation outside the shared writer
+- Assume all projections are calendar-backed
+- Introduce guards in draft creators or domain-specific writers
+
+Validation is **prefix-scoped and centralized**.
+
+Violating this will break non-calendar projection types (e.g. dream journal).
+
 
 ## Core Principle
 
