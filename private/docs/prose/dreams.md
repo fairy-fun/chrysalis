@@ -409,6 +409,8 @@ This entity is now the required target for:
 * `create_dream_journal_entry(...)`
 * `insert_prose_projection(...)` (dream journal targets)
 
+Example: Tiffany Rose (`CHAR-MAIN-012`) has deterministic journal entity `dream_journal:CHAR-MAIN-012`, stored in `entities` with `entity_type_id = 'dream_journal'`.
+
 ---
 
 ### Notes
