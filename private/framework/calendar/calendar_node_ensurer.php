@@ -327,7 +327,47 @@ function is_calendar_structural_duplicate_key(PDOException $e): bool
 
 function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void
 {
-    ensure_entity_row($pdo, calendar_event_entity_id($eventId), 'entity_type_calendar_event');
+    $stmt = $pdo->prepare("
+        SELECT layer_id
+        FROM sxnzlfun_chrysalis.calendar_events
+        WHERE event_id = :event_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':event_id' => $eventId,
+    ]);
+
+    $layerId = $stmt->fetchColumn();
+
+    if (!is_string($layerId) || trim($layerId) === '') {
+        throw new RuntimeException('Calendar event row not found for entity repair');
+    }
+
+    $entityTypeId = calendar_entity_type_for_layer(trim($layerId));
+
+    $entityId = calendar_event_entity_id($eventId);
+
+    $stmt = $pdo->prepare("
+    SELECT entity_type_id
+    FROM sxnzlfun_chrysalis.entities
+    WHERE id = :entity_id
+    LIMIT 1
+");
+
+    $stmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $existingTypeId = $stmt->fetchColumn();
+
+    if (is_string($existingTypeId) && $existingTypeId !== $entityTypeId) {
+        throw new RuntimeException(
+            "Calendar entity type mismatch for {$entityId}: expected {$entityTypeId}, found {$existingTypeId}"
+        );
+    }
+
+    ensure_entity_row($pdo, $entityId, $entityTypeId);
 }
 
 function ensure_entity_row(PDO $pdo, string $entityId, string $entityTypeId): void
