@@ -91,12 +91,12 @@ MySQL allows multiple `NULL` values in UNIQUE constraints, so root identity must
 
 ```sql
 CREATE UNIQUE INDEX uniq_calendar_node_structural
-ON sxnzlfun_chrysalis.calendar_events (
-  projection_entity_id,
-  layer_id,
-  (COALESCE(parent_event_id, 0)),
-  sequence_index
-);
+    ON sxnzlfun_chrysalis.calendar_events (
+                                           projection_entity_id,
+                                           layer_id,
+        (COALESCE(parent_event_id, 0)),
+                                           sequence_index
+        );
 ```
 
 ```text
