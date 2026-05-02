@@ -302,6 +302,8 @@ function insert_prose_annotations(
             :span_end,
             :source_type_id
         )
+        ON DUPLICATE KEY UPDATE
+            prose_entity_id = prose_entity_id
     ");
 
     $inserted = 0;
