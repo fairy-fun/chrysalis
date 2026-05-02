@@ -47,7 +47,7 @@ function create_calendar_time(
         $pdo,
         $projectionEntityId,
         'calendar_layer_day',
-        (int) $parentWeek['id'],
+        (int) $parentWeek['event_id'], // ✅ FIXED
         $parentDaySequenceIndex
     );
 
@@ -55,7 +55,7 @@ function create_calendar_time(
         $pdo,
         $projectionEntityId,
         'calendar_layer_time',
-        (int) $parentDay['id'],
+        (int) $parentDay['event_id'], // ✅ FIXED
         $timeIndex,
         [
             'summary' => $timeLabel,

@@ -68,7 +68,7 @@ function create_calendar_day(
         $pdo,
         $projectionEntityId,
         'calendar_layer_day',
-        (int) $parentWeek['id'],
+        (int) $parentWeek['event_id'], // ✅ FIXED
         $dayIndex,
         [
             'summary' => $dayLabel,
