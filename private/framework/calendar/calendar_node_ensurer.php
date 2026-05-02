@@ -157,7 +157,13 @@ function insert_calendar_node(
         $eventId = generate_event_id($pdo);
         $entityId = calendar_event_entity_id($eventId);
 
-        ensure_entity_row($pdo, $entityId, 'entity_type_calendar_event');
+        $entityTypeId = calendar_entity_type_for_layer($layerId);
+
+        if ($entityTypeId !== calendar_entity_type_for_layer($layerId)) {
+            throw new RuntimeException('Calendar layer/entity type mapping mismatch');
+        }
+
+        ensure_entity_row($pdo, $entityId, $entityTypeId);
 
         $stmt = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
@@ -237,6 +243,22 @@ function insert_calendar_node(
  * SUPPORT
  * ============================
  */
+
+function calendar_entity_type_for_layer(string $layerId): string
+{
+    static $map = [
+        'calendar_layer_week'  => 'entity_type_calendar_week',
+        'calendar_layer_day'   => 'entity_type_calendar_day',
+        'calendar_layer_time'  => 'entity_type_calendar_time',
+        'calendar_layer_event' => 'entity_type_calendar_event',
+    ];
+
+    if (!isset($map[$layerId])) {
+        throw new InvalidArgumentException("No entity type mapping for layer_id: {$layerId}");
+    }
+
+    return $map[$layerId];
+}
 
 function filter_calendar_node_payload(string $layerId, array $payload): array
 {
