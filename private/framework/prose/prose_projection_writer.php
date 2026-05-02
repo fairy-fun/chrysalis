@@ -16,13 +16,6 @@ function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityI
         throw new InvalidArgumentException('target_entity_id must be non-empty');
     }
 
-    /*if (
-        !str_starts_with($targetEntityId, 'calendar_event:') &&
-        !str_starts_with($targetEntityId, 'dream_journal:')
-    ) {
-        throw new InvalidArgumentException('Unsupported target_entity_id domain');
-    }*/
-
     // Calendar domain
     if (str_starts_with($targetEntityId, 'calendar_event:')) {
         require_calendar_event_projection_target_node($pdo, $targetEntityId);
@@ -36,11 +29,8 @@ function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityI
     }
 }
 
-
 /**
- * Insert projection row.
- *
- * This is the ONLY allowed write path into prose_projections.
+ * Insert projection row (idempotent + strict conflict handling).
  */
 function insert_prose_projection(
     PDO $pdo,
@@ -71,14 +61,13 @@ function insert_prose_projection(
         throw new InvalidArgumentException('is_export_target must be 0 or 1');
     }
 
-    // 🔒 Guard supported projection target domains
+    // 🔒 Guard domain validity
     prose_projection_guard_target_if_needed($pdo, $targetEntityId);
 
-    // 🔁 Ensure single export target per (type, target)
-    if ($isExportTarget === 1) {
-        clear_existing_export_target($pdo, $projectionTypeId, $targetEntityId);
-    }
-
+    /**
+     * ✅ Idempotent insert (identity enforced by UNIQUE index)
+     * ❗ Does NOT mutate existing rows
+     */
     $stmt = $pdo->prepare("
         INSERT INTO sxnzlfun_chrysalis.prose_projections (
             prose_draft_id,
@@ -86,54 +75,69 @@ function insert_prose_projection(
             target_entity_id,
             role_id,
             projection_order,
-            is_export_target
+            is_export_target,
+            created_at
         ) VALUES (
             :prose_draft_id,
             :projection_type_id,
             :target_entity_id,
             :role_id,
             :projection_order,
-            :is_export_target
+            :is_export_target,
+            NOW()
         )
+        ON DUPLICATE KEY UPDATE
+            projection_order = projection_order,
+            is_export_target = is_export_target
     ");
 
-    $stmt->execute([
-        ':prose_draft_id'    => $proseDraftId,
-        ':projection_type_id'=> $projectionTypeId,
-        ':target_entity_id'  => $targetEntityId,
-        ':role_id'           => $roleId,
-        ':projection_order'  => $projectionOrder,
-        ':is_export_target'  => $isExportTarget,
-    ]);
+    try {
+        $stmt->execute([
+            ':prose_draft_id'     => $proseDraftId,
+            ':projection_type_id' => $projectionTypeId,
+            ':target_entity_id'   => $targetEntityId,
+            ':role_id'            => $roleId,
+            ':projection_order'   => $projectionOrder,
+            ':is_export_target'   => $isExportTarget,
+        ]);
+    } catch (PDOException $e) {
 
-    return (int) $pdo->lastInsertId();
-}
+        // 🔴 Handle strict export-target conflict
+        if ($e->errorInfo[1] === 1062 && $isExportTarget === 1) {
 
-/**
- * Clears existing export target for (projection_type_id, target_entity_id)
- */
-function clear_existing_export_target(
-    PDO $pdo,
-    string $projectionTypeId,
-    string $targetEntityId
-): void {
-    $projectionTypeId = trim($projectionTypeId);
-    $targetEntityId   = trim($targetEntityId);
+            throw new RuntimeException(
+                "Export target conflict for {$projectionTypeId} → {$targetEntityId}"
+            );
+        }
 
-    if ($projectionTypeId === '' || $targetEntityId === '') {
-        throw new InvalidArgumentException('projection_type_id and target_entity_id must be non-empty');
+        throw $e;
     }
 
+    /**
+     * ✅ Resolve row ID (works for insert OR duplicate)
+     */
     $stmt = $pdo->prepare("
-        UPDATE sxnzlfun_chrysalis.prose_projections
-           SET is_export_target = 0
-         WHERE projection_type_id = :projection_type_id
-           AND target_entity_id   = :target_entity_id
-           AND is_export_target   = 1
+        SELECT id
+        FROM sxnzlfun_chrysalis.prose_projections
+        WHERE prose_draft_id = :prose_draft_id
+          AND projection_type_id = :projection_type_id
+          AND target_entity_id = :target_entity_id
+          AND role_id = :role_id
+        LIMIT 1
     ");
 
     $stmt->execute([
+        ':prose_draft_id'     => $proseDraftId,
         ':projection_type_id' => $projectionTypeId,
         ':target_entity_id'   => $targetEntityId,
+        ':role_id'            => $roleId,
     ]);
+
+    $id = (int)$stmt->fetchColumn();
+
+    if ($id < 1) {
+        throw new RuntimeException('Failed to resolve prose projection');
+    }
+
+    return $id;
 }
