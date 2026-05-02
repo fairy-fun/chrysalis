@@ -269,6 +269,69 @@ These must be added explicitly to classval tables before use.
 
 ---
 
+### Target Entity Domain Validation
+
+All writes to `sxnzlfun_chrysalis.prose_projections` MUST go through:
+
+`private/framework/prose/prose_projection_writer.php`
+
+Specifically:
+`prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityId)`
+
+#### Domain Rules
+
+- `calendar_event:*`
+    - MUST pass `require_calendar_event_projection_target_node(...)`
+    - Validation includes:
+        - existence (event_id or entity_id)
+        - correct layer (`calendar_layer_event`)
+        - structural integrity
+    - MUST fail before insert if invalid
+
+- `dream_journal:*`
+    - MUST NOT invoke calendar validation
+    - MUST be allowed as a valid projection target
+
+- Any other prefix
+    - MUST be rejected
+    - Throws `Unsupported target_entity_id domain`
+
+#### Design Principle
+
+Target validation is **domain-scoped, not table-scoped**.
+
+This allows prose projections to support multiple domains (calendar, dream journal, future types) without coupling all writes to a single domain's rules.
+
+#### Adding a New Target Domain
+
+To introduce a new projection target type:
+
+1. Define a new prefix:
+   example_domain:*
+
+
+2. Extend `prose_projection_guard_target_if_needed`:
+- Add prefix to allowed list
+- Add domain-specific guard if needed
+
+3. DO NOT:
+- Modify existing domain guards
+- Introduce cross-domain validation
+- Bypass the shared writer
+
+4. Ensure:
+- Validation happens before insert
+- Non-applicable domains are not validated
+
+#### Invariant
+
+No code may write directly to `prose_projections`.
+
+All writes must flow through the shared writer to guarantee:
+- domain validation
+- export target uniqueness
+- consistent behavior across domains
+
 ## Final Rule
 
 If a value or table is not present in the schema,

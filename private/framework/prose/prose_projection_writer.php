@@ -15,6 +15,13 @@ function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityI
         throw new InvalidArgumentException('target_entity_id must be non-empty');
     }
 
+    if (
+        !str_starts_with($targetEntityId, 'calendar_event:') &&
+        !str_starts_with($targetEntityId, 'dream_journal:')
+    ) {
+        throw new InvalidArgumentException('Unsupported target_entity_id domain');
+    }
+
     if (str_starts_with($targetEntityId, 'calendar_event:')) {
         require_calendar_event_projection_target_node($pdo, $targetEntityId);
     }
@@ -106,9 +113,6 @@ function clear_existing_export_target(
     if ($projectionTypeId === '' || $targetEntityId === '') {
         throw new InvalidArgumentException('projection_type_id and target_entity_id must be non-empty');
     }
-
-    // Guard if calendar target
-    prose_projection_guard_target_if_needed($pdo, $targetEntityId);
 
     $stmt = $pdo->prepare("
         UPDATE sxnzlfun_chrysalis.prose_projections
