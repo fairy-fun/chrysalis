@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/calendar_event_projection_target_guard.php';
+
 function prose_required_string(array $source, string $key): string
 {
     $value = $source[$key] ?? null;
@@ -438,10 +440,6 @@ function create_prose_draft(PDO $pdo, array $body): array
     /*if (!prose_classval_exists($pdo, $roleId)) {
         throw new InvalidArgumentException('Invalid projection.role_id: ' . $roleId);
     }*/
-
-    if (str_starts_with($targetEntityId, 'calendar_event:')) {
-    require_calendar_event_projection_target_node($pdo, $targetEntityId);
-}
 
     if ($authorEntityId !== null && !prose_entity_exists($pdo, $authorEntityId)) {
         throw new InvalidArgumentException('Invalid author_entity_id: ' . $authorEntityId);
