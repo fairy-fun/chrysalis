@@ -296,6 +296,9 @@ Specifically:
     - MUST be rejected
     - Throws `Unsupported target_entity_id domain`
 
+Note: For `dream_journal:*` targets, the suffix must be a canonical character ID (`CHAR-MAIN-*`).  
+See: `dreams.md` → Dream Journal Identity
+
 #### Design Principle
 
 Target validation is **domain-scoped, not table-scoped**.

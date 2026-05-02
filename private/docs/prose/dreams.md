@@ -242,3 +242,30 @@ This approach:
 * avoids classval explosion
 * prevents projection system drift
 * keeps future migration clean
+
+## Dream Journal Identity
+
+Dream journals are anchored to **canonical character entities**, not team membership entities or free-form identifiers.
+
+### Resolution Rule
+
+If a character appears via team membership:
+
+tm_* → team_memberships.member_id → CHAR-MAIN-*
+
+The `CHAR-MAIN-*` entity is the **true identity**.
+
+### Correct Usage
+
+dream_journal:CHAR-MAIN-012
+
+### Incorrect Usage
+
+dream_journal:tm_tiffany_rose  
+dream_journal:tiffany_rose
+
+### Invariant
+
+Every `dream_journal:*` must correspond to an existing `entity_type_character`.
+
+Team membership implies character existence, but does not replace it.
