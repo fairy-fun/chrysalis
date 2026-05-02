@@ -26,7 +26,7 @@ entities.id = calendar_events.entity_id
 ### 2. Layer Semantics
 
 | Layer                  | Purpose                            | Prose Allowed |
-| ---------------------- | ---------------------------------- | ------------- |
+|------------------------|------------------------------------|---------------|
 | `calendar_layer_week`  | Structural grouping                | ❌             |
 | `calendar_layer_day`   | Calendar date                      | ❌             |
 | `calendar_layer_time`  | Time bucket (e.g. "Early morning") | ❌             |
@@ -40,10 +40,10 @@ entities.id = calendar_events.entity_id
 
 The event layer contains **two hierarchical depths**:
 
-| Depth | Meaning   | Example Address |
-|------|----------|----------------|
-| 4    | Event    | `1.3.5.1`      |
-| 5    | Subevent | `1.3.5.1.1`    |
+| Depth | Meaning  | Example Address |
+|-------|----------|-----------------|
+| 4     | Event    | `1.3.5.1`       |
+| 5     | Subevent | `1.3.5.1.1`     |
 
 Rules:
 
