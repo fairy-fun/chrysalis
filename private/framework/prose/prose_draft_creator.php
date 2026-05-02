@@ -363,10 +363,6 @@ function add_prose_annotations(PDO $pdo, array $body): array
 
     $annotations = prose_normalise_annotations($body);
 
-    if ($annotations === []) {
-        throw new InvalidArgumentException('annotations must contain at least one annotation');
-    }
-
     $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
 
     $startedTransaction = false;
@@ -505,7 +501,7 @@ function create_prose_draft(PDO $pdo, array $body): array
                 'role_id' => $roleId,
             ],
             'annotations' => [
-                'inserted' => $insertedAnnotations,
+                'processed' => $insertedAnnotations,
             ],
         ];
 
