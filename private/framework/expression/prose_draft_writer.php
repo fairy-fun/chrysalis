@@ -84,6 +84,12 @@ function createProseDraftWithProjection(
         $projectionId = null;
 
         if ($projectionTypeId !== null && $targetEntityId !== null && $roleId !== null) {
+
+            // ✅ REQUIRED GUARD (add here)
+            if (str_starts_with($targetEntityId, 'calendar_event:')) {
+                require_calendar_event_projection_target_node($pdo, $targetEntityId);
+            }
+
             if ($isExportTarget) {
                 $stmt = $pdo->prepare("
                     UPDATE sxnzlfun_chrysalis.prose_projections
