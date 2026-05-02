@@ -1,8 +1,5 @@
 <?php
-
 declare(strict_types=1);
-
-require_once __DIR__ . '/../calendar/calendar_event_projection_target_guard.php';
 
 function prose_required_string(array $source, string $key): string
 {
@@ -408,6 +405,12 @@ function create_prose_draft(PDO $pdo, array $body): array
     $projectionTypeId = prose_required_string($projection, 'projection_type_id');
     $targetEntityId = prose_required_string($projection, 'target_entity_id');
     $roleId = prose_required_string($projection, 'role_id');
+
+    if (str_starts_with($targetEntityId, 'calendar_event:')) {
+        require_calendar_event_projection_target_node($pdo, $targetEntityId);
+    }
+
+
     $projectionOrder = prose_required_positive_int($projection, 'projection_order');
     $isExportTarget = prose_required_boolean_int($projection, 'is_export_target');
 
@@ -436,7 +439,9 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid projection.role_id: ' . $roleId);
     }*/
 
+    if (str_starts_with($targetEntityId, 'calendar_event:')) {
     require_calendar_event_projection_target_node($pdo, $targetEntityId);
+}
 
     if ($authorEntityId !== null && !prose_entity_exists($pdo, $authorEntityId)) {
         throw new InvalidArgumentException('Invalid author_entity_id: ' . $authorEntityId);
