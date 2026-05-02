@@ -11,6 +11,8 @@ return [
         'private/docs/calendar',
         'private/framework/calendar',
         'private/framework/dreams',
+        'private/framework/entity',
+        'private/framework/entities',
         'private/framework/expression',
         'private/framework/prose',
         'public_html/pecherie/chill-api/repo',
