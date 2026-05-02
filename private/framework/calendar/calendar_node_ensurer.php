@@ -9,7 +9,8 @@ declare(strict_types=1);
  * - Only place allowed to INSERT into calendar_events
  * - Idempotent via structural identity
  * - Safe under concurrency
- * - First write wins (no updates)
+ * - First write wins (no updates to calendar_events)
+ * - Every calendar_event must have a matching entities row
  */
 function ensure_calendar_node(
     PDO $pdo,
@@ -19,19 +20,15 @@ function ensure_calendar_node(
     ?int $sequenceIndex,
     array $payload = []
 ): array {
-
     if (empty($payload['summary'])) {
         throw new InvalidArgumentException('summary is required');
     }
 
     while (true) {
-
-        // Determine candidate index
         $candidateIndex = ($sequenceIndex !== null)
             ? $sequenceIndex
             : get_next_sequence_index($pdo, $projectionEntityId, $layerId, $parentEventId);
 
-        // Try find first (fast path)
         $existing = find_calendar_node(
             $pdo,
             $projectionEntityId,
@@ -41,11 +38,12 @@ function ensure_calendar_node(
         );
 
         if ($existing !== null) {
+            ensure_calendar_event_entity_exists($pdo, (int)$existing['event_id']);
             return $existing;
         }
 
         try {
-            $row = insert_calendar_node(
+            return insert_calendar_node(
                 $pdo,
                 $projectionEntityId,
                 $layerId,
@@ -53,30 +51,18 @@ function ensure_calendar_node(
                 $candidateIndex,
                 $payload
             );
-
-            return $row;
-
         } catch (PDOException $e) {
-
             if (!is_duplicate_key($e)) {
                 throw $e;
             }
 
-            // Another writer won
-
-            if ($sequenceIndex !== null) {
-                // fixed index → retry same
-                continue;
-            }
-
-            // append mode → recompute index
             continue;
         }
     }
 }
 
 /**
- * Structural lookup
+ * Structural lookup.
  */
 function find_calendar_node(
     PDO $pdo,
@@ -85,7 +71,6 @@ function find_calendar_node(
     ?int $parentEventId,
     int $sequenceIndex
 ): ?array {
-
     $stmt = $pdo->prepare("
         SELECT *
         FROM calendar_events
@@ -100,7 +85,7 @@ function find_calendar_node(
         ':projection' => $projectionEntityId,
         ':layer' => $layerId,
         ':parent' => $parentEventId,
-        ':seq' => $sequenceIndex
+        ':seq' => $sequenceIndex,
     ]);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -109,7 +94,9 @@ function find_calendar_node(
 }
 
 /**
- * Insert node (ONLY write path)
+ * Insert node.
+ *
+ * This is the ONLY write path into calendar_events.
  */
 function insert_calendar_node(
     PDO $pdo,
@@ -119,49 +106,69 @@ function insert_calendar_node(
     int $sequenceIndex,
     array $payload
 ): array {
+    $startedTransaction = !$pdo->inTransaction();
 
-    // Generate required IDs
-    $entityId = generate_entity_id();
-    $eventId  = generate_event_id($pdo);
+    if ($startedTransaction) {
+        $pdo->beginTransaction();
+    }
 
-    $stmt = $pdo->prepare("
-        INSERT INTO calendar_events (
-            entity_id,
-            projection_entity_id,
-            parent_event_id,
-            layer_id,
-            sequence_index,
-            event_id,
-            summary
-        ) VALUES (
-            :entity_id,
-            :projection,
-            :parent,
-            :layer,
-            :seq,
-            :event_id,
-            :summary
-        )
-    ");
+    try {
+        $eventId = generate_event_id($pdo);
+        $entityId = calendar_event_entity_id($eventId);
 
-    $stmt->execute([
-        ':entity_id' => $entityId,
-        ':projection' => $projectionEntityId,
-        ':parent' => $parentEventId,
-        ':layer' => $layerId,
-        ':seq' => $sequenceIndex,
-        ':event_id' => $eventId,
-        ':summary' => $payload['summary']
-    ]);
+        ensure_entity_row($pdo, $entityId, 'calendar_event');
 
-    // Return the inserted row directly
-    $id = (int)$pdo->lastInsertId();
+        $stmt = $pdo->prepare("
+            INSERT INTO calendar_events (
+                entity_id,
+                projection_entity_id,
+                parent_event_id,
+                layer_id,
+                sequence_index,
+                event_id,
+                summary
+            ) VALUES (
+                :entity_id,
+                :projection,
+                :parent,
+                :layer,
+                :seq,
+                :event_id,
+                :summary
+            )
+        ");
 
-    return get_calendar_node_by_id($pdo, $id);
+        $stmt->execute([
+            ':entity_id' => $entityId,
+            ':projection' => $projectionEntityId,
+            ':parent' => $parentEventId,
+            ':layer' => $layerId,
+            ':seq' => $sequenceIndex,
+            ':event_id' => $eventId,
+            ':summary' => $payload['summary'],
+        ]);
+
+        $id = (int)$pdo->lastInsertId();
+
+        if ($startedTransaction) {
+            $pdo->commit();
+        }
+
+        return get_calendar_node_by_id($pdo, $id);
+    } catch (Throwable $e) {
+        if ($startedTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        throw $e;
+    }
 }
 
 /**
- * Append index (safe under retry)
+ * Append index.
+ *
+ * Safe because callers retry on duplicate.
+ * Append mode must recompute this value on retry.
  */
 function get_next_sequence_index(
     PDO $pdo,
@@ -169,7 +176,6 @@ function get_next_sequence_index(
     string $layerId,
     ?int $parentEventId
 ): int {
-
     $stmt = $pdo->prepare("
         SELECT MAX(sequence_index)
         FROM calendar_events
@@ -181,16 +187,16 @@ function get_next_sequence_index(
     $stmt->execute([
         ':projection' => $projectionEntityId,
         ':layer' => $layerId,
-        ':parent' => $parentEventId
+        ':parent' => $parentEventId,
     ]);
 
     $max = $stmt->fetchColumn();
 
-    return $max ? ((int)$max + 1) : 1;
+    return ($max !== null && $max !== false) ? ((int)$max + 1) : 1;
 }
 
 /**
- * Fetch by primary key
+ * Fetch by primary key.
  */
 function get_calendar_node_by_id(PDO $pdo, int $id): array
 {
@@ -206,36 +212,62 @@ function get_calendar_node_by_id(PDO $pdo, int $id): array
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$row) {
-        throw new RuntimeException('Inserted node not found');
+        throw new RuntimeException('Inserted calendar node not found');
     }
 
     return $row;
 }
 
 /**
- * Proper duplicate detection (MySQL/MariaDB)
+ * Ensure entity exists for an existing calendar event.
+ *
+ * Used on idempotent return to repair/guarantee entity consistency.
+ */
+function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void
+{
+    ensure_entity_row(
+        $pdo,
+        calendar_event_entity_id($eventId),
+        'calendar_event'
+    );
+}
+
+/**
+ * Ensure global entity row exists.
+ */
+function ensure_entity_row(PDO $pdo, string $entityId, string $entityTypeId): void
+{
+    $stmt = $pdo->prepare("
+        INSERT INTO entities (id, entity_type_id)
+        VALUES (:id, :entity_type_id)
+        ON DUPLICATE KEY UPDATE id = id
+    ");
+
+    $stmt->execute([
+        ':id' => $entityId,
+        ':entity_type_id' => $entityTypeId,
+    ]);
+}
+
+/**
+ * Deterministic calendar event entity identity.
+ */
+function calendar_event_entity_id(int $eventId): string
+{
+    return 'calendar_event:' . $eventId;
+}
+
+/**
+ * Proper duplicate detection for MySQL/MariaDB.
  */
 function is_duplicate_key(PDOException $e): bool
 {
-    // SQLSTATE 23000 = integrity constraint violation
-    // driver-specific code 1062 = duplicate entry
     return $e->getCode() === '23000'
         || (isset($e->errorInfo[1]) && (int)$e->errorInfo[1] === 1062);
 }
 
 /**
- * Generate entity_id (string, external identity)
- */
-function generate_entity_id(): string
-{
-    return 'ce_' . bin2hex(random_bytes(8));
-}
-
-/**
- * Generate event_id (BIGINT, must be unique)
- *
- * NOTE: This assumes you have a helper or sequence.
- * Replace with your real generator if needed.
+ * Generate event_id using calendar_event_sequence.
  */
 function generate_event_id(PDO $pdo): int
 {
@@ -261,6 +293,9 @@ function generate_event_id(PDO $pdo): int
     return $eventId;
 }
 
+/**
+ * Self-initialize calendar event sequence.
+ */
 function ensure_calendar_event_sequence_row(PDO $pdo): void
 {
     $stmt = $pdo->prepare("
