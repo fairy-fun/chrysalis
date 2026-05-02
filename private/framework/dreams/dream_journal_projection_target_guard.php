@@ -22,6 +22,43 @@ function require_dream_journal_projection_target_entity(PDO $pdo, string $target
         );
     }
 
+    // 🔍 Extract character_id
+    $characterId = substr($targetEntityId, strlen('dream_journal:'));
+
+    if ($characterId === '') {
+        throw new InvalidArgumentException(
+            'dream_journal target must include character_id suffix'
+        );
+    }
+
+    // 🔒 Enforce character existence
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.entities
+        WHERE id = :id
+          AND entity_type_id = 'character'
+    ");
+
+    $stmt->execute([
+        ':id' => $characterId
+    ]);
+
+    if ((int)$stmt->fetchColumn() !== 1) {
+        throw new InvalidArgumentException(
+            'Invalid dream_journal target: character does not exist → ' . $characterId
+        );
+    }
+
+    // 🔒 Enforce canonical identity mapping
+    $expectedId = 'dream_journal:' . $characterId;
+
+    if ($targetEntityId !== $expectedId) {
+        throw new InvalidArgumentException(
+            'Non-canonical dream_journal id: expected ' . $expectedId . ', got ' . $targetEntityId
+        );
+    }
+
+    // 🔒 Ensure entity exists with correct type
     $stmt = $pdo->prepare("
         SELECT COUNT(*)
         FROM sxnzlfun_chrysalis.entities
@@ -35,7 +72,7 @@ function require_dream_journal_projection_target_entity(PDO $pdo, string $target
 
     if ((int)$stmt->fetchColumn() !== 1) {
         throw new InvalidArgumentException(
-            'Invalid dream_journal target_entity_id: ' . $targetEntityId
+            'Dream journal entity does not exist: ' . $targetEntityId
         );
     }
 }
