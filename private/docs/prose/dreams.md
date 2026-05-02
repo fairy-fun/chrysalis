@@ -419,7 +419,142 @@ Example: Tiffany Rose (`CHAR-MAIN-012`) has deterministic journal entity `dream_
 * The ID is deterministic and must not vary
 * No alternate journal IDs are allowed for the same character
 
+## Example — Creating a Dream Journal Entry (End-to-End)
 
+### Endpoint
+
+POST /pecherie/chill-api/index.php
+
+---
+
+### Request Body
+
+```json
+{
+  "operation": "createDreamJournalEntry",
+  "dreamer_entity_id": "CHAR-MAIN-012",
+  "journal_entity_id": "dream_journal:CHAR-MAIN-012",
+  "title": "Trying to Make It Work in Time",
+  "prose_body": "I'm sitting on the couch trying to play a video game, but I can't just start. There's a mod I need to install to make it a two-player game, and it isn't working the way I expect.\n\nI keep adjusting things, second-guessing each step. I'm worried that if I install it the wrong way, it might cause problems for other people using the computer. At the same time, I feel this pressure building—I need to get it working before my partner is ready to play with me.\n\nI keep trying, but nothing feels certain. Every choice feels like it could either fix everything or make things worse.\n\nThe pressure isn't loud, but it's constant. I just want it to work in time.",
+  "sequence_index": 1,
+  "dreamed_at": null,
+  "annotations": []
+}
+```
+#### Preconditions
+
+The following entities must already exist:
+```text
+entities.id = CHAR-MAIN-012
+entities.entity_type_id = entity_type_character
+
+entities.id = dream_journal:CHAR-MAIN-012
+entities.entity_type_id = dream_journal
+```
+What the API Does
+1. Creates Dream
+   dreams.entity_id = dream:1
+   dreams.dreamer_entity_id = CHAR-MAIN-012
+   dreams.sequence_index = 1
+2. Creates Prose Draft
+   prose_drafts.entity_id = prose_draft:1
+   prose_drafts.title = "Trying to Make It Work in Time"
+3. Writes Projection (via shared writer)
+   prose_projections.projection_type_id = projection_type_dream_journal
+   prose_projections.target_entity_id   = dream_journal:CHAR-MAIN-012
+   prose_projections.role_id            = primary
+
+All projection writes go through:
+
+private/framework/prose/prose_projection_writer.php
+Projection Guard Behaviour
+
+The writer enforces domain-specific validation.
+
+dream_journal:*
+
+Validated by:
+
+require_dream_journal_projection_target_entity(...)
+
+Guarantees:
+``` 
+entity exists in entities
+entities.id = dream_journal:<entity_id>
+entity_type_id = dream_journal
+Important Design Rule
+``` 
+prose_projections.target_entity_id is polymorphic.
+
+It may point to:
+
+calendar_event:*
+dream_journal:*
+
+Therefore:
+
+NO database foreign key to calendar_events
+
+All validation is enforced in the application layer via guards.
+
+##### Example Response
+
+``` json
+{
+"status": "ok",
+"dream": {
+"id": 1,
+"entity_id": "dream:1",
+"dreamer_entity_id": "CHAR-MAIN-012",
+"dreamed_at": null,
+"sequence_index": 1,
+"recurrence_group_id": null
+},
+"prose": {
+"entity_id": "prose_draft:1",
+"title": "Trying to Make It Work in Time"
+},
+"projection": {
+"id": 12,
+"projection_type_id": "projection_type_dream_journal",
+"target_entity_id": "dream_journal:CHAR-MAIN-012",
+"role_id": "primary"
+},
+"annotations": {
+"inserted": 0
+}
+}
+```
+
+#### Failure Modes
+``` text
+Invalid target_entity_id
+Invalid dream_journal target_entity_id
+```
+
+Cause:
+
+entity does not exist
+wrong entity_type_id
+Foreign key violation (1216)
+
+Likely causes:
+
+- role_id not present in prose_projection_roles
+- projection_type_id not present in prose_projection_types
+  Key Takeaway
+  Dream = event container
+  Prose = canonical content
+  Projection = attachment to journal entity
+
+All projection writes must go through:
+
+prose_projection_writer.php
+
+Never insert directly into prose_projections.
+
+
+---
 
 ### Creation Rule
 
