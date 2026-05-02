@@ -284,14 +284,23 @@ function get_next_sequence_index(
 
     return $max ? ((int)$max + 1) : 1;
 }
-
+/**
+ * Only structural identity duplicate-key races are safe to retry.
+ * Other duplicate-key errors must surface as integrity failures.
+ */
 function is_calendar_structural_duplicate_key(PDOException $e): bool
 {
-    if (($e->errorInfo[1] ?? null) !== 1062) {
+    $info = $e->errorInfo ?? null;
+
+    if (!is_array($info) || !isset($info[1], $info[2])) {
         return false;
     }
 
-    return str_contains((string)($e->errorInfo[2] ?? ''), 'ux_calendar_structural_identity');
+    if ((int)$info[1] !== 1062) {
+        return false;
+    }
+
+    return str_contains((string)$info[2], 'ux_calendar_structural_identity');
 }
 
 function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void

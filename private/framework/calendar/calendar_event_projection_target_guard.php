@@ -6,9 +6,9 @@ declare(strict_types=1);
  * Calendar Event Projection Target Guard
  *
  * Validates that projection targets resolve to real event-layer calendar nodes.
+ * This is a validation-only boundary. It must NOT depend on structural resolvers
+ * or ensurers.
  */
-
-require_once __DIR__ . '/calendar_node_resolver.php';
 
 /**
  * @return array<string, mixed>
@@ -44,11 +44,12 @@ function require_calendar_event_projection_target_node(
     $stmt = $pdo->prepare(
         '
         SELECT
+            event_id,
             projection_entity_id,
             layer_id,
             parent_event_id,
             sequence_index
-        FROM calendar_events
+        FROM sxnzlfun_chrysalis.calendar_events
         WHERE event_id = :event_id
         LIMIT 1
         '
@@ -88,23 +89,17 @@ function require_calendar_event_projection_target_node(
         );
     }
 
-    $parentEventId = null;
-
     if ($row['parent_event_id'] !== null) {
-        if (!ctype_digit((string) $row['parent_event_id']) || (int) $row['parent_event_id'] <= 0) {
+        if (
+            !ctype_digit((string) $row['parent_event_id']) ||
+            (int) $row['parent_event_id'] <= 0
+        ) {
             throw new RuntimeException(
                 'Invalid projection target: calendar event parent identity is malformed.'
             );
         }
-
-        $parentEventId = (int) $row['parent_event_id'];
     }
 
-    return require_calendar_node(
-        $pdo,
-        $row['projection_entity_id'],
-        $row['layer_id'],
-        $parentEventId,
-        (int) $row['sequence_index']
-    );
+    // ✅ STOP HERE — no structural resolution
+    return $row;
 }
