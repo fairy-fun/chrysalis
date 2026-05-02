@@ -19,7 +19,7 @@ function createProseDraftWithProjection(
         return ['status' => 'error', 'message' => 'prose_body is required'];
     }
 
-    if ($targetEntityId !== null && strpos($targetEntityId, ':') === false) {
+    if ($targetEntityId !== null && !str_contains($targetEntityId, ':')) {
         return ['status' => 'error', 'message' => 'target_entity_id must use canonical entity format'];
     }
 
