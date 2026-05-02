@@ -65,7 +65,7 @@ function ensure_calendar_node(
         }
 
         try {
-            return insert_calendar_node(
+            $node = insert_calendar_node(
                 $pdo,
                 $projectionEntityId,
                 $layerId,
@@ -73,6 +73,9 @@ function ensure_calendar_node(
                 $candidateSequenceIndex,
                 $payload
             );
+
+            return $node;
+
         } catch (\PDOException $e) {
             if (!is_calendar_structural_duplicate_key($e)) {
                 throw $e;
@@ -87,6 +90,8 @@ function ensure_calendar_node(
                     $candidateSequenceIndex
                 );
             }
+
+            continue;
         }
     }
 }
