@@ -58,7 +58,7 @@ function create_calendar_event(
         $pdo,
         $projectionEntityId,
         'calendar_layer_day',
-        (int) $parentWeek['id'],
+        (int) $parentWeek['event_id'],
         $parentDaySequenceIndex
     );
 
@@ -66,7 +66,7 @@ function create_calendar_event(
         $pdo,
         $projectionEntityId,
         'calendar_layer_time',
-        (int) $parentDay['id'],
+        (int) $parentDay['event_id'],
         $parentTimeSequenceIndex
     );
 
@@ -80,7 +80,7 @@ function create_calendar_event(
         $pdo,
         $projectionEntityId,
         'calendar_layer_event',
-        (int) $parentTime['id'],
+        (int) $parentTime['event_id'],
         $eventSequenceIndex,
         [
             'summary' => $eventLabel,
