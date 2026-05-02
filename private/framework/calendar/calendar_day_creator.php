@@ -22,54 +22,25 @@ function validate_calendar_day_real_date_start_id_exists(PDO $pdo, string $realD
     }
 }
 
-function resolve_parent_week_for_calendar_day(
-    PDO $pdo,
-    string $parentWeekEntityId
-): array {
-    $parentWeekEntityId = trim($parentWeekEntityId);
-
-    if ($parentWeekEntityId === '') {
-        throw new InvalidArgumentException('parent_week_entity_id must be non-empty');
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT
-            ce.id,
-            ce.entity_id,
-            ce.layer_id,
-            ce.projection_entity_id
-        FROM sxnzlfun_chrysalis.calendar_events ce
-        WHERE ce.entity_id = :entity_id
-          AND ce.layer_id = 'calendar_layer_week'
-        LIMIT 1
-    ");
-
-    $stmt->execute([':entity_id' => $parentWeekEntityId]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!is_array($row)) {
-        throw new RuntimeException(
-            'Invalid parent_week_entity_id: no matching calendar_layer_week row = ' . $parentWeekEntityId
-        );
-    }
-
-    if (empty($row['projection_entity_id'])) {
-        throw new RuntimeException('Invalid parent week: missing projection_entity_id');
-    }
-
-    return $row;
-}
-
 function create_calendar_day(
     PDO $pdo,
-    string $parentWeekEntityId,
+    string $projectionEntityId,
+    int $parentWeekSequenceIndex,
     int $dayIndex,
     string $dayLabel,
     string $realDateId
 ): array {
+    $projectionEntityId = trim($projectionEntityId);
     $dayLabel = trim($dayLabel);
     $realDateId = trim($realDateId);
+
+    if ($projectionEntityId === '') {
+        throw new InvalidArgumentException('projection_entity_id must be non-empty');
+    }
+
+    if ($parentWeekSequenceIndex < 1) {
+        throw new InvalidArgumentException('parent_week_sequence_index must be positive');
+    }
 
     if ($dayIndex < 1) {
         throw new InvalidArgumentException('day_index must be positive');
@@ -85,11 +56,17 @@ function create_calendar_day(
 
     validate_calendar_day_real_date_start_id_exists($pdo, $realDateId);
 
-    $parentWeek = resolve_parent_week_for_calendar_day($pdo, $parentWeekEntityId);
+    $parentWeek = require_calendar_node(
+        $pdo,
+        $projectionEntityId,
+        'calendar_layer_week',
+        null,
+        $parentWeekSequenceIndex
+    );
 
     return ensure_calendar_node(
         $pdo,
-        trim((string) $parentWeek['projection_entity_id']),
+        $projectionEntityId,
         'calendar_layer_day',
         (int) $parentWeek['id'],
         $dayIndex,
