@@ -30,9 +30,9 @@ Annotations = meaning
 ## entities
 
 ```sql
-CREATE TABLE entities (
-    id VARCHAR(64) PRIMARY KEY,
-    entity_type_id VARCHAR(64)
+CREATE TABLE sxnzlfun_chrysalis.entities (
+  id VARCHAR(64) PRIMARY KEY,
+  entity_type_id VARCHAR(64)
 );
 ```
 
