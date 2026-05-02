@@ -5,9 +5,11 @@ declare(strict_types=1);
 /**
  * Calendar Event Projection Target Guard
  *
- * Validates that projection targets resolve to real event-layer calendar nodes.
- * This is a validation-only boundary. It must NOT depend on structural resolvers
- * or ensurers.
+ * Validates that projection targets attach only to real event-layer
+ * calendar nodes.
+ *
+ * This guard validates by direct DB lookup.
+ * It does not resolve or construct calendar identity.
  */
 
 /**
@@ -17,6 +19,7 @@ function require_calendar_event_projection_target_node(
     PDO $pdo,
     string $targetEntityId
 ): array {
+    $targetEntityId = trim($targetEntityId);
     $prefix = 'calendar_event:';
 
     if (!str_starts_with($targetEntityId, $prefix)) {
@@ -44,6 +47,8 @@ function require_calendar_event_projection_target_node(
     $stmt = $pdo->prepare(
         '
         SELECT
+            id,
+            entity_id,
             event_id,
             projection_entity_id,
             layer_id,
@@ -51,43 +56,52 @@ function require_calendar_event_projection_target_node(
             sequence_index
         FROM sxnzlfun_chrysalis.calendar_events
         WHERE event_id = :event_id
+          AND entity_id = :entity_id
         LIMIT 1
         '
     );
 
     $stmt->execute([
         ':event_id' => $eventId,
+        ':entity_id' => $targetEntityId,
     ]);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
+    if (!is_array($row)) {
         throw new RuntimeException(
-            'Invalid projection target: calendar event does not exist.'
+            'Invalid projection target: calendar event does not exist or entity_id does not match event_id.'
+        );
+    }
+
+    if (($row['layer_id'] ?? null) !== 'calendar_layer_event') {
+        throw new RuntimeException(
+            'Invalid projection target: projections may only target calendar_layer_event nodes.'
         );
     }
 
     if (
         !isset($row['projection_entity_id']) ||
         !is_string($row['projection_entity_id']) ||
-        $row['projection_entity_id'] === '' ||
-        !isset($row['layer_id']) ||
-        !is_string($row['layer_id']) ||
-        $row['layer_id'] === '' ||
-        !array_key_exists('sequence_index', $row) ||
-        $row['sequence_index'] === null ||
-        !ctype_digit((string) $row['sequence_index'])
+        trim($row['projection_entity_id']) === ''
     ) {
         throw new RuntimeException(
-            'Invalid projection target: calendar event structural identity is malformed.'
+            'Invalid projection target: calendar event projection_entity_id is malformed.'
         );
     }
 
-    if ($row['layer_id'] !== 'calendar_layer_event') {
+    if (
+        !array_key_exists('sequence_index', $row) ||
+        $row['sequence_index'] === null ||
+        !ctype_digit((string) $row['sequence_index']) ||
+        (int) $row['sequence_index'] <= 0
+    ) {
         throw new RuntimeException(
-            'Invalid projection target: projections may only target calendar_layer_event nodes.'
+            'Invalid projection target: calendar event sequence_index is malformed.'
         );
     }
+
+    $parentEventId = null;
 
     if ($row['parent_event_id'] !== null) {
         if (
@@ -95,11 +109,12 @@ function require_calendar_event_projection_target_node(
             (int) $row['parent_event_id'] <= 0
         ) {
             throw new RuntimeException(
-                'Invalid projection target: calendar event parent identity is malformed.'
+                'Invalid projection target: calendar event parent_event_id is malformed.'
             );
         }
+
+        $parentEventId = (int) $row['parent_event_id'];
     }
 
-    // ✅ STOP HERE — no structural resolution
     return $row;
 }
