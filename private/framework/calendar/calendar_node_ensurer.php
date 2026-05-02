@@ -128,6 +128,53 @@ function find_calendar_node(
 }
 
 /**
+ * Layer-aware payload whitelist.
+ *
+ * This deliberately excludes all structural identity fields:
+ * - event_id
+ * - parent_event_id
+ * - sequence_index
+ * - week_index/day_index/time_index/event_index
+ * - chronology_address
+ * - generated/unique helper columns
+ */
+function filter_calendar_node_payload(string $layerId, array $payload): array
+{
+    $allowedByLayer = [
+        'calendar_layer_week' => [
+            'summary',
+            'real_date_start_id',
+            'real_date_end_id',
+        ],
+        'calendar_layer_day' => [
+            'summary',
+            'real_date_start_id',
+            'real_date_end_id',
+        ],
+        'calendar_layer_time' => [
+            'summary',
+            'time_label_id',
+        ],
+        'calendar_layer_event' => [
+            'summary',
+            'event_type_id',
+            'location_id',
+            'domain_id',
+            'class_type_id',
+            'notes',
+            'source_document',
+        ],
+    ];
+
+    $allowed = $allowedByLayer[$layerId] ?? ['summary'];
+
+    return array_intersect_key(
+        $payload,
+        array_fill_keys($allowed, true)
+    );
+}
+
+/**
  * Only INSERT path into calendar_events.
  */
 function insert_calendar_node(
@@ -138,6 +185,8 @@ function insert_calendar_node(
     int $sequenceIndex,
     array $payload
 ): array {
+    $payload = filter_calendar_node_payload($layerId, $payload);
+
     $startedTransaction = !$pdo->inTransaction();
 
     if ($startedTransaction) {
@@ -159,7 +208,15 @@ function insert_calendar_node(
                 sequence_index,
                 event_id,
                 summary,
-                real_date_start_id
+                real_date_start_id,
+                real_date_end_id,
+                time_label_id,
+                event_type_id,
+                location_id,
+                domain_id,
+                class_type_id,
+                notes,
+                source_document
             ) VALUES (
                 :entity_id,
                 :projection,
@@ -168,7 +225,15 @@ function insert_calendar_node(
                 :seq,
                 :event_id,
                 :summary,
-                :real_date_start_id
+                :real_date_start_id,
+                :real_date_end_id,
+                :time_label_id,
+                :event_type_id,
+                :location_id,
+                :domain_id,
+                :class_type_id,
+                :notes,
+                :source_document
             )
         ");
 
@@ -179,8 +244,16 @@ function insert_calendar_node(
             ':layer' => trim($layerId),
             ':seq' => $sequenceIndex,
             ':event_id' => $eventId,
-            ':summary' => $payload['summary'],
+            ':summary' => $payload['summary'] ?? null,
             ':real_date_start_id' => $payload['real_date_start_id'] ?? null,
+            ':real_date_end_id' => $payload['real_date_end_id'] ?? null,
+            ':time_label_id' => $payload['time_label_id'] ?? null,
+            ':event_type_id' => $payload['event_type_id'] ?? null,
+            ':location_id' => $payload['location_id'] ?? null,
+            ':domain_id' => $payload['domain_id'] ?? null,
+            ':class_type_id' => $payload['class_type_id'] ?? null,
+            ':notes' => $payload['notes'] ?? null,
+            ':source_document' => $payload['source_document'] ?? null,
         ]);
 
         $id = (int) $pdo->lastInsertId();
@@ -277,8 +350,15 @@ function calendar_event_entity_id(int $eventId): string
 
 function is_duplicate_key(PDOException $e): bool
 {
-    return $e->getCode() === '23000'
-        || (isset($e->errorInfo[1]) && (int) $e->errorInfo[1] === 1062);
+    $sqlState = (string) $e->getCode();
+    $driverCode = isset($e->errorInfo[1]) ? (int) $e->errorInfo[1] : null;
+    $message = $e->getMessage();
+
+    if ($sqlState !== '23000' && $driverCode !== 1062) {
+        return false;
+    }
+
+    return str_contains($message, 'ux_calendar_structural_identity');
 }
 
 function generate_event_id(PDO $pdo): int
