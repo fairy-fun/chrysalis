@@ -35,26 +35,7 @@ function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityI
         return;
     }
 }
-/**
- * Ensures the dream journal target exists and is the correct entity type.
- */
-function require_dream_journal_projection_target_entity(PDO $pdo, string $entityId): void
-{
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM sxnzlfun_chrysalis.entities
-        WHERE id = :id
-          AND entity_type_id = 'dream_journal'
-    ");
 
-    $stmt->execute([':id' => $entityId]);
-
-    if ((int)$stmt->fetchColumn() !== 1) {
-        throw new InvalidArgumentException(
-            'Invalid dream_journal target_entity_id: ' . $entityId
-        );
-    }
-}
 
 /**
  * Insert projection row.

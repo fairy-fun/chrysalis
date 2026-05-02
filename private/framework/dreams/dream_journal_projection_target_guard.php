@@ -22,7 +22,6 @@ function require_dream_journal_projection_target_entity(PDO $pdo, string $target
         );
     }
 
-    // Extract the entity ID (everything after the prefix)
     $entityId = substr($targetEntityId, strlen('dream_journal:'));
 
     if ($entityId === '') {
