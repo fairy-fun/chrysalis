@@ -64,10 +64,17 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid journal_entity_id: ' . $journalEntityId);
     }
 
-    if (!prose_classval_exists($pdo, 'projection_type_dream_journal')) {
-        throw new InvalidArgumentException('Invalid projection_type_id: projection_type_dream_journal');
-    }
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.projection_type_classvals
+        WHERE classval_id = :id
+    ");
 
+        $stmt->execute([':id' => 'projection_type_dream_journal']);
+
+        if ((int)$stmt->fetchColumn() !== 1) {
+            throw new InvalidArgumentException('Invalid projection_type_id: projection_type_dream_journal');
+        }
     $startedTransaction = false;
 
     try {
