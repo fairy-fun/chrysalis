@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../prose/prose_projection_writer.php';
+
 function createProseDraftWithProjection(
     PDO     $pdo,
     string  $title,
@@ -83,56 +85,15 @@ function createProseDraftWithProjection(
         $projectionId = null;
 
         if ($projectionTypeId !== null && $targetEntityId !== null && $roleId !== null) {
-
-            // ✅ REQUIRED GUARD
-            if (str_starts_with($targetEntityId, 'calendar_event:')) {
-                require_calendar_event_projection_target_node($pdo, $targetEntityId);
-            }
-
-            if ($isExportTarget) {
-                $stmt = $pdo->prepare("
-                    UPDATE sxnzlfun_chrysalis.prose_projections
-                       SET is_export_target = 0
-                     WHERE projection_type_id = :projection_type_id
-                       AND target_entity_id = :target_entity_id
-                       AND is_export_target = 1
-                ");
-
-                $stmt->execute([
-                    ':projection_type_id' => $projectionTypeId,
-                    ':target_entity_id' => $targetEntityId,
-                ]);
-            }
-
-            $stmt = $pdo->prepare("
-                INSERT INTO sxnzlfun_chrysalis.prose_projections (
-                    prose_draft_id,
-                    projection_type_id,
-                    target_entity_id,
-                    role_id,
-                    projection_order,
-                    is_export_target
-                )
-                VALUES (
-                    :prose_draft_id,
-                    :projection_type_id,
-                    :target_entity_id,
-                    :role_id,
-                    :projection_order,
-                    :is_export_target
-                )
-            ");
-
-            $stmt->execute([
-                ':prose_draft_id' => $proseDraftId,
-                ':projection_type_id' => $projectionTypeId,
-                ':target_entity_id' => $targetEntityId,
-                ':role_id' => $roleId,
-                ':projection_order' => $projectionOrder,
-                ':is_export_target' => $isExportTarget ? 1 : 0,
-            ]);
-
-            $projectionId = (int)$pdo->lastInsertId();
+            $projectionId = insert_prose_projection(
+                $pdo,
+                $proseDraftId,
+                $projectionTypeId,
+                $targetEntityId,
+                $roleId,
+                $projectionOrder,
+                $isExportTarget ? 1 : 0
+            );
         }
 
         $pdo->commit();

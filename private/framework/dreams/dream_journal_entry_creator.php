@@ -1,10 +1,10 @@
 <?php
 
-
 declare(strict_types=1);
 
 require_once __DIR__ . '/../entities/entity_creator.php';
 require_once __DIR__ . '/../prose/prose_draft_creator.php';
+require_once __DIR__ . '/../prose/prose_projection_writer.php';
 
 function next_dream_id(PDO $pdo): int
 {
@@ -25,13 +25,11 @@ function next_dream_id(PDO $pdo): int
 
 function create_dream_journal_entry(PDO $pdo, array $body): array
 {
-    // --- Required fields ---
     $dreamerEntityId = prose_required_string($body, 'dreamer_entity_id');
     $journalEntityId = prose_required_string($body, 'journal_entity_id');
     $title = prose_required_string($body, 'title');
     $proseBody = prose_required_string($body, 'prose_body');
 
-    // --- Optional fields ---
     $dreamedAt = $body['dreamed_at'] ?? null;
     $sequenceIndex = $body['sequence_index'] ?? null;
     $recurrenceGroupId = $body['recurrence_group_id'] ?? null;
@@ -50,7 +48,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
 
     $annotations = prose_normalise_annotations($body);
 
-    // --- Validation ---
     if (!prose_entity_exists($pdo, $dreamerEntityId)) {
         throw new InvalidArgumentException('Invalid dreamer_entity_id: ' . $dreamerEntityId);
     }
@@ -71,20 +68,16 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             $startedTransaction = true;
         }
 
-        // --- Allocate IDs ---
         $dreamId = next_dream_id($pdo);
 
         $dreamEntityId = 'dream:' . $dreamId;
         $proseEntityId = 'prose_draft:' . $dreamId;
 
-        // --- Create entities ---
         create_entity($pdo, $proseEntityId, 'entity_type_prose_draft');
         create_entity($pdo, $dreamEntityId, 'dream');
 
-        // --- Validate annotations against prose ---
         $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
 
-        // --- Insert prose draft ---
         $insertDraft = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.prose_drafts (
                 entity_id,
@@ -114,7 +107,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             throw new RuntimeException('Failed to create prose draft');
         }
 
-        // --- Insert dream row ---
         $insertDream = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.dreams (
                 id,
@@ -149,32 +141,16 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             ':recurrence_group_id' => $recurrenceGroupId,
         ]);
 
-        // --- Projection (journal membership ONLY here) ---
-        $insertProjection = $pdo->prepare("
-            INSERT INTO sxnzlfun_chrysalis.prose_projections (
-                prose_draft_id,
-                projection_type_id,
-                target_entity_id,
-                role_id,
-                projection_order,
-                is_export_target
-            ) VALUES (
-                :prose_draft_id,
-                'projection_type_dream_journal',
-                :target_entity_id,
-                'primary',
-                :projection_order,
-                1
-            )
-        ");
+        $projectionId = insert_prose_projection(
+            $pdo,
+            $proseDraftId,
+            'projection_type_dream_journal',
+            $journalEntityId,
+            'primary',
+            $sequenceIndex ?? $dreamId,
+            1
+        );
 
-        $insertProjection->execute([
-            ':prose_draft_id' => $proseDraftId,
-            ':target_entity_id' => $journalEntityId,
-            ':projection_order' => $sequenceIndex ?? $dreamId,
-        ]);
-
-        // --- Annotations ---
         $insertedAnnotations = insert_prose_annotations(
             $pdo,
             $proseEntityId,
@@ -199,6 +175,7 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
                 'title' => $title,
             ],
             'projection' => [
+                'id' => $projectionId,
                 'projection_type_id' => 'projection_type_dream_journal',
                 'target_entity_id' => $journalEntityId,
                 'role_id' => 'primary',
@@ -212,6 +189,7 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
         if ($startedTransaction && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
+
         throw $e;
     }
 }
