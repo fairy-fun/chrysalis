@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../calendar/calendar_event_projection_target_guard.php';
+require_once __DIR__ . '/prose_projection_writer.php';
 
 function prose_required_string(array $source, string $key): string
 {
@@ -407,12 +407,6 @@ function create_prose_draft(PDO $pdo, array $body): array
     $projectionTypeId = prose_required_string($projection, 'projection_type_id');
     $targetEntityId = prose_required_string($projection, 'target_entity_id');
     $roleId = prose_required_string($projection, 'role_id');
-
-    if (str_starts_with($targetEntityId, 'calendar_event:')) {
-        require_calendar_event_projection_target_node($pdo, $targetEntityId);
-    }
-
-
     $projectionOrder = prose_required_positive_int($projection, 'projection_order');
     $isExportTarget = prose_required_boolean_int($projection, 'is_export_target');
 
@@ -436,10 +430,6 @@ function create_prose_draft(PDO $pdo, array $body): array
     if (!prose_classval_exists($pdo, $projectionTypeId)) {
         throw new InvalidArgumentException('Invalid projection_type_id: ' . $projectionTypeId);
     }
-
-    /*if (!prose_classval_exists($pdo, $roleId)) {
-        throw new InvalidArgumentException('Invalid projection.role_id: ' . $roleId);
-    }*/
 
     if ($authorEntityId !== null && !prose_entity_exists($pdo, $authorEntityId)) {
         throw new InvalidArgumentException('Invalid author_entity_id: ' . $authorEntityId);
@@ -485,32 +475,15 @@ function create_prose_draft(PDO $pdo, array $body): array
             throw new RuntimeException('Failed to create prose draft');
         }
 
-        $insertProjection = $pdo->prepare("
-            INSERT INTO sxnzlfun_chrysalis.prose_projections (
-                prose_draft_id,
-                projection_type_id,
-                target_entity_id,
-                role_id,
-                projection_order,
-                is_export_target
-            ) VALUES (
-                :prose_draft_id,
-                :projection_type_id,
-                :target_entity_id,
-                :role_id,
-                :projection_order,
-                :is_export_target
-            )
-        ");
-
-        $insertProjection->execute([
-            ':prose_draft_id' => $proseDraftId,
-            ':projection_type_id' => $projectionTypeId,
-            ':target_entity_id' => $targetEntityId,
-            ':role_id' => $roleId,
-            ':projection_order' => $projectionOrder,
-            ':is_export_target' => $isExportTarget,
-        ]);
+        $projectionId = insert_prose_projection(
+            $pdo,
+            $proseDraftId,
+            $projectionTypeId,
+            $targetEntityId,
+            $roleId,
+            $projectionOrder,
+            $isExportTarget
+        );
 
         $insertedAnnotations = insert_prose_annotations($pdo, $entityId, $validatedAnnotations);
 
@@ -524,6 +497,7 @@ function create_prose_draft(PDO $pdo, array $body): array
                 'title' => $title,
             ],
             'projection' => [
+                'id' => $projectionId,
                 'target_entity_id' => $targetEntityId,
                 'projection_type_id' => $projectionTypeId,
                 'role_id' => $roleId,
