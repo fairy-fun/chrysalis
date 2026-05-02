@@ -412,6 +412,202 @@ You must define:
 ❌ using legacy identity anywhere in write logic
 ```
 
+
+## Calendar System Refactor Plan v2
+### Structural Identity + Entity Typing Alignment
+
+Core doctrine:
+
+Structural identity decides what exists.
+Entity identity decides what may be referenced.
+Entity type decides what the thing means.
+Layer ID decides where it fits in the hierarchy.
+Add after current Phase 9
+Phase 10 — Define Dual Identity Contract
+calendar_events.event_id is the intrinsic identity.
+
+calendar_events.entity_id MUST equal:
+
+  calendar_event:<event_id>
+
+All external references MUST use entity_id.
+No external system may reference structural identity directly.
+
+Structural identity remains:
+
+projection_entity_id
++ parent_event_id_norm
++ layer_id
++ sequence_index
+
+Used only for ensure/idempotency.
+
+Phase 11 — Split Layer from Type
+layer_id = structural role
+entity_type_id = semantic type
+
+Mapping:
+
+calendar_layer_week  → entity_type_calendar_week
+calendar_layer_day   → entity_type_calendar_day
+calendar_layer_time  → entity_type_calendar_time
+calendar_layer_event → entity_type_calendar_event
+
+Do not remove layer_id.
+
+Phase 12 — Update Insert Contract
+
+In insert_calendar_node(...), replace fixed type:
+
+ensure_entity_row($pdo, $entityId, 'entity_type_calendar_event');
+
+with:
+
+ensure_entity_row(
+    $pdo,
+    $entityId,
+    calendar_entity_type_for_layer($layerId)
+);
+
+Add:
+
+function calendar_entity_type_for_layer(string $layerId): string
+{
+    return match ($layerId) {
+        'calendar_layer_week'  => 'entity_type_calendar_week',
+        'calendar_layer_day'   => 'entity_type_calendar_day',
+        'calendar_layer_time'  => 'entity_type_calendar_time',
+        'calendar_layer_event' => 'entity_type_calendar_event',
+        default => throw new InvalidArgumentException('Unknown calendar layer_id'),
+    };
+}
+Phase 13 — Existing Row Repair
+
+Current code does this:
+
+ensure_calendar_event_entity_exists($pdo, (int)$existing['event_id']);
+
+That is now insufficient because it lacks layer_id.
+
+Replace with:
+
+ensure_calendar_node_entity_exists($pdo, $existing);
+
+Conceptually:
+
+function ensure_calendar_node_entity_exists(PDO $pdo, array $node): void
+{
+    ensure_entity_row(
+        $pdo,
+        calendar_event_entity_id((int)$node['event_id']),
+        calendar_entity_type_for_layer((string)$node['layer_id'])
+    );
+}
+
+But beware: current ensure_entity_row uses:
+
+ON DUPLICATE KEY UPDATE id = id
+
+So it will not fix wrong existing types.
+
+You need either:
+
+- migration updates existing entity_type_id
+- runtime ensure refuses mismatches
+
+Recommended:
+
+Migration repairs.
+Runtime guards mismatch.
+Phase 14 — Projection Guard Upgrade
+
+Current guard validates:
+
+$row['layer_id'] === 'calendar_layer_event'
+
+New guard should validate:
+
+target entity exists
+AND entity_type_id = entity_type_calendar_event
+AND calendar_events.entity_id matches target_entity_id
+
+Keep layer_id check temporarily as a belt-and-suspenders invariant:
+
+entity_type_id = entity_type_calendar_event
+AND layer_id = calendar_layer_event
+
+Later, the semantic authority is entity_type_id.
+
+Phase 15 — Prose Resolver Cleanup
+
+Current resolver exposes:
+
+ce.layer_id
+
+That can stay for display/diagnostics.
+
+But prose should not decide projection validity from layer_id.
+
+Projection validity belongs in:
+
+require_calendar_event_projection_target_node(...)
+
+or a generalized projection target guard.
+
+Phase 16 — Data Migration Safety Checks
+
+Before migration:
+
+SELECT
+  ce.entity_id,
+  ce.layer_id,
+  e.entity_type_id
+FROM calendar_events ce
+JOIN entities e ON e.id = ce.entity_id
+WHERE
+  (ce.layer_id = 'calendar_layer_week'  AND e.entity_type_id <> 'entity_type_calendar_week')
+  OR
+  (ce.layer_id = 'calendar_layer_day'   AND e.entity_type_id <> 'entity_type_calendar_day')
+  OR
+  (ce.layer_id = 'calendar_layer_time'  AND e.entity_type_id <> 'entity_type_calendar_time')
+  OR
+  (ce.layer_id = 'calendar_layer_event' AND e.entity_type_id <> 'entity_type_calendar_event');
+
+Migration:
+
+UPDATE entities e
+JOIN calendar_events ce ON ce.entity_id = e.id
+SET e.entity_type_id = CASE ce.layer_id
+  WHEN 'calendar_layer_week'  THEN 'entity_type_calendar_week'
+  WHEN 'calendar_layer_day'   THEN 'entity_type_calendar_day'
+  WHEN 'calendar_layer_time'  THEN 'entity_type_calendar_time'
+  WHEN 'calendar_layer_event' THEN 'entity_type_calendar_event'
+  ELSE e.entity_type_id
+END;
+
+After migration, mismatch query should return 0 rows.
+
+Final merged rule
+If a calendar write does not go through ensure_calendar_node, it is a bug.
+
+If an external reference does not use entity_id, it is a bug.
+
+If projection validity is decided by layer_id alone, it is legacy behavior.
+
+If entity_type_id and layer_id disagree, the row is corrupt.
+
+That gives you the clean model:
+
+calendar_events:
+  structural tree + intrinsic entity anchor
+
+entities:
+  semantic type authority
+
+projections/prose:
+  reference only entity_id
+
+
 ---
 
 ## 🧠 Final Mental Model
