@@ -21,8 +21,8 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
         throw new InvalidArgumentException('dreamed_at must be null or a valid datetime string');
     }
 
-    if (!is_int($sequenceIndex) || $sequenceIndex < 1) {
-        throw new InvalidArgumentException('sequence_index is required and must be a positive integer');
+    if ($sequenceIndex !== null && (!is_int($sequenceIndex) || $sequenceIndex < 1)) {
+        throw new InvalidArgumentException('sequence_index must be null or a positive integer');
     }
 
     if ($recurrenceGroupId !== null && (!is_int($recurrenceGroupId) || $recurrenceGroupId < 1)) {
@@ -68,6 +68,28 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
         }
 
         /**
+         * 🔢 Allocate sequence_index if not provided
+         */
+        if ($sequenceIndex === null) {
+            $stmt = $pdo->prepare("
+                SELECT COALESCE(MAX(sequence_index), 0) + 1
+                FROM sxnzlfun_chrysalis.dreams
+                WHERE dreamer_entity_id = :dreamer
+                FOR UPDATE
+            ");
+
+            $stmt->execute([
+                ':dreamer' => $dreamerEntityId,
+            ]);
+
+            $sequenceIndex = (int)$stmt->fetchColumn();
+
+            if ($sequenceIndex < 1) {
+                throw new RuntimeException('Failed to allocate dream sequence_index');
+            }
+        }
+
+        /**
          * 🔑 Deterministic identity (CRITICAL for retry safety)
          */
         $identitySeed = hash('sha256', $dreamerEntityId . ':' . $sequenceIndex);
@@ -80,10 +102,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
 
         $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
 
-        /**
-         * ⚠️ Assumes entity_id is UNIQUE in prose_drafts
-         * If not, this should also be upgraded to ON DUPLICATE KEY
-         */
         $insertDraft = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.prose_drafts (
                 entity_id,
@@ -109,9 +127,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             ':author_entity_id' => $dreamerEntityId,
         ]);
 
-        /**
-         * Recover prose_draft id (works for both insert + duplicate)
-         */
         $stmt = $pdo->prepare("
             SELECT id
             FROM sxnzlfun_chrysalis.prose_drafts
@@ -126,9 +141,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             throw new RuntimeException('Failed to resolve prose draft');
         }
 
-        /**
-         * ✅ Idempotent dream insert
-         */
         $insertDream = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.dreams (
                 dream_entity_id,
@@ -162,9 +174,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             ':recurrence_group_id' => $recurrenceGroupId,
         ]);
 
-        /**
-         * Recover dream row (insert OR duplicate)
-         */
         $stmt = $pdo->prepare("
             SELECT id, dream_entity_id, prose_entity_id
             FROM sxnzlfun_chrysalis.dreams
@@ -184,9 +193,6 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             throw new RuntimeException('Failed to resolve dream row');
         }
 
-        /**
-         * 🔒 Invariant enforcement (no identity drift)
-         */
         if ($row['dream_entity_id'] !== $dreamEntityId) {
             throw new RuntimeException(
                 "Dream identity mismatch at sequence {$sequenceIndex} for {$dreamerEntityId}"
@@ -205,7 +211,7 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             1
         );
 
-        $insertedAnnotations = insert_prose_annotations(
+        $processedAnnotations = insert_prose_annotations(
             $pdo,
             $proseEntityId,
             $validatedAnnotations
@@ -235,7 +241,7 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
                 'role_id' => 'primary',
             ],
             'annotations' => [
-                'inserted' => $insertedAnnotations,
+                'processed' => $processedAnnotations,
             ],
         ];
 
