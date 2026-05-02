@@ -67,33 +67,23 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             $startedTransaction = true;
         }
 
-        $duplicateStmt = $pdo->prepare("
-            SELECT 1
-            FROM sxnzlfun_chrysalis.dreams
-            WHERE dreamer_entity_id = :dreamer_entity_id
-            AND sequence_index = :sequence_index
-            LIMIT 1
-        ");
+        /**
+         * 🔑 Deterministic identity (CRITICAL for retry safety)
+         */
+        $identitySeed = hash('sha256', $dreamerEntityId . ':' . $sequenceIndex);
 
-        $duplicateStmt->execute([
-            ':dreamer_entity_id' => $dreamerEntityId,
-            ':sequence_index' => $sequenceIndex,
-        ]);
-
-        if ($duplicateStmt->fetchColumn()) {
-            throw new RuntimeException('Dream already exists for this dreamer_entity_id and sequence_index');
-        }
-
-        $identitySeed = bin2hex(random_bytes(16));
-
-        $dreamEntityId = 'dream:' . $identitySeed;
-        $proseEntityId = 'prose_draft:' . $identitySeed;
+        $dreamEntityId = 'dream:' . substr($identitySeed, 0, 32);
+        $proseEntityId = 'prose_draft:' . substr($identitySeed, 0, 32);
 
         create_entity($pdo, $proseEntityId, 'entity_type_prose_draft');
         create_entity($pdo, $dreamEntityId, 'dream');
 
         $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
 
+        /**
+         * ⚠️ Assumes entity_id is UNIQUE in prose_drafts
+         * If not, this should also be upgraded to ON DUPLICATE KEY
+         */
         $insertDraft = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.prose_drafts (
                 entity_id,
@@ -108,6 +98,8 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
                 'prose_status_draft',
                 :author_entity_id
             )
+            ON DUPLICATE KEY UPDATE
+                entity_id = entity_id
         ");
 
         $insertDraft->execute([
@@ -117,12 +109,26 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             ':author_entity_id' => $dreamerEntityId,
         ]);
 
-        $proseDraftId = (int)$pdo->lastInsertId();
+        /**
+         * Recover prose_draft id (works for both insert + duplicate)
+         */
+        $stmt = $pdo->prepare("
+            SELECT id
+            FROM sxnzlfun_chrysalis.prose_drafts
+            WHERE entity_id = :entity_id
+            LIMIT 1
+        ");
+
+        $stmt->execute([':entity_id' => $proseEntityId]);
+        $proseDraftId = (int)$stmt->fetchColumn();
 
         if ($proseDraftId < 1) {
-            throw new RuntimeException('Failed to create prose draft');
+            throw new RuntimeException('Failed to resolve prose draft');
         }
 
+        /**
+         * ✅ Idempotent dream insert
+         */
         $insertDream = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.dreams (
                 dream_entity_id,
@@ -143,6 +149,8 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
                 NOW(),
                 NOW()
             )
+            ON DUPLICATE KEY UPDATE
+                dream_entity_id = dream_entity_id
         ");
 
         $insertDream->execute([
@@ -154,11 +162,38 @@ function create_dream_journal_entry(PDO $pdo, array $body): array
             ':recurrence_group_id' => $recurrenceGroupId,
         ]);
 
-        $dreamId = (int)$pdo->lastInsertId();
+        /**
+         * Recover dream row (insert OR duplicate)
+         */
+        $stmt = $pdo->prepare("
+            SELECT id, dream_entity_id, prose_entity_id
+            FROM sxnzlfun_chrysalis.dreams
+            WHERE dreamer_entity_id = :dreamer
+              AND sequence_index = :sequence
+            LIMIT 1
+        ");
 
-        if ($dreamId < 1) {
-            throw new RuntimeException('Failed to create dream');
+        $stmt->execute([
+            ':dreamer' => $dreamerEntityId,
+            ':sequence' => $sequenceIndex,
+        ]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            throw new RuntimeException('Failed to resolve dream row');
         }
+
+        /**
+         * 🔒 Invariant enforcement (no identity drift)
+         */
+        if ($row['dream_entity_id'] !== $dreamEntityId) {
+            throw new RuntimeException(
+                "Dream identity mismatch at sequence {$sequenceIndex} for {$dreamerEntityId}"
+            );
+        }
+
+        $dreamId = (int)$row['id'];
 
         $projectionId = insert_prose_projection(
             $pdo,
