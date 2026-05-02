@@ -116,7 +116,7 @@ function insert_calendar_node(
         $eventId = generate_event_id($pdo);
         $entityId = calendar_event_entity_id($eventId);
 
-        ensure_entity_row($pdo, $entityId, 'calendar_event');
+        ensure_entity_row($pdo, $entityId, 'entity_type_calendar_event');
 
         $stmt = $pdo->prepare("
             INSERT INTO calendar_events (
@@ -228,7 +228,7 @@ function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void
     ensure_entity_row(
         $pdo,
         calendar_event_entity_id($eventId),
-        'calendar_event'
+        'entity_type_calendar_event'
     );
 }
 
