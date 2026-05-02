@@ -177,6 +177,84 @@ Until granularity is needed:
 
 ---
 
+
+## 5.6 Annotation Write Semantics (Idempotency & Concurrency Contract)
+Model
+
+Annotations are treated as a set of uniquely identified spans, not an append-only log.
+
+Submitting the same annotation multiple times MUST NOT create multiple rows.
+
+### Identity (Enforced)
+
+An annotation is uniquely identified by:
+```
+(prose_entity_id,
+subject_entity_id,
+annotation_type_id,
+annotation_value_id,
+span_start,
+span_end,
+source_type_id)
+```
+This identity is enforced via a database-level UNIQUE constraint.
+
+### Write Mechanism
+
+All annotation writes use:
+```
+INSERT ... ON DUPLICATE KEY UPDATE
+prose_entity_id = prose_entity_id
+```
+
+#### Implications
+
+* Duplicate annotations are resolved at the database level
+* No application-level deduplication is performed
+* Write operations are idempotent by construction
+
+#### Concurrency Guarantees
+
+* No application-level locking is used
+* Concurrent writes MAY target the same annotation
+* The database guarantees exactly one persisted row per identity
+
+#### Retry Semantics
+
+Clients MAY retry annotation writes without coordination.
+
+The system guarantees:
+
+* No duplicate rows will be created
+* Final state is unchanged by repeated submissions
+* Partial failures MAY be retried safely
+
+#### Transaction Model
+One transaction per request
+All annotation writes occur within that transaction
+Consistency is enforced by database constraints
+
+### API Semantics
+```
+"annotations": {
+"processed": N
+}
+```
+
+`processed` = number of annotations submitted
+It does NOT indicate number of inserted rows
+It does NOT distinguish new vs existing annotations
+
+### Current Limitations
+
+The system does NOT expose:
+
+inserted vs deduplicated counts
+per-annotation write outcomes
+batch-optimized insert execution (currently row-by-row)
+
+---
+
 ## 6. Minimal Valid Annotation Set
 
 Each prose entry should include:
