@@ -10,6 +10,8 @@ return [
         'private/docs',
         'private/docs/calendar',
         'private/framework/calendar',
+        'private/framework/dreams',
+        'private/framework/prose',
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
