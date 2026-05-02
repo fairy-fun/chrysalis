@@ -308,17 +308,45 @@ function insert_prose_annotations(
 
     $inserted = 0;
 
-    foreach ($annotations as $annotation) {
-        $insert->execute([
-            ':prose_entity_id' => $proseEntityId,
-            ':subject_entity_id' => $annotation['subject_entity_id'],
-            ':annotation_type_id' => $annotation['annotation_type_id'],
-            ':annotation_value_id' => $annotation['annotation_value_id'],
-            ':span_start' => $annotation['span_start'],
-            ':span_end' => $annotation['span_end'],
-            ':source_type_id' => $annotation['source_type_id'],
-        ]);
+    $values = [];
+    $params = [];
+
+    foreach ($annotations as $i => $annotation) {
+        $values[] = "(
+        :prose_entity_id_$i,
+        :subject_entity_id_$i,
+        :annotation_type_id_$i,
+        :annotation_value_id_$i,
+        :span_start_$i,
+        :span_end_$i,
+        :source_type_id_$i
+    )";
+
+        $params[":prose_entity_id_$i"] = $proseEntityId;
+        $params[":subject_entity_id_$i"] = $annotation['subject_entity_id'];
+        $params[":annotation_type_id_$i"] = $annotation['annotation_type_id'];
+        $params[":annotation_value_id_$i"] = $annotation['annotation_value_id'];
+        $params[":span_start_$i"] = $annotation['span_start'];
+        $params[":span_end_$i"] = $annotation['span_end'];
+        $params[":source_type_id_$i"] = $annotation['source_type_id'];
     }
+
+    $sql = "
+    INSERT INTO sxnzlfun_chrysalis.prose_annotation_spans (
+        prose_entity_id,
+        subject_entity_id,
+        annotation_type_id,
+        annotation_value_id,
+        span_start,
+        span_end,
+        source_type_id
+    ) VALUES " . implode(',', $values) . "
+    ON DUPLICATE KEY UPDATE
+        prose_entity_id = prose_entity_id
+";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
 
     return count($annotations);
 }
