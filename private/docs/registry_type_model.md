@@ -238,3 +238,13 @@ System becomes:
 deterministic
 auditable
 extensible without ambiguity
+
+### Special Case: Dream Journals
+
+Dream journals are implemented as entity types via `entity_type_classvals`:
+
+- `entity_type_id = 'dream_journal'`
+
+There is no `entity_types` table. This follows the classvals pattern.
+
+See: `private/docs/prose/dreams.md` for full invariant and usage.

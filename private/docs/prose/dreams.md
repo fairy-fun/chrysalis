@@ -310,3 +310,135 @@ character ↔ dream_journal
 This is enforced at creation time in:
 
 create_dream_journal_entry(...)
+
+## Dream Journal Entity Model (Schema Clarification — May 2026)
+
+## Dream Journal System — Schema Clarification (May 2026)
+
+### Entity Type Resolution
+
+Dream journals are **first-class entities**, not derived or polymorphic subtypes.
+
+They are registered in:
+
+```text
+sxnzlfun_chrysalis.entity_type_classvals
+```
+
+Confirmed entry:
+
+```text
+id: dream_journal
+label: Dream Journal
+```
+
+---
+
+### Important Correction
+
+There is **no `entity_types` table** in the schema.
+
+All entity typing is handled via:
+
+```text
+entity_type_classvals
+```
+
+This is consistent with the broader system pattern:
+
+* `*_classvals` tables define canonical type registries
+* Type enforcement may be:
+
+    * soft (application-level), or
+    * relational (via FK to classvals)
+
+---
+
+### Dream Journal Invariant (Authoritative)
+
+Dream journals are deterministic functions of character identity:
+
+```text
+journal_entity_id = 'dream_journal:' + dreamer_entity_id
+```
+
+Example:
+
+```text
+dream_journal:CHAR-MAIN-012
+```
+
+---
+
+### Creation Rule
+
+A dream journal must exist as an entity:
+
+```sql
+INSERT INTO sxnzlfun_chrysalis.entities (id, entity_type_id)
+VALUES ('dream_journal:<CHAR_ID>', 'dream_journal');
+```
+
+---
+
+### Validation Rule (Enforced in Code)
+
+In `create_dream_journal_entry(...)`:
+
+* `dreamer_entity_id` must be a valid `entity_type_character`
+* `journal_entity_id` must EXACTLY equal:
+
+```text
+dream_journal:<dreamer_entity_id>
+```
+
+No alternate journal IDs are permitted.
+
+---
+
+### Projection Behavior
+
+In `prose_projection_writer.php`:
+
+* `calendar_event:*` → calendar guard enforced
+* `dream_journal:*` → calendar guard bypassed
+
+However:
+
+* entity must exist
+* entity must be correctly typed (`dream_journal`)
+
+---
+
+### System State Requirements
+
+For a character to support dream journaling:
+
+* Character entity exists ✅
+* `dream_journal` type exists in `entity_type_classvals` ✅
+* Deterministic journal entity exists ❗ (must be created if missing)
+
+---
+
+### Notes
+
+* `journal_type_classvals` exists but is **not used** for dream journals
+* Dream journals are modeled as **entity types, not journal subtypes**
+* This design enables:
+
+    * direct projection targeting
+    * simplified invariant enforcement
+    * type-level routing in projection systems
+
+---
+
+### Summary
+
+Dream journals are:
+
+* concrete entities
+* deterministically named
+* type-backed via `entity_type_classvals`
+* required for all dream entry operations
+
+Failure to materialize the entity results in a **valid but incomplete system state**

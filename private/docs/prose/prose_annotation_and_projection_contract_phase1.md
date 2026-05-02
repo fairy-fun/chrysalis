@@ -296,6 +296,9 @@ Specifically:
     - MUST be rejected
     - Throws `Unsupported target_entity_id domain`
 
+- `dream_journal:*` targets require a pre-existing entity of type `dream_journal`
+- These entities are deterministic: `dream_journal:<character_id>`
+
 Note: For `dream_journal:*` targets, the target must match the dreamer's identity exactly.
 
 Format:
