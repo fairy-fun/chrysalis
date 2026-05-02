@@ -40,6 +40,7 @@ function create_calendar_week_for_book(
     string $weekLabel,
     string $realDateStartId
 ): array {
+    $bookCode = trim($bookCode);
     $weekLabel = trim($weekLabel);
     $realDateStartId = trim($realDateStartId);
 
