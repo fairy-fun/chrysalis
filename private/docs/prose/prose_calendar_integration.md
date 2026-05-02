@@ -169,23 +169,32 @@ Anti-Patterns (Disallowed)
 ❌ Attaching prose to invalid/non-existent event
 ❌ Encoding narrative meaning in calendar metadata
 ❌ Skipping calendar layer and attaching prose to arbitrary entities
+```
 
-Implementation Plan
-Phase 1 (Now)
-Use existing createProseDraft
-Ensure valid calendar_event manually or via DB queries
-Validate storage + retrieval
-Phase 1.5 (Immediate Upgrade)
-Add ensureCalendarEventForProse helper
-Or build wrapper endpoint
-Phase 2 (Future)
-richer annotation system
-theme + presence
-multi-character POV
-limbic suggestion layer
-Success Criteria
-prose drafts attach cleanly to valid events
-no calendar data required in prose payload
-no schema violations
-annotation spans valid
-retrieval consistent
+### Implementation Plan
+
+#### Phase 1 (Now)
+
+* Use existing `createProseDraft`
+* Ensure valid calendar_event manually or via DB queries
+* Validate storage + retrieval
+
+#### Phase 1.5 (Immediate Upgrade)
+
+* Add `ensureCalendarEventForProse` helper
+* Or build wrapper endpoint
+
+#### Phase 2 (Future)
+
+* richer annotation system
+* theme + presence
+* multi-character POV
+* limbic suggestion layer
+
+#### Success Criteria
+
+* prose drafts attach cleanly to valid events
+* no calendar data required in prose payload
+* no schema violations
+* annotation spans valid
+* retrieval consistent
