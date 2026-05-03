@@ -59,10 +59,7 @@ try {
     // --- Derived (NON-PERSISTED) suggestion capability ---
     if ($target['layer_id'] === 'calendar_layer_time') {
         $canSuggest = 'events';
-    } elseif (
-        $target['layer_id'] === 'calendar_layer_event' &&
-        $target['subevent_index'] === null
-    ) {
+    } elseif ($target['layer_id'] === 'calendar_layer_event') {
         $canSuggest = 'subevents';
     } else {
         $canSuggest = 'none';
