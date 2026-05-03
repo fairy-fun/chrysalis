@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_node_ensurer.php';
@@ -8,55 +9,12 @@ function create_calendar_event_under_time_entity(
     string $timeEntityId,
     array $payload
 ): array {
-    $timeEntityId = trim($timeEntityId);
-
-    if ($timeEntityId === '') {
-        throw new InvalidArgumentException('timeEntityId must be non-empty');
-    }
-
-    $sql = "
-        SELECT
-            e.entity_type_id,
-            ce.layer_id,
-            ce.projection_entity_id,
-            ce.event_id
-        FROM sxnzlfun_chrysalis.entities e
-        INNER JOIN sxnzlfun_chrysalis.calendar_events ce
-            ON ce.entity_id = e.id
-        WHERE e.id = :time_entity_id
-        LIMIT 1
-    ";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        ':time_entity_id' => $timeEntityId,
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($row === false) {
-        throw new RuntimeException(
-            'Time entity not found or not a calendar node: ' . $timeEntityId
-        );
-    }
-
-    if ($row['entity_type_id'] !== 'entity_type_calendar_time') {
-        throw new RuntimeException(
-            'Invalid parent entity_type_id; expected entity_type_calendar_time, got: ' . $row['entity_type_id']
-        );
-    }
-
-    if ($row['layer_id'] !== 'calendar_layer_time') {
-        throw new RuntimeException(
-            'Invalid parent layer_id; expected calendar_layer_time, got: ' . $row['layer_id']
-        );
-    }
-
-    if ($row['projection_entity_id'] === null || trim((string)$row['projection_entity_id']) === '') {
-        throw new RuntimeException(
-            'Invalid calendar_time node: missing projection_entity_id for entity ' . $timeEntityId
-        );
-    }
+    $row = _resolve_calendar_parent_node_for_event_creation(
+        $pdo,
+        $timeEntityId,
+        'entity_type_calendar_time',
+        'calendar_layer_time'
+    );
 
     return ensure_calendar_node(
         $pdo,
@@ -67,60 +25,18 @@ function create_calendar_event_under_time_entity(
         $payload
     );
 }
+
 function create_calendar_event_under_event_entity(
     PDO $pdo,
     string $parentEventEntityId,
     array $payload
 ): array {
-    $parentEventEntityId = trim($parentEventEntityId);
-
-    if ($parentEventEntityId === '') {
-        throw new InvalidArgumentException('parentEventEntityId must be non-empty');
-    }
-
-    $sql = "
-        SELECT
-            e.entity_type_id,
-            ce.layer_id,
-            ce.projection_entity_id,
-            ce.event_id
-        FROM sxnzlfun_chrysalis.entities e
-        INNER JOIN sxnzlfun_chrysalis.calendar_events ce
-            ON ce.entity_id = e.id
-        WHERE e.id = :parent_event_entity_id
-        LIMIT 1
-    ";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        ':parent_event_entity_id' => $parentEventEntityId,
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($row === false) {
-        throw new RuntimeException(
-            'Parent event entity not found or not a calendar node: ' . $parentEventEntityId
-        );
-    }
-
-    if ($row['entity_type_id'] !== 'entity_type_calendar_event') {
-        throw new RuntimeException(
-            'Invalid parent entity_type_id; expected entity_type_calendar_event, got: ' . $row['entity_type_id']
-        );
-    }
-
-    if ($row['layer_id'] !== 'calendar_layer_event') {
-        throw new RuntimeException(
-            'Invalid parent layer_id; expected calendar_layer_event, got: ' . $row['layer_id']
-        );
-    }
-
-    if ($row['projection_entity_id'] === null || trim((string)$row['projection_entity_id']) === '') {
-        throw new RuntimeException(
-            'Invalid calendar_event node: missing projection_entity_id for entity ' . $parentEventEntityId
-        );
-    }
+    $row = _resolve_calendar_parent_node_for_event_creation(
+        $pdo,
+        $parentEventEntityId,
+        'entity_type_calendar_event',
+        'calendar_layer_event'
+    );
 
     return ensure_calendar_node(
         $pdo,
@@ -130,4 +46,89 @@ function create_calendar_event_under_event_entity(
         null,
         $payload
     );
+}
+
+/** @internal */
+function _resolve_calendar_parent_node_for_event_creation(
+    PDO $pdo,
+    string $entityId,
+    string $expectedEntityTypeId,
+    string $expectedLayerId
+): array {
+    $entityId = trim($entityId);
+    $expectedEntityTypeId = trim($expectedEntityTypeId);
+    $expectedLayerId = trim($expectedLayerId);
+
+    if ($entityId === '') {
+        throw new InvalidArgumentException('parent entity id must be non-empty');
+    }
+
+    if ($expectedEntityTypeId === '') {
+        throw new InvalidArgumentException('expected entity_type_id must be non-empty');
+    }
+
+    if ($expectedLayerId === '') {
+        throw new InvalidArgumentException('expected layer_id must be non-empty');
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            e.id AS entity_id,
+            e.entity_type_id,
+            ce.layer_id,
+            ce.projection_entity_id,
+            ce.event_id
+        FROM sxnzlfun_chrysalis.entities e
+        INNER JOIN sxnzlfun_chrysalis.calendar_events ce
+            ON ce.entity_id = e.id
+        WHERE e.id = :entity_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row === false) {
+        throw new RuntimeException(
+            'Parent entity not found or not a calendar node: ' . $entityId
+        );
+    }
+
+    if (($row['entity_type_id'] ?? null) !== $expectedEntityTypeId) {
+        throw new RuntimeException(
+            'Invalid parent entity_type_id; expected ' .
+            $expectedEntityTypeId .
+            ', got: ' .
+            (string)($row['entity_type_id'] ?? '')
+        );
+    }
+
+    if (($row['layer_id'] ?? null) !== $expectedLayerId) {
+        throw new RuntimeException(
+            'Invalid parent layer_id; expected ' .
+            $expectedLayerId .
+            ', got: ' .
+            (string)($row['layer_id'] ?? '')
+        );
+    }
+
+    if (
+        $row['projection_entity_id'] === null ||
+        trim((string)$row['projection_entity_id']) === ''
+    ) {
+        throw new RuntimeException(
+            'Invalid parent calendar node: missing projection_entity_id for entity ' . $entityId
+        );
+    }
+
+    if (!isset($row['event_id']) || (int)$row['event_id'] < 1) {
+        throw new RuntimeException(
+            'Invalid parent calendar node: missing valid event_id for entity ' . $entityId
+        );
+    }
+
+    return $row;
 }
