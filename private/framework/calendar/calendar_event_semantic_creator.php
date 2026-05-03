@@ -8,6 +8,12 @@ function create_calendar_event_under_time_entity(
     string $timeEntityId,
     array $payload
 ): array {
+    $timeEntityId = trim($timeEntityId);
+
+    if ($timeEntityId === '') {
+        throw new InvalidArgumentException('timeEntityId must be non-empty');
+    }
+
     $sql = "
         SELECT
             e.entity_type_id,
@@ -34,35 +40,29 @@ function create_calendar_event_under_time_entity(
         );
     }
 
-    // Hard semantic assertion
     if ($row['entity_type_id'] !== 'entity_type_calendar_time') {
         throw new RuntimeException(
             'Invalid parent entity_type_id; expected entity_type_calendar_time, got: ' . $row['entity_type_id']
         );
     }
 
-    // Hard structural assertion
     if ($row['layer_id'] !== 'calendar_layer_time') {
         throw new RuntimeException(
             'Invalid parent layer_id; expected calendar_layer_time, got: ' . $row['layer_id']
         );
     }
 
-    if ($row['projection_entity_id'] === null) {
+    if ($row['projection_entity_id'] === null || trim((string)$row['projection_entity_id']) === '') {
         throw new RuntimeException(
             'Invalid calendar_time node: missing projection_entity_id for entity ' . $timeEntityId
         );
     }
 
-    $projectionEntityId = $row['projection_entity_id'];
-    $parentEventId = $row['event_id'];
-
-    // Delegate to structural creator (no inference, no recomputation)
     return ensure_calendar_node(
         $pdo,
-        $projectionEntityId,
+        (string)$row['projection_entity_id'],
         'calendar_layer_event',
-        $parentEventId,
+        (int)$row['event_id'],
         null,
         $payload
     );
