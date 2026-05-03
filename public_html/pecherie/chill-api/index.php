@@ -145,6 +145,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/get_calendar_node_by_chronology_address.php';
         break;
 
+    case 'getCalendarTreeForEntity':
+        require __DIR__ . '/calendar/get_calendar_tree_for_entity.php';
+        break;
+
     case 'createProseDraft':
         require __DIR__ . '/prose/create_prose_draft.php';
         break;
