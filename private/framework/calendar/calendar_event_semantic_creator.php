@@ -48,6 +48,12 @@ function create_calendar_event_under_time_entity(
         );
     }
 
+    if ($row['projection_entity_id'] === null) {
+        throw new RuntimeException(
+            'Invalid calendar_time node: missing projection_entity_id for entity ' . $timeEntityId
+        );
+    }
+
     $projectionEntityId = $row['projection_entity_id'];
     $parentEventId = $row['event_id'];
 
