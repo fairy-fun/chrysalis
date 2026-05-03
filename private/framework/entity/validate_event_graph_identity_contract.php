@@ -5,18 +5,18 @@ declare(strict_types=1);
 function count_bad_calendar_event_links(PDO $pdo): int
 {
     $stmt = $pdo->query(
-        'SELECT COUNT(*)
+        "SELECT COUNT(*)
          FROM sxnzlfun_chrysalis.calendar_events ce
          LEFT JOIN sxnzlfun_chrysalis.entities e
            ON e.id = ce.entity_id
          WHERE e.id IS NULL
             OR e.entity_type_id <> CASE ce.layer_id
-                WHEN CAST("calendar_layer_week" AS CHAR) THEN CAST("entity_type_calendar_week" AS CHAR)
-                WHEN CAST("calendar_layer_day" AS CHAR) THEN CAST("entity_type_calendar_day" AS CHAR)
-                WHEN CAST("calendar_layer_time" AS CHAR) THEN CAST("entity_type_calendar_time" AS CHAR)
-                WHEN CAST("calendar_layer_event" AS CHAR) THEN CAST("entity_type_calendar_event" AS CHAR)
-                ELSE CAST("__invalid_calendar_layer__" AS CHAR)
-            END'
+                WHEN 'calendar_layer_week' THEN 'entity_type_calendar_week'
+                WHEN 'calendar_layer_day' THEN 'entity_type_calendar_day'
+                WHEN 'calendar_layer_time' THEN 'entity_type_calendar_time'
+                WHEN 'calendar_layer_event' THEN 'entity_type_calendar_event'
+                ELSE '__invalid_calendar_layer__'
+            END"
     );
 
     $count = $stmt->fetchColumn();
@@ -31,9 +31,9 @@ function count_bad_calendar_event_links(PDO $pdo): int
 function count_bad_event_entities(PDO $pdo): int
 {
     $stmt = $pdo->query(
-        'SELECT COUNT(*)
+        "SELECT COUNT(*)
          FROM sxnzlfun_chrysalis.entities e
-         WHERE e.entity_type_id = CAST("entity_type_event" AS CHAR)'
+         WHERE e.entity_type_id = 'entity_type_event'"
     );
 
     $count = $stmt->fetchColumn();
