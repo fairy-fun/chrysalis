@@ -27,16 +27,14 @@ function resolve_prose_target_calendar_node(
             pp.target_entity_id,
 
             ce.id AS calendar_event_row_id,
+            ce.event_id,
             ce.entity_id AS calendar_entity_id,
-            ce.layer_id,
-            ce.summary,
-            ce.week_index,
-            ce.day_index,
-            ce.time_index,
-            ce.event_index,
-            ce.subevent_index,
-            ce.chronology_address,
             ce.parent_event_id,
+            ce.layer_id,
+            ce.sequence_index,
+            ce.summary,
+            ce.created_at,
+            ce.updated_at,
 
             e.entity_type_id
 
