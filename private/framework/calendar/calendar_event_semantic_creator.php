@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_node_ensurer.php';
+require_once __DIR__ . '/calendar_hierarchy_validator.php';
 
 function create_calendar_event_under_time_entity(
     PDO $pdo,
@@ -11,9 +12,12 @@ function create_calendar_event_under_time_entity(
 ): array {
     $row = _resolve_calendar_parent_node_for_event_creation(
         $pdo,
-        $timeEntityId,
-        'entity_type_calendar_time',
-        'calendar_layer_time'
+        $timeEntityId
+    );
+
+    assert_calendar_semantic_parent_child(
+        (string)$row['entity_type_id'],
+        'entity_type_calendar_event'
     );
 
     return ensure_calendar_node(
@@ -33,9 +37,12 @@ function create_calendar_event_under_event_entity(
 ): array {
     $row = _resolve_calendar_parent_node_for_event_creation(
         $pdo,
-        $parentEventEntityId,
-        'entity_type_calendar_event',
-        'calendar_layer_event'
+        $parentEventEntityId
+    );
+
+    assert_calendar_semantic_parent_child(
+        (string)$row['entity_type_id'],
+        'entity_type_calendar_event'
     );
 
     return ensure_calendar_node(
@@ -51,24 +58,12 @@ function create_calendar_event_under_event_entity(
 /** @internal */
 function _resolve_calendar_parent_node_for_event_creation(
     PDO $pdo,
-    string $entityId,
-    string $expectedEntityTypeId,
-    string $expectedLayerId
+    string $entityId
 ): array {
     $entityId = trim($entityId);
-    $expectedEntityTypeId = trim($expectedEntityTypeId);
-    $expectedLayerId = trim($expectedLayerId);
 
     if ($entityId === '') {
         throw new InvalidArgumentException('parent entity id must be non-empty');
-    }
-
-    if ($expectedEntityTypeId === '') {
-        throw new InvalidArgumentException('expected entity_type_id must be non-empty');
-    }
-
-    if ($expectedLayerId === '') {
-        throw new InvalidArgumentException('expected layer_id must be non-empty');
     }
 
     $stmt = $pdo->prepare("
@@ -94,24 +89,6 @@ function _resolve_calendar_parent_node_for_event_creation(
     if ($row === false) {
         throw new RuntimeException(
             'Parent entity not found or not a calendar node: ' . $entityId
-        );
-    }
-
-    if (($row['entity_type_id'] ?? null) !== $expectedEntityTypeId) {
-        throw new RuntimeException(
-            'Invalid parent entity_type_id; expected ' .
-            $expectedEntityTypeId .
-            ', got: ' .
-            (string)($row['entity_type_id'] ?? '')
-        );
-    }
-
-    if (($row['layer_id'] ?? null) !== $expectedLayerId) {
-        throw new RuntimeException(
-            'Invalid parent layer_id; expected ' .
-            $expectedLayerId .
-            ', got: ' .
-            (string)($row['layer_id'] ?? '')
         );
     }
 

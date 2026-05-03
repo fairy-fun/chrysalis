@@ -45,6 +45,7 @@ function assert_calendar_parent_transition(
         );
     }
 }
+
 function assert_calendar_semantic_parent_child(
     string $parentEntityTypeId,
     string $childEntityTypeId
