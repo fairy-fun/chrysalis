@@ -29,7 +29,14 @@ $expectedDatabase = verifyExpectedDatabase($pdo);
 try {
     $parent = $pdo->prepare("
         SELECT
-            ce.*,
+            ce.entity_id,
+            ce.event_id,
+            ce.parent_event_id,
+            ce.layer_id,
+            ce.sequence_index,
+            ce.summary,
+            ce.created_at,
+            ce.updated_at,
             e.entity_type_id
         FROM sxnzlfun_chrysalis.entities e
         INNER JOIN sxnzlfun_chrysalis.calendar_events ce
@@ -70,7 +77,14 @@ try {
 
     $stmt = $pdo->prepare("
         SELECT
-            ce.*,
+            ce.entity_id,
+            ce.event_id,
+            ce.parent_event_id,
+            ce.layer_id,
+            ce.sequence_index,
+            ce.summary,
+            ce.created_at,
+            ce.updated_at,
             e.entity_type_id
         FROM sxnzlfun_chrysalis.calendar_events ce
         INNER JOIN sxnzlfun_chrysalis.entities e
