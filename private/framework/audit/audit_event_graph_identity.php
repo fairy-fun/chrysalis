@@ -11,9 +11,14 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         FROM calendar_events AS ce
         LEFT JOIN entities AS e
             ON e.id = ce.entity_id
-        WHERE ce.entity_id IS NULL
-           OR e.id IS NULL
-           OR e.entity_type_id <> 'entity_type_calendar_event'
+        WHERE e.id IS NULL
+           OR e.entity_type_id <> CASE ce.layer_id
+                WHEN 'calendar_layer_week' THEN 'entity_type_calendar_week'
+                WHEN 'calendar_layer_day' THEN 'entity_type_calendar_day'
+                WHEN 'calendar_layer_time' THEN 'entity_type_calendar_time'
+                WHEN 'calendar_layer_event' THEN 'entity_type_calendar_event'
+                ELSE '__invalid_calendar_layer__'
+           END
     ";
 
     $badCalendarEventLinks = (int) $pdo->query($sql)->fetchColumn();
@@ -22,8 +27,7 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         $violations[] = [
             'violation_code' => 'invalid_calendar_event_entity',
             'bad_count' => $badCalendarEventLinks,
-            'rule' => 'calendar_events.entity_id must resolve to entities.id with entity_type_id = entity_type_calendar_event',
-        ];
+            'rule' => 'calendar_events.entity_id must resolve to entities.id with an entity_type_id matching calendar_events.layer_id',        ];
     }
 
     $sql = "
