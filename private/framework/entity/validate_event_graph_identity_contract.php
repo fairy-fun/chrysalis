@@ -9,15 +9,22 @@ function count_bad_calendar_event_links(PDO $pdo): int
          FROM sxnzlfun_chrysalis.calendar_events ce
          LEFT JOIN sxnzlfun_chrysalis.entities e
            ON e.id = ce.entity_id
-         WHERE ce.entity_id IS NULL
-            OR e.id IS NULL
-            OR e.entity_type_id <> "entity_type_calendar_event"'
+         WHERE e.id IS NULL
+            OR e.entity_type_id <> CASE ce.layer_id
+                WHEN CAST("calendar_layer_week" AS CHAR) THEN CAST("entity_type_calendar_week" AS CHAR)
+                WHEN CAST("calendar_layer_day" AS CHAR) THEN CAST("entity_type_calendar_day" AS CHAR)
+                WHEN CAST("calendar_layer_time" AS CHAR) THEN CAST("entity_type_calendar_time" AS CHAR)
+                WHEN CAST("calendar_layer_event" AS CHAR) THEN CAST("entity_type_calendar_event" AS CHAR)
+                ELSE CAST("__invalid_calendar_layer__" AS CHAR)
+            END'
     );
 
     $count = $stmt->fetchColumn();
 
     if ($count === false) {
-        throw new RuntimeException('Unable to count bad calendar event links');
+        throw new RuntimeException(
+            'Unable to count bad calendar event links'
+        );
     }
 
     return (int) $count;
