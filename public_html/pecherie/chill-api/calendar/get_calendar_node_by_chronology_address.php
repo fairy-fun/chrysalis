@@ -6,8 +6,11 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
-    respond(405, ['error' => 'Method not allowed']);
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    respond(405, [
+        'status' => 'error',
+        'error' => 'Method not allowed',
+    ]);
 }
 
 requireAuth();
