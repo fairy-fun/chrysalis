@@ -447,15 +447,23 @@ layer_id = structural role
 entity_type_id = semantic type
 
 Mapping:
-
+```text
 calendar_layer_week  → entity_type_calendar_week
 calendar_layer_day   → entity_type_calendar_day
 calendar_layer_time  → entity_type_calendar_time
 calendar_layer_event → entity_type_calendar_event
-
+```
 Do not remove layer_id.
 
-Phase 12 — Update Insert Contract
+### Identity Model — Final Mental Model
+```text
+id → “this row exists”
+entity_id → “this row’s external identity”
+event_id → “where this sits in the story structure”
+```
+As long as those three don’t collapse into one, the system avoids classval-style identity coupling.
+
+## Phase 12 — Update Insert Contract
 
 In insert_calendar_node(...), replace fixed type:
 

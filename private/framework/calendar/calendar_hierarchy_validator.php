@@ -45,3 +45,25 @@ function assert_calendar_parent_transition(
         );
     }
 }
+function assert_calendar_semantic_parent_child(
+    string $parentEntityTypeId,
+    string $childEntityTypeId
+): void {
+    $allowed = [
+        'entity_type_calendar_time'  => ['entity_type_calendar_event'],
+        'entity_type_calendar_event' => ['entity_type_calendar_event'], // subevent
+    ];
+
+    if (!array_key_exists($parentEntityTypeId, $allowed)) {
+        throw new RuntimeException(
+            'Invalid parent entity type for calendar hierarchy: ' . $parentEntityTypeId
+        );
+    }
+
+    if (!in_array($childEntityTypeId, $allowed[$parentEntityTypeId], true)) {
+        throw new RuntimeException(
+            'Invalid child type ' . $childEntityTypeId .
+            ' for parent type ' . $parentEntityTypeId
+        );
+    }
+}
