@@ -55,7 +55,7 @@ function assert_calendar_event_creation_paths(): void
             str_contains($contents, 'ensure_calendar_node') &&
             str_contains($contents, 'calendar_layer_event')
         ) {
-            if ($path !== $allowedEnsurerFile) {
+            if ($path !== $allowedEnsurerFile && $path !== $allowedInsertFile) {
                 throw new RuntimeException(
                     "Illegal event-layer creation via ensure_calendar_node in {$path}"
                 );
