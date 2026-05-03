@@ -298,11 +298,33 @@ function assert_calendar_node_entity_type_matches_layer(PDO $pdo, array $node): 
         throw new RuntimeException("Missing entity_type_id for {$entityId}");
     }
 
+
+    $entityTypeId = $stmt->fetchColumn();
+
+    if (!is_string($entityTypeId) || trim($entityTypeId) === '') {
+        throw new RuntimeException("Missing entity_type_id for {$entityId}");
+    }
+
+// 🔒 Optional hardening: restrict allowed calendar entity types
+    /*$validEntityTypes = [
+        'entity_type_calendar_week',
+        'entity_type_calendar_day',
+        'entity_type_calendar_time',
+        'entity_type_calendar_event',
+    ];
+
+    if (!in_array($entityTypeId, $validEntityTypes, true)) {
+        throw new RuntimeException(
+            "Unsupported entity_type_id for calendar node: {$entityTypeId}"
+        );
+    }*/
+
+
     $expectedEntityTypeId = calendar_entity_type_for_layer(trim($layerId));
 
     if ($entityTypeId !== $expectedEntityTypeId) {
         throw new RuntimeException(
-            "Calendar entity type mismatch for {$entityId}: expected {$expectedEntityTypeId}, found {$entityTypeId}"
+            "Calendar node mismatch: entity_type_id {$entityTypeId} is not valid for layer_id {$layerId}"
         );
     }
 }

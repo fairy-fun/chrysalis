@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_node_ensurer.php';
 
+/*
+ * STRUCTURAL CREATOR ONLY
+ *
+ * This function constructs calendar nodes using layer-based hierarchy.
+ * It does not perform semantic validation.
+ *
+ * Entity types are assigned and validated by calendar_node_ensurer.
+ */
+
 function create_calendar_time(
     PDO $pdo,
     string $projectionEntityId,

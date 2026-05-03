@@ -1,4 +1,14 @@
 <?php
+
+/*
+ * STRUCTURAL VALIDATOR ONLY
+ *
+ * This function enforces calendar tree shape using layer_id.
+ * It must not be used to infer or validate semantic meaning.
+ *
+ * Semantic authority belongs to entities.entity_type_id
+ * and must be enforced separately.
+ */
 function assert_calendar_parent_transition(
     ?array $parent,
     string $childLayerId

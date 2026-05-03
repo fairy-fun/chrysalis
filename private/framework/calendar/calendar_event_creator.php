@@ -9,6 +9,15 @@ declare(strict_types=1);
  * All writes go through ensure_calendar_node().
  */
 
+/*
+ * STRUCTURAL CREATOR ONLY
+ *
+ * This function constructs calendar nodes using layer-based hierarchy.
+ * It does not perform semantic validation.
+ *
+ * Entity types are assigned and validated by calendar_node_ensurer.
+ */
+
 require_once __DIR__ . '/calendar_node_ensurer.php';
 
 /**

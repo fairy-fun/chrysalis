@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_node_ensurer.php';
 
+/*
+ * STRUCTURAL CREATOR ONLY
+ *
+ * This function constructs calendar nodes using layer-based hierarchy.
+ * It does not perform semantic validation.
+ *
+ * Entity types are assigned and validated by calendar_node_ensurer.
+ */
+
 function validate_calendar_day_real_date_start_id_exists(PDO $pdo, string $realDateStartId): void
 {
     $stmt = $pdo->prepare("
