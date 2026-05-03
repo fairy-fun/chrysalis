@@ -22,12 +22,10 @@ function count_bad_calendar_event_links(PDO $pdo): int
     $count = $stmt->fetchColumn();
 
     if ($count === false) {
-        throw new RuntimeException(
-            'Unable to count bad calendar event links'
-        );
+        throw new RuntimeException('Unable to count bad calendar event links');
     }
 
-    return (int) $count;
+    return (int)$count;
 }
 
 function count_bad_event_entities(PDO $pdo): int
@@ -35,7 +33,7 @@ function count_bad_event_entities(PDO $pdo): int
     $stmt = $pdo->query(
         'SELECT COUNT(*)
          FROM sxnzlfun_chrysalis.entities e
-         WHERE e.entity_type_id = "entity_type_event"'
+         WHERE e.entity_type_id = CAST("entity_type_event" AS CHAR)'
     );
 
     $count = $stmt->fetchColumn();
@@ -44,7 +42,7 @@ function count_bad_event_entities(PDO $pdo): int
         throw new RuntimeException('Unable to count legacy event entities');
     }
 
-    return (int) $count;
+    return (int)$count;
 }
 
 function validate_event_graph_identity_contract(PDO $pdo): void
@@ -56,7 +54,7 @@ function validate_event_graph_identity_contract(PDO $pdo): void
         throw new RuntimeException(
             'Event graph identity contract violated: ' .
             'calendar_events.entity_id must resolve to entities.id ' .
-            'with entity_type_calendar_event, and entity_type_event ' .
+            'with entity_type_id matching calendar_events.layer_id, and entity_type_event ' .
             'must not be in active use.'
         );
     }
