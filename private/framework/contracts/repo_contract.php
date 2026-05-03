@@ -100,6 +100,14 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'getCalendarNodeByChronologyAddress' => [
+            'handler' => 'public_html/pecherie/chill-api/calendar/get_calendar_node_by_chronology_address.php',
+            'method' => 'GET',
+            'path' => '/calendar/get_calendar_node_by_chronology_address.php',
+            'description' => 'Look up a calendar node by human-readable chronology address',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'createProseDraft' => [
             'handler' => 'public_html/pecherie/chill-api/prose/create_prose_draft.php',
             'behaviour_tested' => false,
