@@ -76,7 +76,6 @@ function ensure_calendar_node(
             if (!is_calendar_structural_duplicate_key($e)) {
                 throw $e;
             }
-            // retry
         }
     }
 }
@@ -164,12 +163,7 @@ function insert_calendar_node(
     try {
         $eventId = generate_event_id($pdo);
         $entityId = calendar_event_entity_id($eventId);
-
         $entityTypeId = calendar_entity_type_for_layer($layerId);
-
-        if ($entityTypeId === '') {
-            throw new RuntimeException('Empty entity type for calendar node');
-        }
 
         ensure_entity_row($pdo, $entityId, $entityTypeId);
 
@@ -237,11 +231,11 @@ function insert_calendar_node(
         }
 
         return get_calendar_node_by_id($pdo, $id);
-
     } catch (Throwable $e) {
         if ($started && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
+
         throw $e;
     }
 }
@@ -254,6 +248,8 @@ function insert_calendar_node(
 
 function calendar_entity_type_for_layer(string $layerId): string
 {
+    $layerId = trim($layerId);
+
     static $map = [
         'calendar_layer_week'  => 'entity_type_calendar_week',
         'calendar_layer_day'   => 'entity_type_calendar_day',
@@ -281,6 +277,9 @@ function assert_calendar_node_entity_type_matches_layer(PDO $pdo, array $node): 
         throw new RuntimeException('Calendar node has invalid layer_id');
     }
 
+    $entityId = trim($entityId);
+    $layerId = trim($layerId);
+
     $stmt = $pdo->prepare("
         SELECT entity_type_id
         FROM sxnzlfun_chrysalis.entities
@@ -298,15 +297,9 @@ function assert_calendar_node_entity_type_matches_layer(PDO $pdo, array $node): 
         throw new RuntimeException("Missing entity_type_id for {$entityId}");
     }
 
+    $entityTypeId = trim($entityTypeId);
 
-    $entityTypeId = $stmt->fetchColumn();
-
-    if (!is_string($entityTypeId) || trim($entityTypeId) === '') {
-        throw new RuntimeException("Missing entity_type_id for {$entityId}");
-    }
-
-// 🔒 Optional hardening: restrict allowed calendar entity types
-    /*$validEntityTypes = [
+    $validEntityTypes = [
         'entity_type_calendar_week',
         'entity_type_calendar_day',
         'entity_type_calendar_time',
@@ -315,12 +308,11 @@ function assert_calendar_node_entity_type_matches_layer(PDO $pdo, array $node): 
 
     if (!in_array($entityTypeId, $validEntityTypes, true)) {
         throw new RuntimeException(
-            "Unsupported entity_type_id for calendar node: {$entityTypeId}"
+            "Unsupported entity_type_id for calendar node {$entityId}: {$entityTypeId}"
         );
-    }*/
+    }
 
-
-    $expectedEntityTypeId = calendar_entity_type_for_layer(trim($layerId));
+    $expectedEntityTypeId = calendar_entity_type_for_layer($layerId);
 
     if ($entityTypeId !== $expectedEntityTypeId) {
         throw new RuntimeException(
@@ -331,10 +323,23 @@ function assert_calendar_node_entity_type_matches_layer(PDO $pdo, array $node): 
 
 function filter_calendar_node_payload(string $layerId, array $payload): array
 {
+    $layerId = trim($layerId);
+
     $allowed = [
-        'calendar_layer_week' => ['summary', 'real_date_start_id', 'real_date_end_id'],
-        'calendar_layer_day' => ['summary', 'real_date_start_id', 'real_date_end_id'],
-        'calendar_layer_time' => ['summary', 'time_label_id'],
+        'calendar_layer_week' => [
+            'summary',
+            'real_date_start_id',
+            'real_date_end_id',
+        ],
+        'calendar_layer_day' => [
+            'summary',
+            'real_date_start_id',
+            'real_date_end_id',
+        ],
+        'calendar_layer_time' => [
+            'summary',
+            'time_label_id',
+        ],
         'calendar_layer_event' => [
             'summary',
             'event_type_id',
@@ -342,13 +347,15 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
             'domain_id',
             'class_type_id',
             'notes',
-            'source_document'
+            'source_document',
         ],
     ];
 
-    $allowedKeys = $allowed[$layerId] ?? ['summary'];
+    if (!isset($allowed[$layerId])) {
+        throw new InvalidArgumentException("No payload filter for layer_id: {$layerId}");
+    }
 
-    return array_intersect_key($payload, array_flip($allowedKeys));
+    return array_intersect_key($payload, array_flip($allowed[$layerId]));
 }
 
 function get_next_sequence_index(
@@ -366,8 +373,8 @@ function get_next_sequence_index(
     ");
 
     $stmt->execute([
-        ':projection' => $projectionEntityId,
-        ':layer' => $layerId,
+        ':projection' => trim($projectionEntityId),
+        ':layer' => trim($layerId),
         ':parent' => $parentEventId,
     ]);
 
@@ -376,10 +383,6 @@ function get_next_sequence_index(
     return $max ? ((int)$max + 1) : 1;
 }
 
-/**
- * Only structural identity duplicate-key races are safe to retry.
- * Other duplicate-key errors must surface as integrity failures.
- */
 function is_calendar_structural_duplicate_key(PDOException $e): bool
 {
     $info = $e->errorInfo ?? null;
@@ -414,7 +417,8 @@ function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void
         throw new RuntimeException('Calendar event row not found for entity repair');
     }
 
-    $entityTypeId = calendar_entity_type_for_layer(trim($layerId));
+    $layerId = trim($layerId);
+    $entityTypeId = calendar_entity_type_for_layer($layerId);
     $entityId = calendar_event_entity_id($eventId);
 
     $stmt = $pdo->prepare("
@@ -430,7 +434,7 @@ function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void
 
     $existingTypeId = $stmt->fetchColumn();
 
-    if (is_string($existingTypeId) && $existingTypeId !== $entityTypeId) {
+    if (is_string($existingTypeId) && trim($existingTypeId) !== $entityTypeId) {
         throw new RuntimeException(
             "Calendar entity type mismatch for {$entityId}: expected {$entityTypeId}, found {$existingTypeId}"
         );
@@ -441,6 +445,17 @@ function ensure_calendar_event_entity_exists(PDO $pdo, int $eventId): void
 
 function ensure_entity_row(PDO $pdo, string $entityId, string $entityTypeId): void
 {
+    $entityId = trim($entityId);
+    $entityTypeId = trim($entityTypeId);
+
+    if ($entityId === '') {
+        throw new InvalidArgumentException('entity id must be non-empty');
+    }
+
+    if ($entityTypeId === '') {
+        throw new InvalidArgumentException('entity type id must be non-empty');
+    }
+
     $stmt = $pdo->prepare("
         INSERT INTO sxnzlfun_chrysalis.entities (id, entity_type_id)
         VALUES (:id, :type)
@@ -489,11 +504,13 @@ function get_calendar_node_by_id(PDO $pdo, int $id): array
         LIMIT 1
     ");
 
-    $stmt->execute([':id' => $id]);
+    $stmt->execute([
+        ':id' => $id,
+    ]);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
+    if (!is_array($row)) {
         throw new RuntimeException('Inserted node not found');
     }
 
