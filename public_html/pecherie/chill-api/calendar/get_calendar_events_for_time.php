@@ -27,51 +27,63 @@ $pdo = makePdo('read');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
-    // --------------------------------------------------
-    // 1. Resolve parent (Time)
-    // --------------------------------------------------
     $parent = $pdo->prepare("
         SELECT
-            ce.id,
-            ce.entity_id,
-            COALESCE(ce.projection_entity_id, cepm.projection_entity_id) AS projection_entity_id,
-            ce.layer_id,
-            ce.week_index,
-            ce.day_index,
-            ce.time_index,
-            ce.chronology_address
-        FROM sxnzlfun_chrysalis.calendar_events ce
-        LEFT JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
-            ON cepm.calendar_event_id = ce.id
-        WHERE ce.entity_id = :entity_id
-          AND ce.layer_id = 'calendar_layer_time'
+            ce.*,
+            e.entity_type_id
+        FROM sxnzlfun_chrysalis.entities e
+        INNER JOIN sxnzlfun_chrysalis.calendar_events ce
+            ON ce.entity_id = e.id
+        WHERE e.id = :entity_id
         LIMIT 1
     ");
 
-    $parent->execute([':entity_id' => $parentTimeEntityId]);
+    $parent->execute([
+        ':entity_id' => $parentTimeEntityId,
+    ]);
 
     $time = $parent->fetch(PDO::FETCH_ASSOC);
 
     if (!is_array($time)) {
         respond(404, [
             'status' => 'error',
-            'error' => 'Parent time not found',
+            'error' => 'Parent time entity not found or not a calendar node',
             'database' => $expectedDatabase,
         ]);
     }
 
-    // --------------------------------------------------
-    // 2. Fetch events
-    // --------------------------------------------------
+    if ($time['entity_type_id'] !== 'entity_type_calendar_time') {
+        respond(409, [
+            'status' => 'error',
+            'error' => 'Invalid parent entity_type_id; expected entity_type_calendar_time, got: ' . $time['entity_type_id'],
+            'database' => $expectedDatabase,
+        ]);
+    }
+
+    if ($time['layer_id'] !== 'calendar_layer_time') {
+        respond(409, [
+            'status' => 'error',
+            'error' => 'Invalid parent layer_id; expected calendar_layer_time, got: ' . $time['layer_id'],
+            'database' => $expectedDatabase,
+        ]);
+    }
+
     $stmt = $pdo->prepare("
-        SELECT ce.*
+        SELECT
+            ce.*,
+            e.entity_type_id
         FROM sxnzlfun_chrysalis.calendar_events ce
+        INNER JOIN sxnzlfun_chrysalis.entities e
+            ON e.id = ce.entity_id
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_event'
-        ORDER BY ce.event_index ASC, ce.id ASC
+          AND e.entity_type_id = 'entity_type_calendar_event'
+        ORDER BY ce.sequence_index ASC, ce.event_id ASC
     ");
 
-    $stmt->execute([':parent_event_id' => (int)$time['id']]);
+    $stmt->execute([
+        ':parent_event_id' => (int)$time['event_id'],
+    ]);
 
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
