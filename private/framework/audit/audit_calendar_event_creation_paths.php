@@ -28,6 +28,11 @@ function assert_calendar_event_creation_paths(): void
         }
 
         $path = $file->getRealPath();
+
+        if ($path === __FILE__) {
+            continue;
+        }
+
         $contents = file_get_contents($path);
 
         if ($contents === false) {
@@ -36,8 +41,7 @@ function assert_calendar_event_creation_paths(): void
 
         // ❌ Block direct INSERT into calendar_events
         if (
-            str_contains($contents, 'INSERT INTO') &&
-            str_contains($contents, 'calendar_events')
+            preg_match('/\bINSERT\s+INTO\s+(?:sxnzlfun_chrysalis\.)?calendar_events\b/i', $contents)
         ) {
             if ($path !== $allowedInsertFile) {
                 throw new RuntimeException(
