@@ -12,6 +12,7 @@ require_once __DIR__ . '/validate_entity_linked_facts_entity_fk_integrity.php';
 require_once __DIR__ . '/validate_entity_linked_facts_fact_type_validity.php';
 require_once __DIR__ . '/validate_entity_id_suggestion_determinism.php';
 require_once __DIR__ . '/validate_canonical_label_write_guard_contract.php';
+require_once __DIR__ . '/../calendar/validate_calendar_event_identity_separation.php';
 
 function get_invariant_registry(): array
 {
@@ -43,6 +44,12 @@ return [
         'label' => 'entity exact-match lookup stability',
         'runner' => static function (PDO $pdo): void {
             validate_entity_exact_match_lookup_stability($pdo);
+        },
+    ],
+    'calendar_event_identity_separation' => [
+        'label' => 'calendar event identity separation',
+        'runner' => static function (PDO $pdo): void {
+            validate_calendar_event_identity_separation($pdo);
         },
     ],
 ];
