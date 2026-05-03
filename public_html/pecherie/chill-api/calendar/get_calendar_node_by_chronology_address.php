@@ -12,7 +12,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
 
 requireAuth();
 
-$chronologyAddress = $_GET['chronology_address'] ?? null;
+$body = $_QUERY_BODY ?? [];
+$chronologyAddress = $body['chronology_address'] ?? null;
 
 if (!is_string($chronologyAddress) || trim($chronologyAddress) === '') {
     respond(400, [
