@@ -182,7 +182,20 @@ try {
     unset($node);
 
     $rootId = $root['id'];
-    $root = $nodesById[$rootId];
+    $root = stripInternalIds($nodesById[$rootId]);
+
+    function stripInternalIds(array $node): array
+    {
+        unset($node['id']);
+
+        if (!empty($node['children'])) {
+            foreach ($node['children'] as &$child) {
+                $child = stripInternalIds($child);
+            }
+        }
+
+        return $node;
+    }
 
     respond(200, [
         'status' => 'ok',
