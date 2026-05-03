@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis DB</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0e0e0f; --bg2: #161618; --bg3: #1e1e21; --bg4: #252528;
+            --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+            --text: #f2f0ec; --text2: #b0ada4; --text3: #7a7770;
+            --accent: #c8a96e; --accent2: #e8c97a;
+            --ok: #5a9e72; --err: #b85c5c; --warn: #a07840;
+            --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
+            --serif: 'Cormorant Garamond', serif;
+        }
+        html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; }
+        body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* ── Header ── */
+        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg); }
+        .logo { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
+        .logo span { color: var(--text3); font-weight: 300; }
+        .key-area { display: flex; align-items: center; gap: 10px; }
+        .key-label { font-size: 11px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; }
+        #api-key { font-family: var(--mono); font-size: 12px; width: 220px; padding: 6px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); outline: none; transition: border-color 0.15s; }
+        #api-key:focus { border-color: var(--border2); }
+        #api-key::placeholder { color: var(--text3); }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background 0.3s; flex-shrink: 0; }
+        .status-dot.ok { background: var(--ok); }
+        .status-dot.err { background: var(--err); }
+
+        /* ── Tab bar ── */
+        .tab-bar { display: flex; align-items: center; gap: 0; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; padding: 0 24px; }
+        .tab-btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; padding: 10px 16px; background: transparent; color: var(--text3); border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .tab-btn:hover { color: var(--text2); }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+
+        /* ── Panels ── */
+        .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+        .panel.active { display: flex; }
+
+        /* ── Query Panel (SQL/NL/Write) ── */
+        .query-main { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+        .query-main::-webkit-scrollbar { width: 4px; }
+        .query-main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .query-footer { flex-shrink: 0; border-top: 1px solid var(--border); padding: 14px 24px; background: var(--bg); }
+
+        /* ── Calendar Panel ── */
+        .cal-layout { display: flex; flex: 1; overflow: hidden; }
+        .cal-sidebar { width: 260px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; background: var(--bg2); }
+        .cal-sidebar::-webkit-scrollbar { width: 3px; }
+        .cal-sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+        .cal-main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .cal-main::-webkit-scrollbar { width: 4px; }
+        .cal-main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .cal-sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; }
+        .cal-tree-node { border-bottom: 1px solid var(--border); }
+        .cal-tree-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px; cursor: pointer; transition: background 0.1s; font-family: var(--mono); font-size: 12px; color: var(--text2); }
+        .cal-tree-item:hover { background: var(--bg3); }
+        .cal-tree-item.selected { background: var(--bg3); color: var(--accent); }
+        .cal-tree-item .chevron { color: var(--text3); font-size: 10px; transition: transform 0.15s; flex-shrink: 0; }
+        .cal-tree-item .chevron.open { transform: rotate(90deg); }
+        .cal-tree-children { display: none; }
+        .cal-tree-children.open { display: block; }
+        .cal-tree-child { padding: 6px 14px 6px 30px; font-family: var(--mono); font-size: 11px; color: var(--text3); cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 6px; }
+        .cal-tree-child:hover { background: var(--bg3); color: var(--text2); }
+        .cal-tree-child.selected { color: var(--accent); }
+        .cal-tree-grandchild { padding: 5px 14px 5px 46px; font-family: var(--mono); font-size: 11px; color: var(--text3); cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 6px; }
+        .cal-tree-grandchild:hover { background: var(--bg3); color: var(--text2); }
+        .cal-tree-grandchild.selected { color: var(--accent); }
+        .cal-layer-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .dot-week { background: #c8a96e; }
+        .dot-day { background: #7a9ec8; }
+        .dot-time { background: #7ac8a0; }
+        .dot-event { background: #c87a9e; }
+
+        /* ── Calendar forms ── */
+        .cal-section { margin-bottom: 24px; }
+        .cal-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .cal-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-grid.single { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-label { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.05em; }
+        .form-input { font-family: var(--mono); font-size: 12px; padding: 7px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); outline: none; transition: border-color 0.15s; width: 100%; }
+        .form-input:focus { border-color: var(--border2); }
+        .form-input::placeholder { color: var(--text3); }
+        .form-select { font-family: var(--mono); font-size: 12px; padding: 7px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); outline: none; cursor: pointer; width: 100%; }
+        .form-select:focus { border-color: var(--border2); }
+        .btn-primary { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 18px; background: var(--accent); color: #1a1408; border: none; border-radius: 6px; cursor: pointer; transition: background 0.15s, transform 0.1s; white-space: nowrap; }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-primary:disabled { background: var(--bg3); color: var(--text3); cursor: not-allowed; transform: none; }
+        .btn-secondary { font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 14px; background: transparent; color: var(--text3); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .btn-secondary:hover { border-color: var(--border2); color: var(--text2); }
+        .btn-row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+
+        /* ── Result / status cards ── */
+        .result-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-family: var(--mono); font-size: 12px; }
+        .result-card.ok { border-color: rgba(90,158,114,0.3); }
+        .result-card.err { border-color: rgba(184,92,92,0.3); background: rgba(184,92,92,0.06); }
+        .result-card .rc-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+        .result-card .rc-id { color: var(--accent); font-size: 13px; }
+        .result-card .rc-detail { color: var(--text2); margin-top: 4px; }
+        .result-card .rc-err { color: #d08080; }
+        .inline-tag { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 2px 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; color: var(--text3); margin-left: 6px; vertical-align: middle; }
+
+        /* ── Prose Panel ── */
+        .prose-layout { display: flex; flex: 1; overflow: hidden; }
+        .prose-sidebar { width: 280px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; background: var(--bg2); }
+        .prose-sidebar::-webkit-scrollbar { width: 3px; }
+        .prose-sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+        .prose-main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .prose-main::-webkit-scrollbar { width: 4px; }
+        .prose-main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .prose-sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; }
+        .prose-sub-tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .prose-sub-tab { flex: 1; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding: 9px 10px; background: transparent; color: var(--text3); border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; text-align: center; }
+        .prose-sub-tab:hover { color: var(--text2); }
+        .prose-sub-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .prose-sub-panel { display: none; padding: 20px 24px; flex: 1; overflow-y: auto; }
+        .prose-sub-panel.active { display: block; }
+        .prose-body-preview { font-family: var(--serif); font-size: 16px; line-height: 1.8; color: var(--text); white-space: pre-wrap; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; max-height: 320px; overflow-y: auto; }
+        .annotation-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .annotation-row:last-child { border-bottom: none; }
+        .ann-type { font-family: var(--mono); font-size: 10px; padding: 2px 6px; background: var(--bg3); border-radius: 3px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
+        .ann-value { font-family: var(--mono); font-size: 12px; color: var(--text2); flex: 1; }
+        .ann-span { font-family: var(--mono); font-size: 10px; color: var(--text3); white-space: nowrap; }
+        .prose-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+        .prose-item:hover { background: var(--bg3); }
+        .prose-item.selected { background: var(--bg3); }
+        .prose-item-title { font-family: var(--mono); font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .prose-item-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 2px; }
+        .prose-textarea { font-family: var(--serif); font-size: 15px; line-height: 1.8; width: 100%; min-height: 200px; max-height: 400px; resize: vertical; padding: 12px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); outline: none; transition: border-color 0.15s; }
+        .prose-textarea:focus { border-color: var(--border2); }
+        .prose-textarea::placeholder { color: var(--text3); font-style: italic; }
+
+        /* ── Theme Panel ── */
+        .theme-layout { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+        .theme-layout::-webkit-scrollbar { width: 4px; }
+        .theme-layout::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .proposal-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 0.15s; }
+        .proposal-card:hover { border-color: var(--border2); }
+        .proposal-card.applied { border-color: rgba(90,158,114,0.4); }
+        .proposal-card.rejected { opacity: 0.5; }
+        .proposal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .proposal-subject { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+        .proposal-arrow { color: var(--text3); font-size: 12px; margin: 0 8px; }
+        .proposal-object { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+        .proposal-body { padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+        .proposal-confidence { font-family: var(--mono); font-size: 11px; padding: 3px 8px; background: var(--bg3); border-radius: 3px; color: var(--text3); }
+        .proposal-evidence { font-family: var(--mono); font-size: 11px; color: var(--text3); flex: 1; }
+        .proposal-actions { display: flex; gap: 6px; }
+        .btn-apply { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; padding: 5px 12px; background: rgba(90,158,114,0.15); color: var(--ok); border: 1px solid rgba(90,158,114,0.3); border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+        .btn-apply:hover { background: rgba(90,158,114,0.25); }
+        .btn-apply:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-reject { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; padding: 5px 12px; background: transparent; color: var(--text3); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+        .btn-reject:hover { color: var(--err); border-color: rgba(184,92,92,0.3); }
+        .proposal-status-badge { font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 3px; }
+        .badge-applied { background: rgba(90,158,114,0.15); color: var(--ok); }
+        .badge-duplicate { background: rgba(160,120,64,0.15); color: var(--warn); }
+        .badge-rejected { background: rgba(184,92,92,0.1); color: var(--err); }
+        .theme-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        /* ── Shared query panel styles ── */
+        .empty-state { margin: auto; text-align: center; color: var(--text3); }
+        .empty-state .glyph { font-family: var(--mono); font-size: 32px; color: var(--border2); display: block; margin-bottom: 12px; }
+        .empty-state p { font-size: 13px; line-height: 1.8; }
+        .empty-state code { font-family: var(--mono); font-size: 12px; color: var(--text2); background: var(--bg3); padding: 2px 6px; border-radius: 3px; }
+        .msg-user { align-self: flex-end; max-width: 72%; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px 10px 2px 10px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--text); white-space: pre-wrap; word-break: break-word; animation: fadeUp 0.15s ease; }
+        .msg-result { align-self: flex-start; width: 100%; animation: fadeUp 0.15s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .result-meta { font-size: 11px; color: var(--text3); margin-bottom: 8px; font-family: var(--mono); letter-spacing: 0.04em; }
+        .result-meta .ok { color: var(--ok); }
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); }
+        .table-wrap::-webkit-scrollbar { height: 4px; }
+        .table-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+        th { background: var(--bg3); color: var(--text2); text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--border); font-weight: 400; white-space: nowrap; letter-spacing: 0.03em; }
+        td { padding: 6px 12px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg3); }
+        .null-val { color: var(--text3); font-style: italic; }
+        .err-box { background: rgba(184,92,92,0.1); border: 1px solid rgba(184,92,92,0.25); border-radius: 8px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: #d08080; white-space: pre-wrap; word-break: break-word; }
+        .no-rows { font-size: 12px; color: var(--text3); font-family: var(--mono); padding: 10px 0; font-style: italic; }
+        .prose-block { font-size: 17px; font-family: var(--serif); color: var(--text); line-height: 1.9; max-width: 640px; margin: 8px auto 0; white-space: pre-wrap; }
+        .nl-description { margin-top: 24px; margin-bottom: 12px; font-size: 18px; font-family: var(--serif); color: #e8c97a; line-height: 1.8; border-left: 2px solid var(--accent); padding-left: 12px; max-width: 60%; margin-left: auto; margin-right: auto; }
+        .sources-toggle { font-family: var(--mono); font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 8px 0 0; letter-spacing: 0.05em; text-transform: uppercase; display: block; }
+        .sources-toggle:hover { color: var(--text2); }
+        .sources-list { display: none; margin-top: 8px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .sources-list.open { display: block; }
+        .source-item { padding: 8px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 11px; }
+        .source-item:last-child { border-bottom: none; }
+        .source-nl { color: var(--text2); margin-bottom: 4px; }
+        .source-sql { color: var(--text3); white-space: pre-wrap; word-break: break-all; font-size: 10px; }
+        .source-count { color: var(--ok); font-size: 10px; margin-top: 2px; }
+        .spinner { display: inline-block; width: 10px; height: 10px; border: 1.5px solid var(--border2); border-top-color: var(--text2); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .mode-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+        .mode-btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 12px; height: 32px; background: transparent; color: var(--text3); border: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+        .mode-btn.active { background: var(--bg3); color: var(--accent); }
+        .mode-btn:hover:not(.active) { color: var(--text2); }
+        .footer-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        #system-prompt-wrap { margin-bottom: 10px; display: none; }
+        #system-prompt-wrap.visible { display: block; }
+        #system-prompt { width: 100%; font-family: var(--mono); font-size: 12px; resize: vertical; min-height: 80px; max-height: 240px; padding: 8px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); outline: none; line-height: 1.6; }
+        #system-prompt:focus { border-color: var(--border2); color: var(--text); }
+        .prompt-toggle { cursor: pointer; color: var(--text3); font-size: 11px; font-family: var(--mono); background: none; border: none; padding: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+        .prompt-toggle:hover { color: var(--text2); }
+        .generated-sql { font-family: var(--mono); font-size: 11px; color: var(--text3); background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; white-space: pre-wrap; word-break: break-all; }
+        .generated-sql-label { font-size: 10px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+        .describe-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 14px; height: 40px; background: transparent; color: var(--text3); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+        .describe-btn.on { background: var(--bg3); color: var(--accent); border-color: var(--border2); }
+        .describe-btn:hover { border-color: var(--border2); color: var(--text2); }
+        #sql-input { flex: 1; font-family: var(--mono); font-size: 13px; resize: vertical; min-height: 56px; max-height: 200px; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); outline: none; transition: border-color 0.15s; line-height: 1.6; }
+        #sql-input:focus { border-color: var(--border2); }
+        #sql-input::placeholder { color: var(--text3); }
+        #run-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 18px; height: 40px; background: var(--accent); color: #1a1408; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: background 0.15s, transform 0.1s; }
+        #run-btn:hover { background: var(--accent2); }
+        #run-btn:active { transform: scale(0.97); }
+        #run-btn:disabled { background: var(--bg3); color: var(--text3); cursor: not-allowed; transform: none; }
+        .input-row { display: flex; gap: 10px; align-items: flex-end; }
+        .hint { margin-top: 8px; font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+        /* ── Annotation builder ── */
+        .ann-builder-row { display: grid; grid-template-columns: 1fr 1fr 1fr 80px 80px 80px auto; gap: 6px; align-items: end; margin-bottom: 6px; }
+        .ann-remove { font-family: var(--mono); font-size: 18px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 0 4px; line-height: 1; transition: color 0.15s; align-self: center; }
+        .ann-remove:hover { color: var(--err); }
+        .ann-list { margin-bottom: 10px; }
+
+        /* ── Misc ── */
+        .divider { height: 1px; background: var(--border); margin: 16px 0; }
+        .notice { font-family: var(--mono); font-size: 11px; padding: 8px 12px; border-radius: 6px; }
+        .notice.info { background: rgba(200,169,110,0.08); border: 1px solid rgba(200,169,110,0.2); color: var(--accent); }
+        .notice.ok { background: rgba(90,158,114,0.08); border: 1px solid rgba(90,158,114,0.2); color: var(--ok); }
+        .notice.err { background: rgba(184,92,92,0.08); border: 1px solid rgba(184,92,92,0.2); color: #d08080; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">chrysalis <span>/ db</span></div>
+    <div class="key-area">
+        <span class="key-label">key</span>
+        <input id="api-key" type="password" placeholder="x-api-key" autocomplete="off" />
+        <div class="status-dot" id="status-dot"></div>
+    </div>
+</header>
+
+<div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('query')">Query</button>
+    <div class="tab-sep"></div>
+    <button class="tab-btn" onclick="switchTab('calendar')">Calendar</button>
+    <button class="tab-btn" onclick="switchTab('prose')">Prose</button>
+    <button class="tab-btn" onclick="switchTab('theme')">Themes</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     QUERY PANEL
+════════════════════════════════════════════ -->
+<div class="panel active" id="panel-query">
+    <div class="query-main" id="log">
+        <div class="empty-state" id="empty">
+            <span class="glyph">⬡</span>
+            <p>Read-only access to <code>sxnzlfun_chrysalis</code><br>
+                Toggle SQL / NL / Write mode below, then run.<br>
+                <code>Ctrl+Enter</code> or <code>Cmd+Enter</code> to run.</p>
+        </div>
+    </div>
+    <div class="query-footer">
+        <div class="footer-top">
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="btn-sql" onclick="setMode('sql')">SQL</button>
+                <button class="mode-btn" id="btn-nl" onclick="setMode('nl')">NL</button>
+                <button class="mode-btn" id="btn-write" onclick="setMode('write')">Write</button>
+            </div>
+            <button class="prompt-toggle" id="prompt-toggle-btn" style="display:none" onclick="togglePrompt()">System prompt &#9660;</button>
+        </div>
+        <div id="system-prompt-wrap">
+            <textarea id="system-prompt" placeholder="Paste your Chrysalis system prompt here…"></textarea>
+            <div style="display:flex;justify-content:flex-end;margin-top:6px;gap:8px;">
+                <span id="prompt-save-status" style="font-family:var(--mono);font-size:11px;color:var(--text3);align-self:center;"></span>
+                <span id="schema-status" style="font-family:var(--mono);font-size:11px;color:var(--text3);align-self:center;">schema not cached</span>
+                <button onclick="savePrompt()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.05em;text-transform:uppercase;padding:4px 12px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;">Save prompt</button>
+                <button onclick="refreshSchema()" id="refresh-schema-btn" style="font-family:var(--mono);font-size:11px;letter-spacing:0.05em;text-transform:uppercase;padding:4px 12px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;">Refresh schema</button>
+            </div>
+        </div>
+        <div class="input-row">
+            <textarea id="sql-input" placeholder="SELECT * FROM characters LIMIT 10"></textarea>
+            <button id="describe-btn" class="describe-btn" onclick="toggleDescribe()" title="Toggle natural language description">Describe</button>
+            <button id="run-btn" onclick="runQuery()">Run</button>
+        </div>
+        <div class="hint" id="hint">&nbsp;</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CALENDAR PANEL
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-calendar">
+    <div class="cal-layout">
+        <div class="cal-sidebar">
+            <div class="cal-sidebar-header">
+                <span>Structure</span>
+                <button class="btn-secondary" style="padding:3px 8px;font-size:10px;" onclick="loadCalTree()">↻</button>
+            </div>
+            <div id="cal-tree">
+                <div style="padding:14px;font-family:var(--mono);font-size:11px;color:var(--text3);">Enter API key and refresh to load.</div>
+            </div>
+        </div>
+        <div class="cal-main" id="cal-main-content">
+            <!-- Default: show create week form -->
+            <div id="cal-view-create-week">
+                <div class="cal-section">
+                    <div class="cal-section-title">Create Week</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">book_code</label>
+                            <input class="form-input" id="cw-book-code" placeholder="book_1" value="book_1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">week_index</label>
+                            <input class="form-input" id="cw-week-index" type="number" min="1" placeholder="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">week_label</label>
+                            <input class="form-input" id="cw-week-label" placeholder="Week 1 — Arrival">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">real_date_start_id</label>
+                            <input class="form-input" id="cw-date-id" placeholder="date_2025_01_19">
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-primary" onclick="createWeek()">Create Week</button>
+                    </div>
+                    <div id="cw-result" style="margin-top:12px;"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="cal-section">
+                    <div class="cal-section-title">Create Day</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">parent_week_entity_id</label>
+                            <input class="form-input" id="cd-week-entity" placeholder="cal_week_...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">day_index <span class="inline-tag">Sun=1</span></label>
+                            <input class="form-input" id="cd-day-index" type="number" min="1" max="7" placeholder="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">day_label</label>
+                            <input class="form-input" id="cd-day-label" placeholder="Sunday — Arrival Day">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">real_date_id</label>
+                            <input class="form-input" id="cd-date-id" placeholder="date_2025_01_19">
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-primary" onclick="createDay()">Create Day</button>
+                    </div>
+                    <div id="cd-result" style="margin-top:12px;"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="cal-section">
+                    <div class="cal-section-title">Create Time Slot</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">parent_day_entity_id</label>
+                            <input class="form-input" id="ct-day-entity" placeholder="cal_day_...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">time_index</label>
+                            <input class="form-input" id="ct-time-index" type="number" min="1" placeholder="1">
+                        </div>
+                        <div class="form-group" style="grid-column:span 2;">
+                            <label class="form-label">time_label <span class="inline-tag">optional</span></label>
+                            <input class="form-input" id="ct-time-label" placeholder="Morning">
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-primary" onclick="createTime()">Create Time Slot</button>
+                    </div>
+                    <div id="ct-result" style="margin-top:12px;"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="cal-section">
+                    <div class="cal-section-title">Create Event</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">parent_time_entity_id</label>
+                            <input class="form-input" id="ce-time-entity" placeholder="cal_time_...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">event_index</label>
+                            <input class="form-input" id="ce-event-index" type="number" min="1" placeholder="1">
+                        </div>
+                        <div class="form-group" style="grid-column:span 2;">
+                            <label class="form-label">event_label <span class="inline-tag">optional</span></label>
+                            <input class="form-input" id="ce-event-label" placeholder="Team rehearsal">
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-primary" onclick="createEvent()">Create Event</button>
+                    </div>
+                    <div id="ce-result" style="margin-top:12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PROSE PANEL
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-prose">
+    <div class="prose-layout">
+        <div class="prose-sidebar">
+            <div class="prose-sidebar-header">Drafts</div>
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);">
+                <div class="form-group">
+                    <label class="form-label">prose_entity_id</label>
+                    <input class="form-input" id="prose-lookup-id" placeholder="prose_...">
+                </div>
+                <div class="btn-row" style="margin-top:8px;">
+                    <button class="btn-primary" style="flex:1;" onclick="loadProseById()">Load</button>
+                </div>
+            </div>
+            <div id="prose-list">
+                <div style="padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--text3);">Load a draft by entity ID above.</div>
+            </div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+            <div class="prose-sub-tabs">
+                <button class="prose-sub-tab active" onclick="proseSubTab('view')">View</button>
+                <button class="prose-sub-tab" onclick="proseSubTab('create')">Create Draft</button>
+                <button class="prose-sub-tab" onclick="proseSubTab('annotate')">Add Annotations</button>
+            </div>
+
+            <!-- View -->
+            <div class="prose-sub-panel active" id="prose-panel-view">
+                <div id="prose-view-empty" style="color:var(--text3);font-family:var(--mono);font-size:12px;">Load a prose draft to view it.</div>
+                <div id="prose-view-content" style="display:none;">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-family:var(--serif);font-size:20px;color:var(--text);" id="prose-view-title"></div>
+                        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);" id="prose-view-status"></div>
+                    </div>
+                    <div class="prose-body-preview" id="prose-view-body"></div>
+                    <div class="cal-section-title" style="margin-top:16px;">Annotations</div>
+                    <div id="prose-view-annotations"></div>
+                </div>
+            </div>
+
+            <!-- Create Draft -->
+            <div class="prose-sub-panel" id="prose-panel-create">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">entity_id</label>
+                        <input class="form-input" id="pd-entity-id" placeholder="prose_w1_sun_morning">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">title</label>
+                        <input class="form-input" id="pd-title" placeholder="Arrival — Sunday Morning">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">draft_status_id</label>
+                        <input class="form-input" id="pd-status-id" placeholder="status_draft">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">author_entity_id <span class="inline-tag">optional</span></label>
+                        <input class="form-input" id="pd-author-id" placeholder="char_shay_young">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label class="form-label">prose_body</label>
+                    <textarea class="prose-textarea" id="pd-body" placeholder="The taxi smelled of pine freshener and something older — damp wool, or maybe just winter."></textarea>
+                </div>
+
+                <div class="cal-section-title" style="margin-top:16px;">Projection</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">projection_type_id</label>
+                        <input class="form-input" id="pd-proj-type" placeholder="prose_projection_type_...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">target_entity_id <span class="inline-tag">calendar event</span></label>
+                        <input class="form-input" id="pd-proj-target" placeholder="cal_event_...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">role_id</label>
+                        <input class="form-input" id="pd-proj-role" placeholder="prose_role_...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">projection_order</label>
+                        <input class="form-input" id="pd-proj-order" type="number" min="1" placeholder="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">is_export_target</label>
+                        <select class="form-select" id="pd-proj-export">
+                            <option value="1">1 — yes</option>
+                            <option value="0">0 — no</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="cal-section-title" style="margin-top:16px;">Initial Annotations <span class="inline-tag">optional</span></div>
+                <div id="pd-ann-list" class="ann-list"></div>
+                <button class="btn-secondary" onclick="addAnnotationRow('pd')" style="margin-bottom:12px;">+ Add annotation</button>
+
+                <div class="btn-row">
+                    <button class="btn-primary" onclick="createProseDraft()">Create Draft</button>
+                </div>
+                <div id="pd-result" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- Add Annotations -->
+            <div class="prose-sub-panel" id="prose-panel-annotate">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">prose entity_id</label>
+                    <input class="form-input" id="pa-entity-id" placeholder="prose_...">
+                </div>
+
+                <div class="cal-section-title">Annotations</div>
+                <div id="pa-ann-list" class="ann-list"></div>
+                <button class="btn-secondary" onclick="addAnnotationRow('pa')" style="margin-bottom:12px;">+ Add annotation</button>
+
+                <div class="btn-row">
+                    <button class="btn-primary" onclick="addAnnotations()">Add Annotations</button>
+                </div>
+                <div id="pa-result" style="margin-top:12px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     THEME PANEL
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-theme">
+    <div class="theme-layout">
+        <div class="cal-section">
+            <div class="cal-section-title">Suggest Theme Links</div>
+            <div class="theme-controls">
+                <div class="form-group" style="flex:1;max-width:360px;">
+                    <label class="form-label">context_entity_id <span class="inline-tag">optional — omit for all</span></label>
+                    <input class="form-input" id="th-context-id" placeholder="cal_event_...">
+                </div>
+                <button class="btn-primary" onclick="suggestThemes()" style="align-self:flex-end;">Suggest</button>
+                <button class="btn-secondary" id="th-apply-all-btn" onclick="applyAllThemes()" style="align-self:flex-end;display:none;">Apply All</button>
+            </div>
+            <div id="th-summary" style="margin-top:10px;"></div>
+        </div>
+        <div id="th-proposals"></div>
+    </div>
+</div>
+
+<script>
+    // ═══════════════════════════════════════════
+    // CONFIG
+    // ═══════════════════════════════════════════
+    const DB_URL  = 'https://antheapeche.com/pecherie/chrysalis-db/index.php';
+    const API_URL = 'https://antheapeche.com/pecherie/chill-api/index.php';
+
+    // ═══════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════
+    function apiKey() { return document.getElementById('api-key').value.trim(); }
+    function dot() { return document.getElementById('status-dot'); }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function setDot(state) { dot().className = 'status-dot' + (state ? ' ' + state : ''); }
+
+    async function apiPost(operation, body) {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey() },
+            body: JSON.stringify({ operation, ...body })
+        });
+        return res.json();
+    }
+
+    // Calendar tree read helpers — use executeSqlRead since GET handlers aren't in the router
+    async function calGetDaysForWeek(weekEntityId) {
+        return apiPost('executeSqlRead', {
+            sql: `SELECT ce.id, ce.entity_id, ce.summary, ce.day_index, ce.week_index, ce.chronology_address, ce.layer_id FROM sxnzlfun_chrysalis.calendar_events parent JOIN sxnzlfun_chrysalis.calendar_events ce ON ce.parent_event_id = parent.id WHERE parent.entity_id = '${weekEntityId.replace(/'/g,"\\'")}' AND ce.layer_id = 'calendar_layer_day' ORDER BY ce.day_index ASC`,
+            limit: 10
+        });
+    }
+
+    async function calGetTimesForDay(dayEntityId) {
+        return apiPost('executeSqlRead', {
+            sql: `SELECT ce.id, ce.entity_id, ce.summary, ce.time_index, ce.day_index, ce.week_index, ce.chronology_address, ce.layer_id FROM sxnzlfun_chrysalis.calendar_events parent JOIN sxnzlfun_chrysalis.calendar_events ce ON ce.parent_event_id = parent.id WHERE parent.entity_id = '${dayEntityId.replace(/'/g,"\\'")}' AND ce.layer_id = 'calendar_layer_time' ORDER BY ce.time_index ASC`,
+            limit: 20
+        });
+    }
+
+    function showResultCard(containerId, data, successKey) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        if (data.status === 'ok' || data.status === 'applied') {
+            const val = successKey ? (data[successKey]?.entity_id || JSON.stringify(data[successKey])) : 'ok';
+            el.innerHTML = `<div class="result-card ok"><div class="rc-label">created</div><div class="rc-id">${escHtml(val)}</div></div>`;
+        } else {
+            el.innerHTML = `<div class="result-card err"><div class="rc-label">error</div><div class="rc-err">${escHtml(data.error || JSON.stringify(data))}</div></div>`;
+        }
+    }
+
+    function showNotice(containerId, msg, type) {
+        const el = document.getElementById(containerId);
+        if (el) el.innerHTML = `<div class="notice ${type}">${escHtml(msg)}</div>`;
+    }
+
+    // ═══════════════════════════════════════════
+    // TAB SWITCHING
+    // ═══════════════════════════════════════════
+    function switchTab(name) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('panel-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    // ═══════════════════════════════════════════
+    // QUERY PANEL (unchanged logic)
+    // ═══════════════════════════════════════════
+    let mode = 'sql';
+    let describeMode = false;
+    let promptVisible = false;
+    const log = document.getElementById('log');
+    const input = document.getElementById('sql-input');
+    const btn = document.getElementById('run-btn');
+    const hint = document.getElementById('hint');
+
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); runQuery(); }
+    });
+
+    function toggleDescribe() {
+        describeMode = !describeMode;
+        document.getElementById('describe-btn').className = 'describe-btn' + (describeMode ? ' on' : '');
+    }
+
+    function setMode(m) {
+        mode = m;
+        ['sql','nl','write'].forEach(x => {
+            document.getElementById('btn-'+x).className = 'mode-btn' + (m === x ? ' active' : '');
+        });
+        if (m === 'sql') {
+            input.placeholder = 'SELECT * FROM characters LIMIT 10';
+            document.getElementById('describe-btn').style.display = '';
+            document.getElementById('prompt-toggle-btn').style.display = 'none';
+            document.getElementById('system-prompt-wrap').className = '';
+            promptVisible = false;
+        } else if (m === 'nl') {
+            input.placeholder = 'Show me all rehearsals in week 3…';
+            document.getElementById('describe-btn').style.display = '';
+            document.getElementById('prompt-toggle-btn').style.display = '';
+        } else {
+            input.placeholder = 'Describe the scene you want to write…';
+            document.getElementById('describe-btn').style.display = 'none';
+            document.getElementById('prompt-toggle-btn').style.display = '';
+        }
+    }
+
+    function togglePrompt() {
+        promptVisible = !promptVisible;
+        document.getElementById('system-prompt-wrap').className = promptVisible ? 'visible' : '';
+        document.getElementById('prompt-toggle-btn').innerHTML = 'System prompt ' + (promptVisible ? '&#9650;' : '&#9660;');
+    }
+
+    async function runQuery() {
+        const val = input.value.trim();
+        const key = apiKey();
+        if (!val) return;
+        if (!key) { setHint('Paste your API key first.', true); return; }
+
+        document.getElementById('empty') && document.getElementById('empty').remove();
+        addUserMsg(val);
+        input.value = '';
+        btn.disabled = true;
+        setHint('');
+        setDot('');
+
+        const loaderLabel = mode === 'write' ? 'researching & writing…' : mode === 'nl' ? 'translating…' : 'running…';
+        const loader = addLoader(loaderLabel);
+
+        let body;
+        if (mode === 'write') {
+            body = { mode: 'write', prompt: val, system_prompt: document.getElementById('system-prompt').value.trim() || undefined };
+        } else if (mode === 'nl') {
+            body = { mode: 'nl', nl: val, system_prompt: document.getElementById('system-prompt').value.trim() || undefined, describe: describeMode };
+        } else {
+            body = { mode: 'sql', sql: val };
+        }
+
+        try {
+            const res = await fetch(DB_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            loader.remove();
+            if (!res.ok) {
+                addError(data.error || 'HTTP ' + res.status);
+                setDot('err');
+            } else if (data.status === 'write_only') {
+                addWriteResult(data.generated_sql, data.message);
+                setDot('ok');
+            } else if (data.error) {
+                addError(data.error + (data.generated_sql ? '\n\nGenerated SQL:\n' + data.generated_sql : ''));
+                setDot('err');
+            } else if (mode === 'write' && data.prose) {
+                addProseResult(data.prose, data.sources || []);
+                setDot('ok');
+            } else {
+                addResult(data, mode === 'nl' ? data.generated_sql : null, data.description || '');
+                setDot('ok');
+            }
+        } catch (e) {
+            loader.remove();
+            addError('Network error — ' + e.message);
+            setDot('err');
+        }
+
+        btn.disabled = false;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function addUserMsg(txt) {
+        const d = document.createElement('div');
+        d.className = 'msg-user';
+        d.textContent = txt;
+        log.appendChild(d);
+    }
+
+    function addLoader(label) {
+        const d = document.createElement('div');
+        d.className = 'msg-result result-meta';
+        d.innerHTML = '<span class="spinner"></span>' + label;
+        log.appendChild(d);
+        log.scrollTop = log.scrollHeight;
+        return d;
+    }
+
+    function addError(msg) {
+        const wrap = document.createElement('div');
+        wrap.className = 'msg-result';
+        const box = document.createElement('div');
+        box.className = 'err-box';
+        box.textContent = msg;
+        wrap.appendChild(box);
+        log.appendChild(wrap);
+    }
+
+    function addResult(data, generatedSql, description) {
+        const wrap = document.createElement('div');
+        wrap.className = 'msg-result';
+        if (generatedSql) {
+            const sw = document.createElement('div');
+            sw.className = 'generated-sql';
+            const lbl = document.createElement('div');
+            lbl.className = 'generated-sql-label';
+            lbl.textContent = 'generated sql';
+            sw.appendChild(lbl);
+            const code = document.createElement('div');
+            code.textContent = generatedSql;
+            sw.appendChild(code);
+            wrap.appendChild(sw);
+        }
+        const meta = document.createElement('div');
+        meta.className = 'result-meta';
+        meta.innerHTML = '<span class="ok">ok</span> — ' + data.row_count + ' row' + (data.row_count !== 1 ? 's' : '') + ' · ' + escHtml(data.database || '') + ' · limit ' + data.limit_applied;
+        wrap.appendChild(meta);
+        if (data.rows && data.rows.length > 0) {
+            const cols = Object.keys(data.rows[0]);
+            const tw = document.createElement('div');
+            tw.className = 'table-wrap';
+            const t = document.createElement('table');
+            const thead = document.createElement('thead');
+            const hr = document.createElement('tr');
+            cols.forEach(c => { const th = document.createElement('th'); th.textContent = c; hr.appendChild(th); });
+            thead.appendChild(hr);
+            t.appendChild(thead);
+            const tbody = document.createElement('tbody');
+            data.rows.forEach(row => {
+                const tr = document.createElement('tr');
+                cols.forEach(c => {
+                    const td = document.createElement('td');
+                    const v = row[c];
+                    if (v === null) { td.textContent = 'NULL'; td.className = 'null-val'; } else { td.textContent = String(v); }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            t.appendChild(tbody);
+            tw.appendChild(t);
+            wrap.appendChild(tw);
+        } else {
+            const nr = document.createElement('div');
+            nr.className = 'no-rows';
+            nr.textContent = 'No rows returned.';
+            wrap.appendChild(nr);
+        }
+        if (description) {
+            const desc = document.createElement('div');
+            desc.className = 'nl-description';
+            desc.textContent = description;
+            wrap.appendChild(desc);
+        }
+        log.appendChild(wrap);
+    }
+
+    function addProseResult(prose, sources) {
+        const wrap = document.createElement('div');
+        wrap.className = 'msg-result';
+        const p = document.createElement('div');
+        p.className = 'prose-block';
+        p.textContent = prose;
+        wrap.appendChild(p);
+        if (sources && sources.length > 0) {
+            const toggle = document.createElement('button');
+            toggle.className = 'sources-toggle';
+            toggle.textContent = 'Sources (' + sources.length + ') ▾';
+            wrap.appendChild(toggle);
+            const list = document.createElement('div');
+            list.className = 'sources-list';
+            sources.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'source-item';
+                item.innerHTML = '<div class="source-nl">' + escHtml(s.nl) + '</div><div class="source-sql">' + escHtml(s.sql) + '</div><div class="source-count">' + s.row_count + ' row' + (s.row_count !== 1 ? 's' : '') + '</div>';
+                list.appendChild(item);
+            });
+            wrap.appendChild(list);
+            toggle.addEventListener('click', () => {
+                const open = list.classList.toggle('open');
+                toggle.textContent = 'Sources (' + sources.length + ') ' + (open ? '▴' : '▾');
+            });
+        }
+        log.appendChild(wrap);
+    }
+
+    function addWriteResult(sql, message) {
+        const wrap = document.createElement('div');
+        wrap.className = 'msg-result';
+        const notice = document.createElement('div');
+        notice.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;';
+        notice.textContent = message;
+        wrap.appendChild(notice);
+        const sw = document.createElement('div');
+        sw.className = 'generated-sql';
+        sw.style.cursor = 'pointer';
+        sw.title = 'Click to copy';
+        const lbl = document.createElement('div');
+        lbl.className = 'generated-sql-label';
+        lbl.textContent = 'generated sql — click to copy';
+        sw.appendChild(lbl);
+        const code = document.createElement('div');
+        code.textContent = sql;
+        sw.appendChild(code);
+        sw.addEventListener('click', () => {
+            navigator.clipboard.writeText(sql).then(() => {
+                lbl.textContent = 'copied!';
+                setTimeout(() => { lbl.textContent = 'generated sql — click to copy'; }, 2000);
+            });
+        });
+        wrap.appendChild(sw);
+        log.appendChild(wrap);
+    }
+
+    function setHint(msg, isErr) {
+        hint.textContent = msg || '\u00a0';
+        hint.style.color = isErr ? '#b85c5c' : 'var(--text3)';
+    }
+
+    async function refreshSchema() {
+        const key = apiKey();
+        if (!key) { setHint('Paste your API key first.', true); return; }
+        const b = document.getElementById('refresh-schema-btn');
+        const status = document.getElementById('schema-status');
+        b.disabled = true; status.textContent = 'refreshing…';
+        try {
+            const res = await fetch(DB_URL, { method: 'POST', headers: {'Content-Type':'application/json','x-api-key':key}, body: JSON.stringify({mode:'refresh_schema'}) });
+            const data = await res.json();
+            status.textContent = data.status === 'ok' ? 'cached ' + data.cached_at + ' (' + data.table_count + ' tables)' : 'error';
+        } catch(e) { status.textContent = 'error'; }
+        b.disabled = false;
+    }
+
+    async function savePrompt() {
+        const prompt = document.getElementById('system-prompt').value;
+        const key = apiKey();
+        if (!key) { setHint('Paste your API key first.', true); return; }
+        const status = document.getElementById('prompt-save-status');
+        status.textContent = 'saving…';
+        try {
+            const res = await fetch(DB_URL, { method: 'POST', headers: {'Content-Type':'application/json','x-api-key':key}, body: JSON.stringify({mode:'save_prompt',prompt}) });
+            const data = await res.json();
+            status.textContent = data.status === 'ok' ? 'saved' : 'error';
+            setTimeout(() => { status.textContent = ''; }, 2000);
+        } catch(e) { status.textContent = 'error'; }
+    }
+
+    // ═══════════════════════════════════════════
+    // CALENDAR PANEL
+    // ═══════════════════════════════════════════
+    let calWeeks = [];
+
+    async function loadCalTree() {
+        const key = apiKey();
+        if (!key) return;
+        const tree = document.getElementById('cal-tree');
+        tree.innerHTML = '<div style="padding:14px;font-family:var(--mono);font-size:11px;color:var(--text3);"><span class="spinner"></span>loading…</div>';
+
+        try {
+            const data = await apiPost('executeSqlRead', {
+                sql: `SELECT entity_id, summary, week_index, layer_id, chronology_address FROM sxnzlfun_chrysalis.calendar_events WHERE layer_id = 'calendar_layer_week' ORDER BY week_index ASC LIMIT 30`,
+                limit: 30
+            });
+
+            if (!data.rows || data.rows.length === 0) {
+                tree.innerHTML = '<div style="padding:14px;font-family:var(--mono);font-size:11px;color:var(--text3);">No weeks found.</div>';
+                return;
+            }
+
+            calWeeks = data.rows;
+            tree.innerHTML = '';
+            data.rows.forEach(week => {
+                const node = document.createElement('div');
+                node.className = 'cal-tree-node';
+                node.innerHTML = `
+        <div class="cal-tree-item" onclick="toggleWeekNode(this, '${escHtml(week.entity_id)}')">
+          <span class="chevron">▶</span>
+          <span class="cal-layer-dot dot-week"></span>
+          <span>W${week.week_index} — ${escHtml(week.summary || week.entity_id)}</span>
+        </div>
+        <div class="cal-tree-children" id="week-children-${escHtml(week.entity_id)}"></div>
+      `;
+                tree.appendChild(node);
+            });
+        } catch(e) {
+            tree.innerHTML = '<div style="padding:14px;font-family:var(--mono);font-size:11px;color:var(--err);">Error loading tree.</div>';
+        }
+    }
+
+    async function toggleWeekNode(el, weekEntityId) {
+        const chevron = el.querySelector('.chevron');
+        const children = document.getElementById('week-children-' + weekEntityId);
+        if (!children) return;
+
+        const isOpen = children.classList.contains('open');
+        if (isOpen) {
+            children.classList.remove('open');
+            chevron.classList.remove('open');
+            return;
+        }
+
+        chevron.classList.add('open');
+        children.classList.add('open');
+
+        if (children.children.length > 0) return;
+        children.innerHTML = '<div style="padding:6px 14px 6px 30px;font-family:var(--mono);font-size:11px;color:var(--text3);"><span class="spinner"></span></div>';
+
+        try {
+            const data = await calGetDaysForWeek(weekEntityId);
+            children.innerHTML = '';
+            if (!data.rows || data.rows.length === 0) {
+                children.innerHTML = '<div style="padding:6px 14px 6px 30px;font-family:var(--mono);font-size:11px;color:var(--text3);">No days.</div>';
+                return;
+            }
+            data.rows.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'cal-tree-child';
+                dayEl.innerHTML = `<span class="cal-layer-dot dot-day"></span><span>${escHtml(day.summary || day.entity_id)}</span>`;
+                dayEl.onclick = () => loadDayChildren(dayEl, day.entity_id, children);
+                children.appendChild(dayEl);
+            });
+        } catch(e) {
+            children.innerHTML = '<div style="padding:6px 14px 6px 30px;font-family:var(--mono);font-size:11px;color:var(--err);">Error.</div>';
+        }
+    }
+
+    async function loadDayChildren(dayEl, dayEntityId, parentEl) {
+        // Check if already expanded
+        const existingChildren = document.getElementById('day-ch-' + dayEntityId);
+        if (existingChildren) {
+            existingChildren.classList.toggle('open');
+            return;
+        }
+
+        const childContainer = document.createElement('div');
+        childContainer.id = 'day-ch-' + dayEntityId;
+        childContainer.className = 'cal-tree-children open';
+        childContainer.innerHTML = '<div style="padding:5px 14px 5px 46px;font-family:var(--mono);font-size:11px;color:var(--text3);"><span class="spinner"></span></div>';
+        dayEl.after(childContainer);
+
+        try {
+            const data = await calGetTimesForDay(dayEntityId);
+            childContainer.innerHTML = '';
+            if (!data.rows || data.rows.length === 0) {
+                childContainer.innerHTML = '<div style="padding:5px 14px 5px 46px;font-family:var(--mono);font-size:11px;color:var(--text3);">No time slots.</div>';
+                return;
+            }
+            data.rows.forEach(time => {
+                const timeEl = document.createElement('div');
+                timeEl.className = 'cal-tree-grandchild';
+                timeEl.innerHTML = `<span class="cal-layer-dot dot-time"></span><span>${escHtml(time.summary || time.entity_id)}</span>`;
+                timeEl.onclick = () => prefillTimeEntity(time.entity_id);
+                childContainer.appendChild(timeEl);
+            });
+        } catch(e) {
+            childContainer.innerHTML = '<div style="padding:5px 14px 5px 46px;font-family:var(--mono);font-size:11px;color:var(--err);">Error.</div>';
+        }
+    }
+
+    function prefillTimeEntity(entityId) {
+        document.getElementById('ce-time-entity').value = entityId;
+        document.getElementById('ct-day-entity').value = ''; // clear day field — different level
+    }
+
+    async function createWeek() {
+        const key = apiKey();
+        if (!key) { showNotice('cw-result', 'API key required.', 'err'); return; }
+        const bookCode = document.getElementById('cw-book-code').value.trim();
+        const weekIndex = parseInt(document.getElementById('cw-week-index').value);
+        const weekLabel = document.getElementById('cw-week-label').value.trim();
+        const realDateStartId = document.getElementById('cw-date-id').value.trim();
+
+        if (!bookCode || !weekIndex || !weekLabel || !realDateStartId) {
+            showNotice('cw-result', 'All fields required.', 'err'); return;
+        }
+
+        document.getElementById('cw-result').innerHTML = '<div class="notice info"><span class="spinner"></span>creating…</div>';
+
+        try {
+            const data = await apiPost('createCalendarWeek', { book_code: bookCode, week_index: weekIndex, week_label: weekLabel, real_date_start_id: realDateStartId });
+            showResultCard('cw-result', data, 'week');
+            if (data.status === 'ok') {
+                setDot('ok');
+                // Prefill next step
+                if (data.week?.entity_id) document.getElementById('cd-week-entity').value = data.week.entity_id;
+                loadCalTree();
+            } else { setDot('err'); }
+        } catch(e) {
+            showNotice('cw-result', 'Network error: ' + e.message, 'err');
+        }
+    }
+
+    async function createDay() {
+        const key = apiKey();
+        if (!key) { showNotice('cd-result', 'API key required.', 'err'); return; }
+        const parentWeekEntityId = document.getElementById('cd-week-entity').value.trim();
+        const dayIndex = parseInt(document.getElementById('cd-day-index').value);
+        const dayLabel = document.getElementById('cd-day-label').value.trim();
+        const realDateId = document.getElementById('cd-date-id').value.trim();
+
+        if (!parentWeekEntityId || !dayIndex || !dayLabel || !realDateId) {
+            showNotice('cd-result', 'All fields required.', 'err'); return;
+        }
+
+        document.getElementById('cd-result').innerHTML = '<div class="notice info"><span class="spinner"></span>creating…</div>';
+
+        try {
+            const data = await apiPost('createCalendarDay', { parent_week_entity_id: parentWeekEntityId, day_index: dayIndex, day_label: dayLabel, real_date_id: realDateId });
+            showResultCard('cd-result', data, 'day');
+            if (data.status === 'ok') {
+                setDot('ok');
+                if (data.day?.entity_id) document.getElementById('ct-day-entity').value = data.day.entity_id;
+                loadCalTree();
+            } else { setDot('err'); }
+        } catch(e) {
+            showNotice('cd-result', 'Network error: ' + e.message, 'err');
+        }
+    }
+
+    async function createTime() {
+        const key = apiKey();
+        if (!key) { showNotice('ct-result', 'API key required.', 'err'); return; }
+        const parentDayEntityId = document.getElementById('ct-day-entity').value.trim();
+        const timeIndex = parseInt(document.getElementById('ct-time-index').value);
+        const timeLabel = document.getElementById('ct-time-label').value.trim() || null;
+
+        if (!parentDayEntityId || !timeIndex) {
+            showNotice('ct-result', 'parent_day_entity_id and time_index required.', 'err'); return;
+        }
+
+        document.getElementById('ct-result').innerHTML = '<div class="notice info"><span class="spinner"></span>creating…</div>';
+
+        try {
+            const body = { parent_day_entity_id: parentDayEntityId, time_index: timeIndex };
+            if (timeLabel) body.time_label = timeLabel;
+            const data = await apiPost('createCalendarTime', body);
+            showResultCard('ct-result', data, 'time');
+            if (data.status === 'ok') {
+                setDot('ok');
+                if (data.time?.entity_id) document.getElementById('ce-time-entity').value = data.time.entity_id;
+                loadCalTree();
+            } else { setDot('err'); }
+        } catch(e) {
+            showNotice('ct-result', 'Network error: ' + e.message, 'err');
+        }
+    }
+
+    async function createEvent() {
+        const key = apiKey();
+        if (!key) { showNotice('ce-result', 'API key required.', 'err'); return; }
+        const parentTimeEntityId = document.getElementById('ce-time-entity').value.trim();
+        const eventIndex = parseInt(document.getElementById('ce-event-index').value);
+        const eventLabel = document.getElementById('ce-event-label').value.trim() || null;
+
+        if (!parentTimeEntityId || !eventIndex) {
+            showNotice('ce-result', 'parent_time_entity_id and event_index required.', 'err'); return;
+        }
+
+        document.getElementById('ce-result').innerHTML = '<div class="notice info"><span class="spinner"></span>creating…</div>';
+
+        try {
+            const body = { parent_time_entity_id: parentTimeEntityId, event_index: eventIndex };
+            if (eventLabel) body.event_label = eventLabel;
+            const data = await apiPost('createCalendarEvent', body);
+            showResultCard('ce-result', data, 'event');
+            if (data.status === 'ok') { setDot('ok'); loadCalTree(); } else { setDot('err'); }
+        } catch(e) {
+            showNotice('ce-result', 'Network error: ' + e.message, 'err');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // PROSE PANEL
+    // ═══════════════════════════════════════════
+    let currentProseEntityId = null;
+
+    function proseSubTab(name) {
+        document.querySelectorAll('.prose-sub-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.prose-sub-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('prose-panel-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    async function loadProseById() {
+        const entityId = document.getElementById('prose-lookup-id').value.trim();
+        if (!entityId) return;
+        if (!apiKey()) return;
+
+        const listEl = document.getElementById('prose-list');
+        listEl.innerHTML = '<div style="padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--text3);"><span class="spinner"></span>loading…</div>';
+
+        try {
+            const data = await apiPost('getProseTrainingView', { entity_id: entityId });
+            if (data.status !== 'ok' || !data.training_view) {
+                listEl.innerHTML = '<div style="padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--err);">' + escHtml(data.error || 'Not found') + '</div>';
+                return;
+            }
+            const tv = data.training_view;
+            listEl.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = 'prose-item selected';
+            item.innerHTML = '<div class="prose-item-title">' + escHtml(tv.prose.title) + '</div><div class="prose-item-meta">' + escHtml(tv.prose.entity_id) + '</div>';
+            listEl.appendChild(item);
+
+            renderProseTrainingView(tv);
+            currentProseEntityId = entityId;
+            setDot('ok');
+        } catch(e) {
+            listEl.innerHTML = '<div style="padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--err);">Network error.</div>';
+        }
+    }
+
+    function renderProseTrainingView(tv) {
+        const prose = tv.prose;
+        const annotations = tv.annotations || [];
+
+        document.getElementById('prose-view-empty').style.display = 'none';
+        document.getElementById('prose-view-content').style.display = 'block';
+        document.getElementById('prose-view-title').textContent = prose.title;
+        document.getElementById('prose-view-status').textContent = prose.draft_status_id;
+        document.getElementById('prose-view-body').textContent = prose.body;
+
+        const annEl = document.getElementById('prose-view-annotations');
+        if (annotations.length === 0) {
+            annEl.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);">No annotations.</div>';
+            return;
+        }
+        annEl.innerHTML = annotations.map(a => `
+    <div class="annotation-row">
+      <span class="ann-type">${escHtml(a.type)}</span>
+      <span class="ann-value">${escHtml(a.value)}</span>
+      ${a.subject ? '<span class="ann-span">' + escHtml(a.subject) + '</span>' : ''}
+      ${a.span ? '<span class="ann-span">[' + a.span[0] + '–' + a.span[1] + ']</span>' : ''}
+    </div>
+  `).join('');
+
+        // Prefill annotate tab
+        document.getElementById('pa-entity-id').value = prose.entity_id;
+    }
+
+    // ── Annotation row builder ──
+    function addAnnotationRow(prefix) {
+        const list = document.getElementById(prefix + '-ann-list');
+        const row = document.createElement('div');
+        row.className = 'ann-builder-row';
+        row.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">annotation_type_id</label>
+      <input class="form-input" placeholder="prose_annotation_type_...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">annotation_value_id</label>
+      <input class="form-input" placeholder="char_... / theme_...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">source_type_id</label>
+      <input class="form-input" placeholder="prose_annotation_source_...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">subject_entity_id</label>
+      <input class="form-input" placeholder="optional">
+    </div>
+    <div class="form-group">
+      <label class="form-label">span_start</label>
+      <input class="form-input" type="number" min="0" placeholder="null">
+    </div>
+    <div class="form-group">
+      <label class="form-label">span_end</label>
+      <input class="form-input" type="number" min="0" placeholder="null">
+    </div>
+    <button class="ann-remove" onclick="this.closest('.ann-builder-row').remove()" title="Remove">×</button>
+  `;
+        list.appendChild(row);
+    }
+
+    function collectAnnotations(prefix) {
+        const rows = document.querySelectorAll('#' + prefix + '-ann-list .ann-builder-row');
+        const annotations = [];
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const annotationTypeId = inputs[0].value.trim();
+            const annotationValueId = inputs[1].value.trim();
+            const sourceTypeId = inputs[2].value.trim();
+            const subjectEntityId = inputs[3].value.trim() || null;
+            const spanStartRaw = inputs[4].value.trim();
+            const spanEndRaw = inputs[5].value.trim();
+            if (!annotationTypeId || !annotationValueId || !sourceTypeId) return;
+            const ann = { annotation_type_id: annotationTypeId, annotation_value_id: annotationValueId, source_type_id: sourceTypeId, subject_entity_id: subjectEntityId };
+            if (spanStartRaw !== '' && spanEndRaw !== '') {
+                ann.span_start = parseInt(spanStartRaw);
+                ann.span_end = parseInt(spanEndRaw);
+            } else {
+                ann.span_start = null;
+                ann.span_end = null;
+            }
+            annotations.push(ann);
+        });
+        return annotations;
+    }
+
+    async function createProseDraft() {
+        const key = apiKey();
+        if (!key) { showNotice('pd-result', 'API key required.', 'err'); return; }
+
+        const entityId = document.getElementById('pd-entity-id').value.trim();
+        const title = document.getElementById('pd-title').value.trim();
+        const proseBody = document.getElementById('pd-body').value.trim();
+        const draftStatusId = document.getElementById('pd-status-id').value.trim();
+        const authorEntityId = document.getElementById('pd-author-id').value.trim() || null;
+        const projectionTypeId = document.getElementById('pd-proj-type').value.trim();
+        const targetEntityId = document.getElementById('pd-proj-target').value.trim();
+        const roleId = document.getElementById('pd-proj-role').value.trim();
+        const projectionOrder = parseInt(document.getElementById('pd-proj-order').value) || 1;
+        const isExportTarget = parseInt(document.getElementById('pd-proj-export').value);
+
+        if (!entityId || !title || !proseBody || !draftStatusId || !projectionTypeId || !targetEntityId || !roleId) {
+            showNotice('pd-result', 'Required fields missing.', 'err'); return;
+        }
+
+        document.getElementById('pd-result').innerHTML = '<div class="notice info"><span class="spinner"></span>creating…</div>';
+
+        const annotations = collectAnnotations('pd');
+
+        try {
+            const data = await apiPost('createProseDraft', {
+                entity_id: entityId, title, prose_body: proseBody, draft_status_id: draftStatusId,
+                author_entity_id: authorEntityId,
+                projection: { projection_type_id: projectionTypeId, target_entity_id: targetEntityId, role_id: roleId, projection_order: projectionOrder, is_export_target: isExportTarget },
+                annotations
+            });
+
+            if (data.status === 'ok') {
+                setDot('ok');
+                document.getElementById('pd-result').innerHTML = `<div class="result-card ok"><div class="rc-label">created</div><div class="rc-id">${escHtml(data.prose?.entity_id || entityId)}</div><div class="rc-detail">${escHtml(data.annotations?.inserted || 0)} annotation(s) inserted</div></div>`;
+                document.getElementById('prose-lookup-id').value = entityId;
+            } else {
+                setDot('err');
+                document.getElementById('pd-result').innerHTML = `<div class="result-card err"><div class="rc-label">error</div><div class="rc-err">${escHtml(data.error || JSON.stringify(data))}</div></div>`;
+            }
+        } catch(e) {
+            showNotice('pd-result', 'Network error: ' + e.message, 'err');
+        }
+    }
+
+    async function addAnnotations() {
+        const key = apiKey();
+        if (!key) { showNotice('pa-result', 'API key required.', 'err'); return; }
+
+        const entityId = document.getElementById('pa-entity-id').value.trim();
+        if (!entityId) { showNotice('pa-result', 'entity_id required.', 'err'); return; }
+
+        const annotations = collectAnnotations('pa');
+        if (annotations.length === 0) { showNotice('pa-result', 'Add at least one annotation row.', 'err'); return; }
+
+        document.getElementById('pa-result').innerHTML = '<div class="notice info"><span class="spinner"></span>adding…</div>';
+
+        try {
+            const data = await apiPost('addProseAnnotations', { entity_id: entityId, annotations });
+            if (data.status === 'ok') {
+                setDot('ok');
+                document.getElementById('pa-result').innerHTML = `<div class="result-card ok"><div class="rc-label">inserted</div><div class="rc-id">${data.annotations?.inserted || 0} annotation(s)</div></div>`;
+            } else {
+                setDot('err');
+                document.getElementById('pa-result').innerHTML = `<div class="result-card err"><div class="rc-label">error</div><div class="rc-err">${escHtml(data.error || JSON.stringify(data))}</div></div>`;
+            }
+        } catch(e) {
+            showNotice('pa-result', 'Network error: ' + e.message, 'err');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // THEME PANEL
+    // ═══════════════════════════════════════════
+    let themeProposals = [];
+
+    async function suggestThemes() {
+        const key = apiKey();
+        if (!key) return;
+
+        const contextEntityId = document.getElementById('th-context-id').value.trim() || null;
+        const summaryEl = document.getElementById('th-summary');
+        const proposalsEl = document.getElementById('th-proposals');
+
+        summaryEl.innerHTML = '<div class="notice info"><span class="spinner"></span>generating suggestions…</div>';
+        proposalsEl.innerHTML = '';
+        document.getElementById('th-apply-all-btn').style.display = 'none';
+        themeProposals = [];
+
+        try {
+            const body = {};
+            if (contextEntityId) body.context_entity_id = contextEntityId;
+            const data = await apiPost('suggestEntityEventThemeLink', body);
+
+            if (data.status !== 'ok' || !data.data) {
+                summaryEl.innerHTML = `<div class="notice err">${escHtml(data.error || 'No response')}</div>`;
+                setDot('err');
+                return;
+            }
+
+            const result = data.data;
+            themeProposals = result.proposals || [];
+
+            summaryEl.innerHTML = `<div class="notice info">${result.proposal_count} proposal${result.proposal_count !== 1 ? 's' : ''} found</div>`;
+
+            if (themeProposals.length === 0) {
+                proposalsEl.innerHTML = '<div style="font-family:var(--mono);font-size:12px;color:var(--text3);padding:8px 0;">No new theme links to suggest.</div>';
+                return;
+            }
+
+            document.getElementById('th-apply-all-btn').style.display = '';
+            renderProposals();
+            setDot('ok');
+        } catch(e) {
+            summaryEl.innerHTML = `<div class="notice err">Network error: ${escHtml(e.message)}</div>`;
+            setDot('err');
+        }
+    }
+
+    function renderProposals() {
+        const el = document.getElementById('th-proposals');
+        el.innerHTML = '';
+        themeProposals.forEach((p, i) => {
+            const card = document.createElement('div');
+            card.className = 'proposal-card' + (p._status === 'applied' ? ' applied' : p._status === 'rejected' ? ' rejected' : '');
+            card.id = 'proposal-' + i;
+            card.innerHTML = `
+      <div class="proposal-header">
+        <div>
+          <span class="proposal-subject">${escHtml(p.subject_entity_id)}</span>
+          <span class="proposal-arrow">→</span>
+          <span class="proposal-object">${escHtml(p.object_entity_id)}</span>
+        </div>
+        ${p._status ? `<span class="proposal-status-badge badge-${escHtml(p._status)}">${escHtml(p._status)}</span>` : ''}
+      </div>
+      <div class="proposal-body">
+        <span class="proposal-confidence">${escHtml(p.confidence_classval_id || '—')}</span>
+        <span class="proposal-evidence">${escHtml(p.evidence?.attribute_type_id || '')} → ${escHtml(p.evidence?.output_value_classval_id || '')}</span>
+        <div class="proposal-actions">
+          <button class="btn-apply" id="apply-btn-${i}" onclick="applyProposal(${i})" ${p._status ? 'disabled' : ''}>Apply</button>
+          <button class="btn-reject" onclick="rejectProposal(${i})" ${p._status ? 'disabled' : ''}>Skip</button>
+        </div>
+      </div>
+    `;
+            el.appendChild(card);
+        });
+    }
+
+    async function applyProposal(index) {
+        const proposal = themeProposals[index];
+        if (!proposal) return;
+
+        const applyBtn = document.getElementById('apply-btn-' + index);
+        if (applyBtn) applyBtn.disabled = true;
+
+        try {
+            const data = await apiPost('applyEntityEventThemeLink', { proposal });
+            if (data.status === 'ok') {
+                const result = data.data;
+                themeProposals[index]._status = result.status; // 'applied' or 'duplicate'
+                setDot('ok');
+            } else {
+                themeProposals[index]._status = 'rejected';
+                setDot('err');
+            }
+        } catch(e) {
+            themeProposals[index]._status = 'rejected';
+        }
+        renderProposals();
+    }
+
+    function rejectProposal(index) {
+        themeProposals[index]._status = 'rejected';
+        renderProposals();
+    }
+
+    async function applyAllThemes() {
+        const pending = themeProposals.filter(p => !p._status);
+        if (pending.length === 0) return;
+
+        const btn = document.getElementById('th-apply-all-btn');
+        btn.disabled = true;
+        btn.textContent = 'Applying…';
+
+        for (let i = 0; i < themeProposals.length; i++) {
+            if (themeProposals[i]._status) continue;
+            await applyProposal(i);
+            await new Promise(r => setTimeout(r, 150)); // small delay between calls
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Apply All';
+
+        const applied = themeProposals.filter(p => p._status === 'applied').length;
+        const dupes = themeProposals.filter(p => p._status === 'duplicate').length;
+        document.getElementById('th-summary').innerHTML = `<div class="notice ok">${applied} applied, ${dupes} duplicate${dupes !== 1 ? 's' : ''}</div>`;
+    }
+</script>
+</body>
+</html>
