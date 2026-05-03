@@ -78,7 +78,7 @@ function create_calendar_event_under_event_entity(
         throw new InvalidArgumentException('parentEventEntityId must be non-empty');
     }
 
-    $stmt = $pdo->prepare("
+    $sql = "
         SELECT
             e.entity_type_id,
             ce.layer_id,
@@ -89,8 +89,9 @@ function create_calendar_event_under_event_entity(
             ON ce.entity_id = e.id
         WHERE e.id = :parent_event_entity_id
         LIMIT 1
-    ");
+    ";
 
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':parent_event_entity_id' => $parentEventEntityId,
     ]);
