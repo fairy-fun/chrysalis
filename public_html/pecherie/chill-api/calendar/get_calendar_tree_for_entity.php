@@ -51,7 +51,7 @@ try {
     $stmt = $pdo->prepare("
         WITH RECURSIVE calendar_tree AS (
             SELECT
-                ce.id AS _internal_id,
+                ce.`id` AS _internal_id,
                 ce.entity_id,
                 ce.event_id,
                 ce.parent_event_id AS _internal_parent_id,
@@ -71,7 +71,7 @@ try {
             UNION ALL
 
             SELECT
-                child.id AS _internal_id,
+                child.`id` AS _internal_id,
                 child.entity_id,
                 child.event_id,
                 child.parent_event_id AS _internal_parent_id,
