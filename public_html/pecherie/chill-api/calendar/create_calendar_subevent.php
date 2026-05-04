@@ -107,7 +107,7 @@ try {
         static fn($value) => $value !== null
     );
 
-    $event = ensure_calendar_event(
+    $result = ensure_calendar_subevent(
         $pdo,
         $parentEventEntityId,
         null,
@@ -117,7 +117,7 @@ try {
     respond(200, [
         'status' => 'ok',
         'database' => $expectedDatabase,
-        'event' => $event,
+        'event' => $result,
     ]);
 
 } catch (InvalidArgumentException $e) {
