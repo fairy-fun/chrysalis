@@ -51,10 +51,10 @@ try {
     $stmt = $pdo->prepare("
         WITH RECURSIVE calendar_tree AS (
             SELECT
-                ce.id,
+                ce.id AS _internal_id,
                 ce.entity_id,
                 ce.event_id,
-                ce.parent_event_id,
+                ce.parent_event_id AS _internal_parent_id,
                 ce.layer_id,
                 ce.sequence_index,
                 ce.summary,
@@ -71,10 +71,10 @@ try {
             UNION ALL
 
             SELECT
-                child.id,
+                child.id AS _internal_id,
                 child.entity_id,
                 child.event_id,
-                child.parent_event_id,
+                child.parent_event_id AS _internal_parent_id,
                 child.layer_id,
                 child.sequence_index,
                 child.summary,
@@ -87,14 +87,14 @@ try {
             INNER JOIN sxnzlfun_chrysalis.entities child_entity
                 ON child_entity.id = child.entity_id
             INNER JOIN calendar_tree
-                ON child.parent_event_id = calendar_tree.id
+                ON child.parent_event_id = calendar_tree._internal_id
             WHERE calendar_tree.depth < :max_depth
         )
         SELECT
-            id,
+            _internal_id,
+            _internal_parent_id,
             entity_id,
             event_id,
-            parent_event_id,
             layer_id,
             sequence_index,
             summary,
@@ -104,7 +104,7 @@ try {
             chronology_address,
             depth
         FROM calendar_tree
-        ORDER BY depth ASC, parent_event_id ASC, sequence_index ASC, id ASC
+        ORDER BY depth ASC, _internal_parent_id ASC, sequence_index ASC, _internal_id ASC
     ");
 
     $stmt->execute([
@@ -142,18 +142,18 @@ try {
             ]);
         }
 
-        $row['id'] = (int)$row['id'];
-        $row['event_id'] = (int)$row['event_id'];
-        $row['parent_event_id'] = $row['parent_event_id'] === null
+        $row['_internal_id'] = (int)$row['_internal_id'];
+        $row['_internal_parent_id'] = $row['_internal_parent_id'] === null
             ? null
-            : (int)$row['parent_event_id'];
+            : (int)$row['_internal_parent_id'];
+        $row['event_id'] = (int)$row['event_id'];
         $row['sequence_index'] = $row['sequence_index'] === null
             ? null
             : (int)$row['sequence_index'];
         $row['depth'] = (int)$row['depth'];
         $row['children'] = [];
 
-        $nodesById[$row['id']] = $row;
+        $nodesById[$row['_internal_id']] = $row;
 
         if ($row['depth'] === 0) {
             $root = $row;
@@ -168,12 +168,12 @@ try {
         ]);
     }
 
-    foreach ($nodesById as $id => &$node) {
+    foreach ($nodesById as &$node) {
         if ($node['depth'] === 0) {
             continue;
         }
 
-        $parentId = $node['parent_event_id'];
+        $parentId = $node['_internal_parent_id'];
 
         if ($parentId !== null && array_key_exists($parentId, $nodesById)) {
             $nodesById[$parentId]['children'][] = &$node;
@@ -181,16 +181,16 @@ try {
     }
     unset($node);
 
-    $rootId = $root['id'];
-    $root = stripInternalIds($nodesById[$rootId]);
+    $rootId = $root['_internal_id'];
+    $root = stripCalendarTreeInternalFields($nodesById[$rootId]);
 
-    function stripInternalIds(array $node): array
+    function stripCalendarTreeInternalFields(array $node): array
     {
-        unset($node['id']);
+        unset($node['_internal_id'], $node['_internal_parent_id']);
 
         if (!empty($node['children'])) {
             foreach ($node['children'] as &$child) {
-                $child = stripInternalIds($child);
+                $child = stripCalendarTreeInternalFields($child);
             }
         }
 
