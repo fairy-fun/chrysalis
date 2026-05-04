@@ -29,6 +29,7 @@ $expectedDatabase = verifyExpectedDatabase($pdo);
 try {
     $parent = $pdo->prepare("
         SELECT
+            ce.`id` AS _internal_id,
             ce.entity_id,
             ce.event_id,
             ce.parent_event_id,
@@ -79,7 +80,6 @@ try {
         SELECT
             ce.entity_id,
             ce.event_id,
-            ce.parent_event_id,
             ce.layer_id,
             ce.sequence_index,
             ce.summary,
@@ -96,10 +96,12 @@ try {
     ");
 
     $stmt->execute([
-        ':parent_event_id' => (int)$time['event_id'],
+        ':parent_event_id' => (int)$time['_internal_id'],
     ]);
 
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    unset($time['_internal_id']);
 
     respond(200, [
         'status' => 'ok',
