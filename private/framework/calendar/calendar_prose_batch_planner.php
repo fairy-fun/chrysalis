@@ -32,6 +32,7 @@ function generate_calendar_batch_from_prose(
             'operation' => 'createCalendarSubevent',
             'parent_event_entity_id' => $parentEventEntityId,
             'event_label' => $summary,
+            'beat_type' => $beat['type'],
         ];
     }
 
@@ -45,6 +46,18 @@ function generate_calendar_batch_from_prose(
         'parent_event_entity_id' => $parentEventEntityId,
         'operation_count' => count($operations),
         'operations' => $operations,
+    ];
+}
+
+function allowed_calendar_beat_types(): array {
+    return [
+        'instruction',
+        'demonstration',
+        'correction',
+        'interaction',
+        'evaluation',
+        'reflection',
+        'transition',
     ];
 }
 
@@ -125,43 +138,71 @@ function normalise_calendar_beat_summary(string $segment): string {
 function classify_calendar_beat_type(string $summary): string {
     $lower = mb_strtolower($summary);
 
-    if (str_contains($lower, 'demonstrat')) {
-        return 'demonstration';
-    }
-
-    if (
-        str_contains($lower, 'correct') ||
-        str_contains($lower, 'adjust') ||
-        str_contains($lower, 'fix')
-    ) {
-        return 'correction';
-    }
-
     if (
         str_contains($lower, 'explain') ||
-        str_contains($lower, 'says') ||
-        str_contains($lower, 'tells')
+        str_contains($lower, 'rule') ||
+        str_contains($lower, 'principle') ||
+        str_contains($lower, 'concept') ||
+        str_contains($lower, 'frame')
     ) {
         return 'instruction';
     }
 
     if (
-        str_contains($lower, 'watch') ||
-        str_contains($lower, 'notice') ||
-        str_contains($lower, 'observe')
+        str_contains($lower, 'demonstrat') ||
+        str_contains($lower, 'show') ||
+        str_contains($lower, 'perform') ||
+        str_contains($lower, 'model')
     ) {
-        return 'observation';
+        return 'demonstration';
     }
 
     if (
-        str_contains($lower, 'evaluate') ||
+        str_contains($lower, 'correct') ||
+        str_contains($lower, 'incorrect') ||
+        str_contains($lower, 'error') ||
+        str_contains($lower, 'fix') ||
+        str_contains($lower, 'adjust')
+    ) {
+        return 'correction';
+    }
+
+    if (
+        str_contains($lower, 'touch') ||
+        str_contains($lower, 'takes my') ||
+        str_contains($lower, 'dialogue') ||
+        str_contains($lower, 'asks') ||
+        str_contains($lower, 'answers') ||
+        str_contains($lower, 'responds')
+    ) {
+        return 'interaction';
+    }
+
+    if (
+        str_contains($lower, 'acceptable') ||
+        str_contains($lower, 'good') ||
+        str_contains($lower, 'nods') ||
+        str_contains($lower, 'judges') ||
+        str_contains($lower, 'approval') ||
         str_contains($lower, 'assess')
     ) {
         return 'evaluation';
     }
 
-    return 'action';
+    if (
+        str_contains($lower, 'i think') ||
+        str_contains($lower, 'i realise') ||
+        str_contains($lower, 'i notice') ||
+        str_contains($lower, 'has been downgraded') ||
+        str_contains($lower, 'system') ||
+        str_contains($lower, 'meta')
+    ) {
+        return 'reflection';
+    }
+
+    return 'transition';
 }
+
 
 function dedupe_calendar_beats(array $beats): array {
     $seen = [];
