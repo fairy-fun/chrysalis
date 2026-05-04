@@ -332,6 +332,18 @@ Optimise later via:
 - caching
 - materialised read model
 ```
+### Implementation Note (Updated)
+
+Chronology resolution may be implemented via:
+
+- recursive traversal (e.g. SQL recursive CTE) — preferred for set-based queries
+- per-node resolution — simpler but O(depth) per lookup
+
+Both approaches must derive chronology from structural relationships
+(parent_event_id + sequence_index).
+
+At no point should chronology_address be stored, indexed, or used
+as a direct lookup key in the database.
 
 ---
 
@@ -643,3 +655,15 @@ ensure_node:
 If a write does not go through ensure_node,
 it is a bug.
 ```
+
+Current Status:
+- Structural identity enforced
+- Ensure-based writes implemented
+- Entity typing aligned with layer_id
+- Legacy classval identity removed
+
+Remaining:
+- event_id resolution
+- removal of legacy creator patterns
+- API boundary cleanup
+- audit + enforcement hardening
