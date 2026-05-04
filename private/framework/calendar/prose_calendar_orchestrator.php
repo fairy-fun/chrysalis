@@ -30,23 +30,15 @@ function execute_calendar_batch_from_prose(
         throw new RuntimeException('Missing plan_id');
     }
 
-    // -----------------------------
-    // Load existing subevents
-    // -----------------------------
     $existing = load_existing_subevents($pdo, $parentEventEntityId);
 
-    // Track incoming hashes
     $incomingHashes = [];
+    $incomingOrder = [];
 
     $results = [];
     $executedCount = 0;
     $idempotentCount = 0;
 
-    $incomingOrder = [];
-
-    // -----------------------------
-    // Execute creates (idempotent)
-    // -----------------------------
     foreach ($operations as $index => $op) {
 
         if (($op['operation'] ?? '') !== 'createCalendarSubevent') {
@@ -57,11 +49,8 @@ function execute_calendar_batch_from_prose(
         $beatHash = $op['beat_hash'] ?? null;
 
         if (is_string($beatHash) && $beatHash !== '') {
-            $incomingOrder[$beatHash] = $op['order_index'];
-        }
-
-        if (is_string($beatHash) && $beatHash !== '') {
             $incomingHashes[] = $beatHash;
+            $incomingOrder[$beatHash] = (int)($op['order_index'] ?? $index);
         }
 
         $payload = [
@@ -71,12 +60,11 @@ function execute_calendar_batch_from_prose(
             'client_id' => $clientId,
         ];
 
-        // passthroughs
         if (isset($op['beat_inference'])) {
             $payload['beat_inference'] = $op['beat_inference'];
         }
 
-        if ($beatHash) {
+        if (is_string($beatHash) && $beatHash !== '') {
             $payload['beat_hash'] = $beatHash;
         }
 
@@ -92,25 +80,26 @@ function execute_calendar_batch_from_prose(
             'index' => $index,
             'client_id' => $clientId,
             'beat_hash' => $beatHash,
+            'order_index' => $incomingOrder[$beatHash] ?? null,
             'result' => $result,
         ];
     }
 
-    // -----------------------------
-    // Diff: delete stale beats
-    // -----------------------------
     $existingHashes = array_keys($existing);
     $toDelete = array_diff($existingHashes, $incomingHashes);
 
-    $deleted = [];
+    $deleteCandidates = [];
 
     foreach ($toDelete as $hash) {
-        $entityId = $existing[$hash];
-        delete_calendar_subevent($pdo, $entityId);
-
-        $deleted[] = [
+        $deleteCandidates[] = [
             'beat_hash' => $hash,
-            'entity_id' => $entityId,
+            'entity_id' => $existing[$hash]['entity_id'],
+            'event_id' => (int)$existing[$hash]['event_id'],
+            'subevent_index' => (int)$existing[$hash]['subevent_index'],
+            'manual_sql' => sprintf(
+                "DELETE FROM sxnzlfun_chrysalis.calendar_events WHERE event_id = %d AND layer_id = 'calendar_layer_subevent';",
+                (int)$existing[$hash]['event_id']
+            ),
         ];
     }
 
@@ -120,8 +109,9 @@ function execute_calendar_batch_from_prose(
         'operation_count' => count($operations),
         'executed_count' => $executedCount,
         'idempotent_count' => $idempotentCount,
-        'deleted_count' => count($deleted),
-        'deleted' => $deleted,
+        'delete_required' => count($deleteCandidates) > 0,
+        'delete_candidate_count' => count($deleteCandidates),
+        'delete_candidates' => $deleteCandidates,
         'results' => $results,
     ];
 }
@@ -133,7 +123,6 @@ function execute_calendar_batch_from_prose(
 
 function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
 
-    // Step 1 — resolve parent event_id
     $stmt = $pdo->prepare("
         SELECT event_id
         FROM sxnzlfun_chrysalis.calendar_events
@@ -151,7 +140,6 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
 
     $parentEventId = $row['event_id'];
 
-    // Step 2 — fetch subevents
     $stmt = $pdo->prepare("
         SELECT entity_id, event_id, beat_hash, subevent_index
         FROM sxnzlfun_chrysalis.calendar_events
@@ -169,22 +157,11 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
         if (is_string($hash) && $hash !== '') {
             $map[$hash] = [
                 'entity_id' => $row['entity_id'],
-                'event_id' => $row['event_id'],
+                'event_id' => (int)$row['event_id'],
                 'subevent_index' => (int)$row['subevent_index'],
             ];
         }
     }
 
     return $map;
-}
-
-function delete_calendar_subevent(PDO $pdo, string $entityId): void {
-
-    $stmt = $pdo->prepare("
-        DELETE FROM sxnzlfun_chrysalis.calendar_events
-        WHERE entity_id = :id
-        AND layer_id = 'calendar_layer_subevent'
-    ");
-
-    $stmt->execute([':id' => $entityId]);
 }
