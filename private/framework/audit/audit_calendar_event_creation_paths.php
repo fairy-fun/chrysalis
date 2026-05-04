@@ -114,5 +114,20 @@ function assert_calendar_event_creation_paths(): void
                 "Hierarchical creator naming detected in {$path}; use ensure chain"
             );
         }
+
+        if (preg_match('/\bWHERE\s+chronology_address\s*=/i', $contents)) {
+            throw new RuntimeException("Forbidden chronology_address lookup in {$path}");
+        }
+
+        if (preg_match('/\bUPDATE\s+(?:sxnzlfun_chrysalis\.)?calendar_events\s+SET\s+chronology_address\b/i', $contents)) {
+            throw new RuntimeException("Forbidden chronology_address mutation in {$path}");
+        }
+
+        if (
+            str_contains($path, '/public_html/') &&
+            preg_match('/\bcalendar_events\.id\b|\bce\.id\b/i', $contents)
+        ) {
+            throw new RuntimeException("Public API exposes calendar_events.id in {$path}");
+        }
     }
 }
