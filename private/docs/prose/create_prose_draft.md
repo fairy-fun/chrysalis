@@ -88,9 +88,17 @@ FK 1216 on draft_status_id	FK not migrated to entities
 FK 1216 on role_id	FK still exists on prose_projections
 Hanging request	PHP error before response
 projection.role_id invalid	Old validator not removed
-🧩 Design Notes (LOCKED)
+### 🧩 Design Notes (LOCKED)
 Prose = canonical source
 Annotations = curated facts
 Training view = derived (read-only)
 No suggestion persistence
 No SQL business logic
+
+
+Post-creation workflows MAY:
+
+- generate derived calendar structures (e.g. beats)
+- using separate orchestration pipelines
+
+These are not part of the createProseDraft contract.

@@ -232,3 +232,19 @@ Anti-Patterns (Disallowed)
 * no schema violations
 * annotation spans valid
 * retrieval consistent
+
+## Derived Calendar Structures (Beats)
+
+Beats are NOT part of prose projection.
+
+They are:
+
+- derived from prose_body
+- materialized as calendar subevents
+- constrained by calendar domain rules
+
+Generation must occur AFTER prose draft creation.
+
+Persistence is handled exclusively by calendar APIs.
+
+Inference metadata MUST NOT be stored in prose tables.
