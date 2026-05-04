@@ -48,7 +48,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['attribute_domains', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['calendar_events', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['calendar_events_old', 'domain_id', 'DOMAIN_ENTITY_FK'],
-        ['calendar_beat_domain_map', 'domain_id', 'CLASSVAL'],
+    ['calendar_beat_domain_map', 'domain_id', 'DOMAIN_CLASSVAL'],
         ['calendar_records', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'input_domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'target_domain_id', 'DOMAIN_ENTITY_FK'],
@@ -179,6 +179,24 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
                 WHERE t.{$columnName} IS NOT NULL
                   AND t.{$columnName} <> ''
                   AND c.id IS NULL
+                GROUP BY t.{$columnName}
+                ORDER BY t.{$columnName}
+            ";
+        } elseif ($expectedKind === 'DOMAIN_CLASSVAL') {
+            $sql = "
+                SELECT
+                    '{$tableName}' AS table_name,
+                    '{$columnName}' AS column_name,
+                    '{$expectedKind}' AS expected_kind,
+                    t.{$columnName} AS invalid_value,
+                    NULL AS actual_entity_type_id,
+                    COUNT(*) AS reference_count
+                FROM {$schemaName}.{$tableName} t
+                LEFT JOIN {$schemaName}.calendar_domain_classvals cd
+                    ON cd.id COLLATE utf8mb4_general_ci = t.{$columnName} COLLATE utf8mb4_general_ci
+                WHERE t.{$columnName} IS NOT NULL
+                  AND t.{$columnName} <> ''
+                  AND cd.id IS NULL
                 GROUP BY t.{$columnName}
                 ORDER BY t.{$columnName}
             ";
