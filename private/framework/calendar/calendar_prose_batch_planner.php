@@ -27,7 +27,7 @@ function generate_calendar_batch_from_prose(
     $beats = extract_calendar_beats($prose);
 
     // -----------------------------
-    // Plan identity (stable)
+    // Plan identity (diagnostic only)
     // -----------------------------
     $planSeed = json_encode([
         'parent' => $parentEventEntityId,
@@ -57,9 +57,12 @@ function generate_calendar_batch_from_prose(
             'event_label' => $summary,
             'beat_type_id' => map_calendar_beat_code_to_id((string)$beat['type']),
             'beat_inference' => $beat['inference'] ?? null,
-            'client_id' => $planId . ':' . $i,
+
+            // ✅ STABLE SLOT IDENTITY (core change)
+            'client_id' => 'calendar_event:' . $parentEventEntityId . ':slot:' . $i,
+
             'order_index' => $i,
-            'beat_hash' => $beatHash,
+            'beat_hash' => $beatHash, // diagnostic only
         ];
     }
 
@@ -72,7 +75,7 @@ function generate_calendar_batch_from_prose(
         'mode' => 'plan_only',
         'parent_event_entity_id' => $parentEventEntityId,
         'beat_extractor_version' => CALENDAR_BEAT_EXTRACTOR_VERSION,
-        'plan_id' => $planId,
+        'plan_id' => $planId, // retained for debugging/visibility
         'operation_count' => count($operations),
         'beats' => $beats,
         'operations' => $operations,
