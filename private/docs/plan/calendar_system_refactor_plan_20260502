@@ -43,8 +43,12 @@ Identity = projection + parent + layer + sequence_index
 ```text
 - Derived only
 - Never written as authority
-- Never used for lookup or uniqueness
-- Exists only in read/query layer
+- Never used for identity or uniqueness
+- Never used in write paths
+- MAY be used as a read-only query interface
+
+All chronology-based lookups must resolve via structural traversal
+(parent_event_id + sequence_index), not direct column matching.
 ```
 
 ---

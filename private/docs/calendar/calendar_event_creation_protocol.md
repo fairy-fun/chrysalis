@@ -18,7 +18,7 @@ The primitive is:
 
 Event-layer callers should use the semantic creator functions in:
 
-`private/framework/calendar/calendar_event_semantic_creator.php`
+`private/framework/calendar/calendar_layer_ensurers.php`
 
 Those functions validate the parent entity and delegate to the ensurer.
 

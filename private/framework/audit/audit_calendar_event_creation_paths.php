@@ -6,10 +6,6 @@ function assert_calendar_event_creation_paths(): void
 {
     $repoRoot = dirname(__DIR__, 3);
 
-    $allowedLegacyShimFile = realpath(
-        $repoRoot . '/private/framework/calendar/calendar_event_semantic_creator.php'
-    );
-
     $allowedLayerEnsurerFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_layer_ensurers.php'
     );
@@ -88,8 +84,7 @@ function assert_calendar_event_creation_paths(): void
 
         // ❌ Block deprecated creator usage outside the compatibility shim itself.
         if (
-            str_contains($contents, 'create_calendar_event_under_') &&
-            $path !== $allowedLegacyShimFile
+            str_contains($contents, 'create_calendar_event_under_')
         ) {
             throw new RuntimeException(
                 "Forbidden legacy calendar event creator usage in {$path}"
@@ -97,10 +92,7 @@ function assert_calendar_event_creation_paths(): void
         }
 
         // ❌ Block deprecated generic creator usage.
-        if (
-            str_contains($contents, 'create_calendar_event(') &&
-            !str_contains($path, 'calendar_event_creator.php')
-        ) {
+        if (str_contains($contents, 'create_calendar_event(')) {
             throw new RuntimeException(
                 "Deprecated create_calendar_event() usage in {$path}"
             );
@@ -117,10 +109,7 @@ function assert_calendar_event_creation_paths(): void
         }
 
         // ❌ Block old hierarchical creator naming outside deprecated shim comments/defs.
-        if (
-            preg_match('/under_.*(?:event|time|day)/i', $contents) &&
-            $path !== $allowedLegacyShimFile
-        ) {
+        if (preg_match('/under_.*(?:event|time|day)/i', $contents)) {
             throw new RuntimeException(
                 "Hierarchical creator naming detected in {$path}; use ensure chain"
             );

@@ -18,7 +18,7 @@ The write primitive is:
 
 Event-layer creation should go through the semantic creator in:
 
-`private/framework/calendar/calendar_event_semantic_creator.php`
+`private/framework/calendar/calendar_layer_ensurers.php`
 
 ## Current Construction Rule
 

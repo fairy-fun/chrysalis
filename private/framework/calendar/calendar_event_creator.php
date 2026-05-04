@@ -10,6 +10,5 @@ declare(strict_types=1);
 function create_calendar_event(...$args): array
 {
     throw new RuntimeException(
-        'create_calendar_event is deprecated. Use create_calendar_event_under_time_entity instead.'
-    );
+        'create_calendar_event is deprecated. Use ensure_calendar_event instead.'    );
 }
