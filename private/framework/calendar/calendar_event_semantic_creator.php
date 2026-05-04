@@ -24,7 +24,7 @@ function create_calendar_event_under_time_entity(
         $pdo,
         (string)$row['projection_entity_id'],
         'calendar_layer_event',
-        (int)$row['event_id'],
+        (int)$row['calendar_event_row_id'],
         null,
         $payload
     );
@@ -49,7 +49,7 @@ function create_calendar_event_under_event_entity(
         $pdo,
         (string)$row['projection_entity_id'],
         'calendar_layer_event',
-        (int)$row['event_id'],
+        (int)$row['calendar_event_row_id'],
         null,
         $payload
     );
@@ -70,6 +70,7 @@ function _resolve_calendar_parent_node_for_event_creation(
         SELECT
             e.id AS entity_id,
             e.entity_type_id,
+            ce.id AS calendar_event_row_id,
             ce.layer_id,
             ce.projection_entity_id,
             ce.event_id
@@ -89,6 +90,15 @@ function _resolve_calendar_parent_node_for_event_creation(
     if ($row === false) {
         throw new RuntimeException(
             'Parent entity not found or not a calendar node: ' . $entityId
+        );
+    }
+
+    if (
+        !isset($row['calendar_event_row_id']) ||
+        (int)$row['calendar_event_row_id'] < 1
+    ) {
+        throw new RuntimeException(
+            'Invalid parent calendar node: missing valid calendar row id for entity ' . $entityId
         );
     }
 
