@@ -6,7 +6,7 @@ require_once __DIR__ . '/calendar_prose_batch_planner.php';
 require_once __DIR__ . '/calendar_subevent_service.php';
 
 /**
- * Execute a prose → calendar batch with replay safety.
+ * Execute a prose → calendar batch with replay safety + diffing.
  */
 function execute_calendar_batch_from_prose(
     PDO $pdo,
@@ -30,16 +30,32 @@ function execute_calendar_batch_from_prose(
         throw new RuntimeException('Missing plan_id');
     }
 
+    // -----------------------------
+    // Load existing subevents
+    // -----------------------------
+    $existing = load_existing_subevents($pdo, $parentEventEntityId);
+
+    // Track incoming hashes
+    $incomingHashes = [];
+
     $results = [];
     $executedCount = 0;
     $idempotentCount = 0;
 
+    // -----------------------------
+    // Execute creates (idempotent)
+    // -----------------------------
     foreach ($operations as $index => $op) {
-
-        $clientId = $planId . ':' . $index;
 
         if (($op['operation'] ?? '') !== 'createCalendarSubevent') {
             continue;
+        }
+
+        $clientId = $planId . ':' . $index;
+        $beatHash = $op['beat_hash'] ?? null;
+
+        if (is_string($beatHash) && $beatHash !== '') {
+            $incomingHashes[] = $beatHash;
         }
 
         $payload = [
@@ -49,9 +65,13 @@ function execute_calendar_batch_from_prose(
             'client_id' => $clientId,
         ];
 
-        // Optional passthrough
+        // passthroughs
         if (isset($op['beat_inference'])) {
             $payload['beat_inference'] = $op['beat_inference'];
+        }
+
+        if ($beatHash) {
+            $payload['beat_hash'] = $beatHash;
         }
 
         $result = create_calendar_subevent_core($pdo, $payload);
@@ -65,7 +85,26 @@ function execute_calendar_batch_from_prose(
         $results[] = [
             'index' => $index,
             'client_id' => $clientId,
+            'beat_hash' => $beatHash,
             'result' => $result,
+        ];
+    }
+
+    // -----------------------------
+    // Diff: delete stale beats
+    // -----------------------------
+    $existingHashes = array_keys($existing);
+    $toDelete = array_diff($existingHashes, $incomingHashes);
+
+    $deleted = [];
+
+    foreach ($toDelete as $hash) {
+        $entityId = $existing[$hash];
+        delete_calendar_subevent($pdo, $entityId);
+
+        $deleted[] = [
+            'beat_hash' => $hash,
+            'entity_id' => $entityId,
         ];
     }
 
@@ -75,7 +114,67 @@ function execute_calendar_batch_from_prose(
         'operation_count' => count($operations),
         'executed_count' => $executedCount,
         'idempotent_count' => $idempotentCount,
+        'deleted_count' => count($deleted),
+        'deleted' => $deleted,
         'results' => $results,
     ];
 }
 
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
+
+    // Step 1 — resolve parent event_id
+    $stmt = $pdo->prepare("
+        SELECT event_id
+        FROM sxnzlfun_chrysalis.calendar_events
+        WHERE entity_id = :entity_id
+        AND layer_id = 'calendar_layer_event'
+        LIMIT 1
+    ");
+    $stmt->execute([':entity_id' => $parentEntityId]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        throw new RuntimeException('Invalid parent_event_entity_id');
+    }
+
+    $parentEventId = $row['event_id'];
+
+    // Step 2 — fetch subevents
+    $stmt = $pdo->prepare("
+        SELECT entity_id, beat_hash
+        FROM sxnzlfun_chrysalis.calendar_events
+        WHERE parent_event_id = :parent_event_id
+        AND layer_id = 'calendar_layer_subevent'
+    ");
+
+    $stmt->execute([':parent_event_id' => $parentEventId]);
+
+    $map = [];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $hash = $row['beat_hash'] ?? null;
+
+        if (is_string($hash) && $hash !== '') {
+            $map[$hash] = $row['entity_id'];
+        }
+    }
+
+    return $map;
+}
+
+function delete_calendar_subevent(PDO $pdo, string $entityId): void {
+
+    $stmt = $pdo->prepare("
+        DELETE FROM sxnzlfun_chrysalis.calendar_events
+        WHERE entity_id = :id
+        AND layer_id = 'calendar_layer_subevent'
+    ");
+
+    $stmt->execute([':id' => $entityId]);
+}

@@ -49,18 +49,17 @@ function generate_calendar_batch_from_prose(
             continue;
         }
 
+        $beatHash = hash('sha256', mb_strtolower($summary));
+
         $operations[] = [
             'operation' => 'createCalendarSubevent',
             'parent_event_entity_id' => $parentEventEntityId,
             'event_label' => $summary,
             'beat_type_id' => map_calendar_beat_code_to_id((string)$beat['type']),
             'beat_inference' => $beat['inference'] ?? null,
-
-            // ✅ idempotency
             'client_id' => $planId . ':' . $i,
-
-            // ✅ stable ordering
             'order_index' => $i,
+            'beat_hash' => $beatHash,
         ];
     }
 
