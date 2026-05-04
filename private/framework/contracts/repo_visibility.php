@@ -35,7 +35,6 @@ return [
         'private/framework/procedures/calendar_event_id.php',
         'private/framework/calendar/calendar_event_projection_target_guard.php',
         'private/framework/calendar/calendar_hierarchy_validator.php',
-        'private/framework/calendar/calendar_week_creator.php',
         'private/framework/calendar/calendar_day_creator.php',
         'private/framework/calendar/calendar_event_creator.php',
         'private/framework/calendar/calendar_node_ensurer.php',

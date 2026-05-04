@@ -5,8 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
-require_once __DIR__ . '/../../../../private/framework/calendar/calendar_week_creator.php';
-
+require_once __DIR__ . '/../../../../private/framework/calendar/calendar_layer_ensurers.php';
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(405, ['error' => 'Method not allowed']);
 }
@@ -56,12 +55,14 @@ $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
-    $week = create_calendar_week_for_book(
+    $week = ensure_calendar_week(
         $pdo,
         $bookCode,
         $weekIndex,
-        $weekLabel,
-        $realDateStartId
+        [
+            'week_label' => $weekLabel,
+            'real_date_start_id' => $realDateStartId,
+        ]
     );
 
     respond(200, [
