@@ -96,10 +96,11 @@ function execute_calendar_batch_from_prose(
             'entity_id' => $existing[$hash]['entity_id'],
             'event_id' => (int)$existing[$hash]['event_id'],
             'subevent_index' => (int)$existing[$hash]['subevent_index'],
-            'manual_sql' => sprintf(
-                "DELETE FROM sxnzlfun_chrysalis.calendar_events WHERE event_id = %d AND layer_id = 'calendar_layer_subevent';",
-                (int)$existing[$hash]['event_id']
-            ),
+            'manual_action' => [
+                'type' => 'delete_subevent',
+                'event_id' => (int)$existing[$hash]['event_id'],
+                'layer_id' => 'calendar_layer_subevent',
+            ],
         ];
     }
 
