@@ -7,6 +7,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/calendar/calendar_layer_ensurers.php';
 require_once __DIR__ . '/../../../../private/framework/classvals/classval_validation.php';
+require_once __DIR__ . '/../../../../private/framework/calendar/calendar_subevent_service.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(405, ['error' => 'Method not allowed']);

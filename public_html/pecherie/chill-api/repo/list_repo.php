@@ -166,6 +166,14 @@ function is_listable_path(string $relativePath, array $visiblePrefixes, array $v
         return true;
     }
 
+    $nonListableBridgePrefixes = [
+        'public_html/pecherie/chill-api',
+    ];
+
+    if (in_array($relativePath, $nonListableBridgePrefixes, true)) {
+        return false;
+    }
+
     foreach ($visiblePrefixes as $prefix) {
         if ($relativePath === $prefix) {
             return true;
