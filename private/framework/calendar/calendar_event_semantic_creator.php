@@ -72,6 +72,7 @@ function _resolve_calendar_parent_node_for_event_creation(
             e.entity_type_id,
             ce.id AS calendar_event_row_id,
             ce.layer_id,
+            ce.id AS calendar_id,
             ce.projection_entity_id,
             ce.event_id
         FROM sxnzlfun_chrysalis.entities e
@@ -111,7 +112,7 @@ function _resolve_calendar_parent_node_for_event_creation(
         );
     }
 
-    if (!isset($row['event_id']) || (int)$row['event_id'] < 1) {
+    if (!isset($row['event_id']) || (int)$row['calendar_id'] < 1) {
         throw new RuntimeException(
             'Invalid parent calendar node: missing valid event_id for entity ' . $entityId
         );
