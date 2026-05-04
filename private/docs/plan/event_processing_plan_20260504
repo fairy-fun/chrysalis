@@ -1,0 +1,92 @@
+1) Inheritance Mode (Domain/Class/Event Type Propagation)
+🎯 Goal
+
+Subevents should NOT require repeated:
+
+domain_id
+class_type_id
+event_type_id
+
+They inherit from their parent event (calendar_event:336).
+
+🧠 Core Rule Change
+Before
+
+Each subevent is fully specified:
+
+subevent = independent semantic unit
+After
+subevent = structural unit + inherited semantics
+🏗️ Inheritance Contract
+Source of truth
+parent_event (calendar_event:336)
+Inherited fields
+domain_id
+class_type_id
+event_type_id
+location_id (optional inheritance)
+Override rule
+
+Only allowed if explicitly provided:
+
+subevent overrides parent field ONLY if non-null
+⚙️ Implementation Points
+1. API Layer (create_calendar_subevent.php)
+
+Replace manual assignment with:
+
+$parent = getCalendarEvent($pdo, $parentEventEntityId);
+
+$payload = array_merge([
+    'summary' => $eventLabel,
+], array_filter([
+    'event_type_id' => $eventTypeId ?? $parent['event_type_id'],
+    'domain_id'     => $domainId     ?? $parent['domain_id'],
+    'class_type_id' => $classTypeId ?? $parent['class_type_id'],
+    'location_id'   => $locationId   ?? $parent['location_id'],
+]));
+2. DB behavior (no schema change required)
+
+This is application-level inheritance only:
+
+no denormalization
+no copy-on-write required
+3. Ensurer layer (important)
+
+Ensure:
+
+calendar_node_ensurer
+
+does NOT overwrite inherited fields.
+
+📬 New Minimal Sub-event Payload (after change)
+
+You will reduce from this:
+
+{
+  "operation": "createCalendarSubevent",
+  "parent_event_entity_id": "...",
+  "event_label": "...",
+  "event_type_id": "...",
+  "domain_id": "...",
+  "class_type_id": "..."
+}
+To this:
+{
+  "operation": "createCalendarSubevent",
+  "parent_event_entity_id": "calendar_event:336",
+  "event_label": "Correct mechanics demonstrated"
+}
+🧠 Why this matters structurally
+
+You are enforcing:
+
+time defines context
+event defines semantics
+subevent defines sequence + nuance
+
+This removes:
+
+duplication drift
+inconsistent classification
+batch payload bloat
