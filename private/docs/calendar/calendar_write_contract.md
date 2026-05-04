@@ -304,11 +304,10 @@ create_calendar_day.php
 Allowed input:
 
 {
-  "operation": "createCalendarDay",
-  "parent_week_entity_id": "calendar_event:...",
-  "day_index": 1,
-  "day_label": "Sunday",
-  "real_date_id": "DATE-..."
+"operation": "createCalendarDay",
+"parent_week_entity_id": "calendar_event:...",
+"day_label": "Sunday",
+"real_date_id": "DATE-..."
 }
 
 Payload to ensurer:
@@ -322,10 +321,35 @@ Payload to ensurer:
 Rules:
 
 day_label maps to summary
-day_index maps to sequence_index
+sequence_index is allocated by the primitive layer.
+
+The API must not supply or control structural indices.
 real_date_id maps to start/end date fields
 parent is resolved by entity_id
 parent_event_id uses internal calendar_events.id
+
+Day ordering is determined exclusively by sequence_index.
+
+The next day is created by passing sequenceIndex: null,
+allowing the primitive to allocate the next valid position.
+
+Clients must not attempt to calculate or enforce ordering.
+
+The following fields must not be accepted from API input:
+
+- day_index
+- week_index
+- time_index
+- event_index
+- subevent_index
+
+These are derived or structural fields and are not part of the public write surface.
+
+Structure is defined only by:
+
+parent_event_id + sequence_index
+
+No other index field has structural meaning.
 
 
 ## Time Creation
