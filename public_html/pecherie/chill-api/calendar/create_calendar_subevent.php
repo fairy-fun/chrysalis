@@ -38,7 +38,7 @@ foreach ([
     if ($value !== null && !is_string($value)) {
         respond(400, [
             'status' => 'error',
-            'error' => "{$field} must be a string when provided",
+            'error' => "$field must be a string when provided",
         ]);
     }
 }
