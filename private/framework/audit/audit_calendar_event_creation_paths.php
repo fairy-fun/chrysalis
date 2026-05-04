@@ -10,6 +10,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_event_semantic_creator.php'
     );
 
+    $allowedLayerEnsurerFile = realpath(
+        $repoRoot . '/private/framework/calendar/calendar_layer_ensurers.php'
+    );
+
     $allowedInsertFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_node_ensurer.php'
     );
@@ -55,7 +59,11 @@ function assert_calendar_event_creation_paths(): void
             str_contains($contents, 'ensure_calendar_node') &&
             str_contains($contents, 'calendar_layer_event')
         ) {
-            if ($path !== $allowedEnsurerFile && $path !== $allowedInsertFile) {
+            if (
+                $path !== $allowedEnsurerFile &&
+                $path !== $allowedLayerEnsurerFile &&
+                $path !== $allowedInsertFile
+            ) {
                 throw new RuntimeException(
                     "Illegal event-layer creation via ensure_calendar_node in {$path}"
                 );
