@@ -23,15 +23,21 @@ $eventTypeId = $body['event_type_id'] ?? null;
 $locationId = $body['location_id'] ?? null;
 $domainId = $body['domain_id'] ?? null;
 $classTypeId = $body['class_type_id'] ?? null;
+$beatTypeId = $body['beat_type_id'] ?? null;
+
 $notes = $body['notes'] ?? null;
 $sourceDocument = $body['source_document'] ?? null;
 
+/**
+ * Type validation
+ */
 foreach ([
              'event_label' => $eventLabel,
              'event_type_id' => $eventTypeId,
              'location_id' => $locationId,
              'domain_id' => $domainId,
              'class_type_id' => $classTypeId,
+             'beat_type_id' => $beatTypeId,
              'notes' => $notes,
              'source_document' => $sourceDocument,
          ] as $field => $value) {
@@ -43,12 +49,16 @@ foreach ([
     }
 }
 
+/**
+ * Normalize
+ */
 $parentEventEntityId = is_string($parentEventEntityId) ? trim($parentEventEntityId) : $parentEventEntityId;
 $eventLabel = is_string($eventLabel) ? trim($eventLabel) : null;
 $eventTypeId = is_string($eventTypeId) ? trim($eventTypeId) : null;
 $locationId = is_string($locationId) ? trim($locationId) : null;
 $domainId = is_string($domainId) ? trim($domainId) : null;
 $classTypeId = is_string($classTypeId) ? trim($classTypeId) : null;
+$beatTypeId = is_string($beatTypeId) ? trim($beatTypeId) : null;
 $notes = is_string($notes) ? trim($notes) : null;
 $sourceDocument = is_string($sourceDocument) ? trim($sourceDocument) : null;
 
@@ -63,6 +73,10 @@ $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
+
+    /**
+     * Classval validation
+     */
     if ($eventTypeId !== null && $eventTypeId !== '') {
         assert_valid_classval($pdo, 'calendar_event_type_classvals', $eventTypeId, 'event_type_id');
     }
@@ -75,6 +89,18 @@ try {
         assert_valid_classval($pdo, 'calendar_class_type_classvals', $classTypeId, 'class_type_id');
     }
 
+    if ($beatTypeId !== null && $beatTypeId !== '') {
+        assert_valid_classval(
+            $pdo,
+            'cvt_calendar_beat_type',
+            $beatTypeId,
+            'beat_type_id'
+        );
+    }
+
+    /**
+     * Load parent event (for inheritance)
+     */
     $stmt = $pdo->prepare("
         SELECT
             event_type_id,
@@ -101,6 +127,9 @@ try {
         ]);
     }
 
+    /**
+     * Build payload with inheritance
+     */
     $payload = [
         'summary' => $eventLabel !== null && $eventLabel !== ''
             ? $eventLabel
@@ -136,6 +165,44 @@ try {
         static fn($value) => $value !== null
     );
 
+    /**
+     * Resolve effective domain (after inheritance)
+     */
+    $effectiveDomainId = $payload['domain_id'] ?? null;
+
+    /**
+     * 🔒 Beat-domain enforcement (DB-driven)
+     */
+    if ($beatTypeId !== null && $beatTypeId !== '') {
+
+        $stmt = $pdo->prepare("
+            SELECT 1
+            FROM calendar_beat_domain_map
+            WHERE beat_type_id = :beat_type_id
+              AND domain_id = :domain_id
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            ':beat_type_id' => $beatTypeId,
+            ':domain_id' => $effectiveDomainId,
+        ]);
+
+        if (!$stmt->fetch()) {
+            respond(400, [
+                'status' => 'error',
+                'error' => 'beat_type_id not allowed in this domain',
+                'beat_type_id' => $beatTypeId,
+                'domain_id' => $effectiveDomainId,
+            ]);
+        }
+
+        $payload['beat_type_id'] = $beatTypeId;
+    }
+
+    /**
+     * Create subevent
+     */
     $result = ensure_calendar_subevent(
         $pdo,
         $parentEventEntityId,
@@ -150,6 +217,7 @@ try {
     ]);
 
 } catch (InvalidArgumentException $e) {
+
     respond(400, [
         'status' => 'error',
         'error' => $e->getMessage(),
@@ -157,6 +225,7 @@ try {
     ]);
 
 } catch (RuntimeException $e) {
+
     respond(409, [
         'status' => 'error',
         'error' => $e->getMessage(),
@@ -164,6 +233,7 @@ try {
     ]);
 
 } catch (Throwable $e) {
+
     debugRespond(500, [
         'error' => 'Failed to create calendar subevent',
         'database' => $expectedDatabase,
