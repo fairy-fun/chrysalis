@@ -132,3 +132,29 @@ Orchestrator defines execution
 Service defines domain logic
 Ensurer defines structure
 DB enforces uniqueness
+
+## Parent Validation (Database)
+
+Before creating subevents, the parent node MUST be verified at the database level.
+
+### Rule
+
+```text
+parent_event_entity_id MUST resolve to a node where:
+
+layer_id = calendar_layer_event
+```
+
+#### Verification Query
+```sql
+SELECT layer_id
+FROM calendar_events
+WHERE entity_id = 'calendar_event:<id>';
+```
+#### Constraint
+
+Subevents may only be created under:
+
+calendar_layer_event → calendar_layer_subevent
+
+Any other parent layer is invalid and MUST NOT be used.

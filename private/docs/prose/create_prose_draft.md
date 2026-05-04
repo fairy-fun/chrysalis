@@ -43,7 +43,8 @@ POST /pecherie/chill-api/index.php
 "parent_event_entity_id": "calendar_event:322",
 "prose": "Arrive\nSetup\nBegin session"
 }
-Parent Event Rules (CRITICAL)
+## Parent Event Rules (CRITICAL)
+
 parent_event_entity_id MUST:
 - refer to a calendar_layer_event node
 - match projection.target_entity_id from the prose draft
@@ -63,8 +64,80 @@ in order, with stable indexing.
 Execution Uses Provided Prose
 Batch execution uses the prose string in the request.
 It does NOT load or depend on stored prose_draft records.
-Internal Architecture
-Prose
+
+### 🔎 Verify Parent Event (Database)
+
+Before executing batch, confirm the parent is a valid event node.
+
+SQL
+SELECT
+id,
+entity_id,
+layer_id,
+parent_event_id,
+sequence_index,
+summary
+FROM calendar_events
+WHERE entity_id = 'calendar_event:322';
+✅ Expected Result
+layer_id = calendar_layer_event
+❌ Invalid Cases
+
+If layer_id is:
+
+calendar_layer_week
+calendar_layer_day
+calendar_layer_time
+calendar_layer_subevent
+
+Then:
+
+DO NOT USE THIS AS parent_event_entity_id
+Rule
+Subevents can ONLY be attached to:
+
+calendar_layer_event → calendar_layer_subevent
+🔁 Optional: Verify After Execution
+
+After running:
+
+{
+"operation": "executeCalendarBatchFromProse",
+...
+}
+
+You can confirm subevents were created correctly:
+
+SELECT
+entity_id,
+layer_id,
+parent_event_id,
+client_id,
+sequence_index,
+summary
+FROM calendar_events
+WHERE parent_event_id = (
+SELECT id FROM calendar_events WHERE entity_id = 'calendar_event:322'
+)
+AND layer_id = 'calendar_layer_subevent'
+ORDER BY sequence_index;
+✅ Expected
+layer_id = calendar_layer_subevent
+client_id populated (plan_id:index)
+rows match number of prose lines
+sequence_index is continuous
+🧠 Why this is better than an API check
+Uses actual source of truth
+Verifies layer correctness directly
+Lets you inspect:
+parent linkage (parent_event_id)
+execution identity (client_id)
+ordering (sequence_index)
+
+No abstraction, no ambiguity.
+
+## Internal Architecture
+### Prose
 → Planner (deterministic)
 → operations[]
 → plan_id
