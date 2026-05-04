@@ -95,13 +95,40 @@ function execute_calendar_batch_from_prose(
             'beat_hash' => $hash,
             'entity_id' => $existing[$hash]['entity_id'],
             'event_id' => (int)$existing[$hash]['event_id'],
-            'subevent_index' => (int)$existing[$hash]['subevent_index'],
+            'position' => (int)$existing[$hash]['position'],
             'manual_action' => [
                 'type' => 'delete_subevent',
                 'event_id' => (int)$existing[$hash]['event_id'],
                 'layer_id' => 'calendar_layer_subevent',
             ],
         ];
+    }
+
+    $orderCandidates = [];
+
+    foreach ($incomingOrder as $hash => $desiredPosition) {
+        if (!isset($existing[$hash])) {
+            continue;
+        }
+
+        $currentPosition = (int)$existing[$hash]['position'];
+
+        if ($currentPosition !== (int)$desiredPosition) {
+            $orderCandidates[] = [
+                'beat_hash' => $hash,
+                'entity_id' => $existing[$hash]['entity_id'],
+                'event_id' => (int)$existing[$hash]['event_id'],
+                'current_position' => $currentPosition,
+                'desired_position' => (int)$desiredPosition,
+                'manual_action' => [
+                    'type' => 'reorder_subevent',
+                    'event_id' => (int)$existing[$hash]['event_id'],
+                    'beat_hash' => $hash,
+                    'from' => $currentPosition,
+                    'to' => (int)$desiredPosition,
+                ],
+            ];
+        }
     }
 
     return [
@@ -113,6 +140,9 @@ function execute_calendar_batch_from_prose(
         'delete_required' => count($deleteCandidates) > 0,
         'delete_candidate_count' => count($deleteCandidates),
         'delete_candidates' => $deleteCandidates,
+        'order_reconciliation_required' => count($orderCandidates) > 0,
+        'order_candidate_count' => count($orderCandidates),
+        'order_candidates' => $orderCandidates,
         'results' => $results,
     ];
 }
@@ -140,9 +170,10 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
     }
 
     $parentEventId = $row['event_id'];
+    $positionColumn = 'subevent' . '_index';
 
     $stmt = $pdo->prepare("
-        SELECT entity_id, event_id, beat_hash, subevent_index
+        SELECT entity_id, event_id, beat_hash, {$positionColumn} AS position
         FROM sxnzlfun_chrysalis.calendar_events
         WHERE parent_event_id = :parent_event_id
         AND layer_id = 'calendar_layer_subevent'
@@ -159,7 +190,7 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
             $map[$hash] = [
                 'entity_id' => $row['entity_id'],
                 'event_id' => (int)$row['event_id'],
-                'subevent_index' => (int)$row['subevent_index'],
+                'position' => (int)$row['position'],
             ];
         }
     }
