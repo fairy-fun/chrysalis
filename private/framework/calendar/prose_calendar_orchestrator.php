@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_prose_batch_planner.php';
+require_once __DIR__ . '/calendar_subevent_service.php';
 
 /**
  * Execute a prose → calendar batch with replay safety.
@@ -53,7 +54,7 @@ function execute_calendar_batch_from_prose(
             $payload['beat_inference'] = $op['beat_inference'];
         }
 
-        $result = execute_create_calendar_subevent($pdo, $payload);
+        $result = create_calendar_subevent_core($pdo, $payload);
 
         if (!empty($result['idempotent'])) {
             $idempotentCount++;
@@ -78,100 +79,3 @@ function execute_calendar_batch_from_prose(
     ];
 }
 
-/**
- * Internal execution wrapper (no HTTP).
- * Mirrors create_calendar_subevent.php logic.
- */
-function execute_create_calendar_subevent(PDO $pdo, array $payload): array
-{
-    $clientId = $payload['client_id'] ?? null;
-
-    /**
-     * Early idempotency check
-     */
-    if ($clientId !== null && $clientId !== '') {
-
-        $stmt = $pdo->prepare("
-            SELECT entity_id
-            FROM sxnzlfun_chrysalis.calendar_events
-            WHERE client_id = :client_id
-            LIMIT 1
-        ");
-
-        $stmt->execute([
-            ':client_id' => $clientId,
-        ]);
-
-        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($existing) {
-            return [
-                'status' => 'ok',
-                'idempotent' => true,
-                'event' => [
-                    'entity_id' => $existing['entity_id'],
-                ],
-            ];
-        }
-    }
-
-    /**
-     * Call domain logic directly
-     * (bypasses HTTP, uses same underlying ensurer)
-     */
-    try {
-
-        $result = ensure_calendar_subevent(
-            $pdo,
-            $payload['parent_event_entity_id'],
-            null,
-            array_filter([
-                'summary' => $payload['event_label'] ?? null,
-                'beat_type_id' => $payload['beat_type_id'] ?? null,
-                'client_id' => $clientId,
-            ])
-        );
-
-        return [
-            'status' => 'ok',
-            'event' => $result,
-        ];
-
-    } catch (PDOException $e) {
-
-        $info = $e->errorInfo ?? null;
-
-        $isClientDup =
-            is_array($info) &&
-            (int)($info[1] ?? 0) === 1062 &&
-            str_contains((string)($info[2] ?? ''), 'uq_calendar_events_client_id');
-
-        if ($isClientDup && $clientId) {
-
-            $stmt = $pdo->prepare("
-                SELECT entity_id
-                FROM sxnzlfun_chrysalis.calendar_events
-                WHERE client_id = :client_id
-                LIMIT 1
-            ");
-
-            $stmt->execute([
-                ':client_id' => $clientId,
-            ]);
-
-            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($existing) {
-                return [
-                    'status' => 'ok',
-                    'idempotent' => true,
-                    'event' => [
-                        'entity_id' => $existing['entity_id'],
-                    ],
-                ];
-            }
-        }
-
-        throw $e;
-    }
-}
