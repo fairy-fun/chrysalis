@@ -42,6 +42,8 @@ function execute_calendar_batch_from_prose(
     $executedCount = 0;
     $idempotentCount = 0;
 
+    $incomingOrder = [];
+
     // -----------------------------
     // Execute creates (idempotent)
     // -----------------------------
@@ -53,6 +55,10 @@ function execute_calendar_batch_from_prose(
 
         $clientId = $planId . ':' . $index;
         $beatHash = $op['beat_hash'] ?? null;
+
+        if (is_string($beatHash) && $beatHash !== '') {
+            $incomingOrder[$beatHash] = $op['order_index'];
+        }
 
         if (is_string($beatHash) && $beatHash !== '') {
             $incomingHashes[] = $beatHash;
