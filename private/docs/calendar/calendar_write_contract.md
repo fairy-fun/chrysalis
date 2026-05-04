@@ -39,7 +39,7 @@ day
 time
 event
 
-Subevents are also calendar_layer_event nodes whose parent is another event node.
+Subevents are calendar_layer_subevent nodes whose parent is an event node.
 
 Write Responsibilities
 API Layer
@@ -526,3 +526,30 @@ Layer ensurers resolve and guard parents.
 The primitive writes structure.
 
 Nothing else writes calendar nodes.
+
+## Execution Idempotency (Subevents Only)
+
+Subevent creation supports an optional:
+
+client_id (string, unique)
+
+Purpose:
+- prevents duplicate writes during retries
+- enables safe parallel execution
+- used by batch orchestration
+
+Rules:
+- client_id MUST NOT affect structural identity
+- enforced by UNIQUE constraint in DB
+- API may:
+    - pre-check by client_id
+    - recover from duplicate key errors
+
+Example:
+
+{
+"operation": "createCalendarSubevent",
+"parent_event_entity_id": "calendar_event:322",
+"event_label": "Beat",
+"client_id": "plan123:0"
+}

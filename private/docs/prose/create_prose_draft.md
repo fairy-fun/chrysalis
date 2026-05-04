@@ -95,10 +95,16 @@ Training view = derived (read-only)
 No suggestion persistence
 No SQL business logic
 
+## 🔁 Calendar Integration (Deterministic)
 
-Post-creation workflows MAY:
+Prose can be converted into calendar subevents (beats) using:
 
-- generate derived calendar structures (e.g. beats)
-- using separate orchestration pipelines
+operation: executeCalendarBatchFromProse
 
-These are not part of the createProseDraft contract.
+This process is:
+
+- deterministic (same prose → same plan_id)
+- idempotent (safe to retry)
+- replay-safe (no duplicate writes)
+
+This is a separate API call and is NOT part of createProseDraft.

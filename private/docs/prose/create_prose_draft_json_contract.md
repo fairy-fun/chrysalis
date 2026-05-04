@@ -92,3 +92,26 @@ No alternate forms are allowed:
 ❌ dream_journal:shay
 ❌ dream_journal:tm_*
 ```
+
+---
+
+## 🔁 Next Step: Generate Calendar Beats
+
+After creating a prose draft, you may generate calendar subevents (beats):
+
+POST /pecherie/chill-api/index.php
+
+```json
+{
+  "operation": "executeCalendarBatchFromProse",
+  "parent_event_entity_id": "calendar_event:322",
+  "prose": "Line 1\nLine 2\nLine 3"
+}
+```
+
+### Behavior
+
+* Deterministic execution
+* Safe to retry
+* Same prose → same results
+
