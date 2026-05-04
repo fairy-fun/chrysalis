@@ -18,6 +18,7 @@ $body = getJsonBody();
 $parentDayEntityId = $body['parent_day_entity_id'] ?? null;
 $timeIndex = $body['time_index'] ?? null;
 $timeLabel = $body['time_label'] ?? null;
+$timeLabelId = $body['time_label_id'] ?? null;
 
 if ($timeLabel !== null && !is_string($timeLabel)) {
     respond(400, [
@@ -26,10 +27,18 @@ if ($timeLabel !== null && !is_string($timeLabel)) {
     ]);
 }
 
+if ($timeLabelId !== null && !is_string($timeLabelId)) {
+    respond(400, [
+        'status' => 'error',
+        'error' => 'time_label_id must be a string when provided',
+    ]);
+}
+
 $parentDayEntityId = is_string($parentDayEntityId) ? trim($parentDayEntityId) : $parentDayEntityId;
 $timeLabel = is_string($timeLabel) ? trim($timeLabel) : null;
+$timeLabelId = is_string($timeLabelId) ? trim($timeLabelId) : null;
 
-if (!is_string($parentDayEntityId) || trim($parentDayEntityId) === '') {
+if (!is_string($parentDayEntityId) || $parentDayEntityId === '') {
     respond(400, ['status' => 'error', 'error' => 'parent_day_entity_id required']);
 }
 
@@ -46,6 +55,28 @@ try {
             ? $timeLabel
             : 'Time',
     ];
+
+    if ($timeLabelId !== null && $timeLabelId !== '') {
+        $stmt = $pdo->prepare("
+            SELECT label
+            FROM sxnzlfun_chrysalis.calendar_time_label_classvals
+            WHERE id = :id
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            ':id' => $timeLabelId,
+        ]);
+
+        $classvalLabel = $stmt->fetchColumn();
+
+        if (!is_string($classvalLabel) || trim($classvalLabel) === '') {
+            throw new InvalidArgumentException('Invalid time_label_id');
+        }
+
+        $payload['time_label_id'] = $timeLabelId;
+        $payload['summary'] = trim($classvalLabel);
+    }
 
     $time = ensure_calendar_time(
         $pdo,
