@@ -1,6 +1,5 @@
 <?php
 
-
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -30,6 +29,7 @@ $expectedDatabase = verifyExpectedDatabase($pdo);
 try {
     $parent = $pdo->prepare("
         SELECT
+            ce.`id` AS _internal_id,
             ce.entity_id,
             ce.event_id,
             ce.parent_event_id,
@@ -97,10 +97,12 @@ try {
     ");
 
     $stmt->execute([
-        ':parent_event_id' => (int)$event['event_id'],
+        ':parent_event_id' => (int)$event['_internal_id'],
     ]);
 
     $subevents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    unset($event['_internal_id']);
 
     respond(200, [
         'status' => 'ok',
