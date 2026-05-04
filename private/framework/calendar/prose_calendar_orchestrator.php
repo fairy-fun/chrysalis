@@ -147,7 +147,7 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
 
     // Step 2 — fetch subevents
     $stmt = $pdo->prepare("
-        SELECT entity_id, beat_hash
+        SELECT entity_id, event_id, beat_hash, subevent_index
         FROM sxnzlfun_chrysalis.calendar_events
         WHERE parent_event_id = :parent_event_id
         AND layer_id = 'calendar_layer_subevent'
@@ -161,7 +161,11 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
         $hash = $row['beat_hash'] ?? null;
 
         if (is_string($hash) && $hash !== '') {
-            $map[$hash] = $row['entity_id'];
+            $map[$hash] = [
+                'entity_id' => $row['entity_id'],
+                'event_id' => $row['event_id'],
+                'subevent_index' => (int)$row['subevent_index'],
+            ];
         }
     }
 
