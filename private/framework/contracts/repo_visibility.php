@@ -16,6 +16,7 @@ return [
         'private/framework/expression',
         'private/framework/prose',
         'private/framework/support',
+        'public_html/pecherie/chill-api/',
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
