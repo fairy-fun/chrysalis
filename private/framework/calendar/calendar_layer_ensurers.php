@@ -91,6 +91,32 @@ function ensure_calendar_event(
     );
 }
 
+function ensure_calendar_subevent(
+    PDO $pdo,
+    string $parentEventEntityId,
+    ?int $sequenceIndex,
+    array $payload
+): array {
+    $parent = resolve_calendar_node_for_layer_wrapper($pdo, $parentEventEntityId);
+
+    assert_calendar_parent_transition($parent, 'calendar_layer_subevent');
+
+    assert_calendar_semantic_parent_child(
+        (string)$parent['entity_type_id'],
+        'entity_type_calendar_event'
+    );
+
+    return ensure_calendar_node(
+        $pdo,
+        (string)$parent['projection_entity_id'],
+        'calendar_layer_subevent',
+        (int)$parent['id'],
+        $sequenceIndex,
+        $payload
+    );
+}
+
+
 /** @internal */
 function resolve_calendar_node_for_layer_wrapper(
     PDO $pdo,
