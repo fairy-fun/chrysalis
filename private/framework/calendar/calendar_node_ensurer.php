@@ -255,6 +255,7 @@ function calendar_entity_type_for_layer(string $layerId): string
         'calendar_layer_day'   => 'entity_type_calendar_day',
         'calendar_layer_time'  => 'entity_type_calendar_time',
         'calendar_layer_event' => 'entity_type_calendar_event',
+        'calendar_layer_subevent' => 'entity_type_calendar_event',
     ];
 
     if (!isset($map[$layerId])) {
@@ -341,6 +342,15 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
             'time_label_id',
         ],
         'calendar_layer_event' => [
+            'summary',
+            'event_type_id',
+            'location_id',
+            'domain_id',
+            'class_type_id',
+            'notes',
+            'source_document',
+        ],
+        'calendar_layer_subevent' => [
             'summary',
             'event_type_id',
             'location_id',
