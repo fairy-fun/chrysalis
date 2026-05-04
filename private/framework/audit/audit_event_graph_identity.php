@@ -17,6 +17,7 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
                 WHEN 'calendar_layer_day' THEN 'entity_type_calendar_day'
                 WHEN 'calendar_layer_time' THEN 'entity_type_calendar_time'
                 WHEN 'calendar_layer_event' THEN 'entity_type_calendar_event'
+               WHEN 'calendar_layer_subevent' THEN 'entity_type_calendar_event'
                 ELSE '__invalid_calendar_layer__'
            END
     ";
