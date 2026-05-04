@@ -90,6 +90,7 @@ return [
         'getDreamAnnotations' => 'public_html/pecherie/chill-api/dreams/get_dream_annotations.php',
         'getCalendarTreeForEntity' => 'public_html/pecherie/chill-api/calendar/get_calendar_tree_for_entity.php',
         'generateCalendarBatchFromProse' => 'public_html/pecherie/chill-api/calendar/generate_calendar_batch_from_prose.php',    ],
+    'generateCalendarBatchFromProse' => 'public_html/pecherie/chill-api/calendar/generate_calendar_batch_from_prose.php',
 ];
 
 

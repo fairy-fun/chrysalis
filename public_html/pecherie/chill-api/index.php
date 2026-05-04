@@ -177,6 +177,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/generate_calendar_batch_from_prose.php';
         break;
 
+    case 'executeCalendarBatchFromProse':
+        require __DIR__ . '/calendar/execute_calendar_batch_from_prose.php';
+        break;
+
     case 'auditTraversalStepChainIntegrity':
         require __DIR__ . '/audit/traversal_step_chain_integrity.php';
         break;
