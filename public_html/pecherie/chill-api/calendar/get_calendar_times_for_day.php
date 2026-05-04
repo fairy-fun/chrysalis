@@ -29,7 +29,7 @@ $expectedDatabase = verifyExpectedDatabase($pdo);
 try {
     $parent = $pdo->prepare("
         SELECT
-            ce.id,
+            ce.`id` AS _internal_id,
             ce.entity_id,
             COALESCE(ce.projection_entity_id, cepm.projection_entity_id) AS projection_entity_id,
             ce.layer_id,
@@ -38,7 +38,7 @@ try {
             ce.chronology_address
         FROM sxnzlfun_chrysalis.calendar_events ce
         LEFT JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
-            ON cepm.calendar_event_id = ce.id
+            ON cepm.calendar_event_id = ce.`id`
         WHERE ce.entity_id = :entity_id
           AND ce.layer_id = 'calendar_layer_day'
         LIMIT 1
@@ -57,16 +57,27 @@ try {
     }
 
     $stmt = $pdo->prepare("
-        SELECT ce.*
+        SELECT
+            ce.entity_id,
+            ce.event_id,
+            ce.projection_entity_id,
+            ce.layer_id,
+            ce.sequence_index,
+            ce.summary,
+            ce.created_at,
+            ce.updated_at,
+            ce.chronology_address
         FROM sxnzlfun_chrysalis.calendar_events ce
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_time'
-        ORDER BY ce.time_index ASC, ce.id ASC
+        ORDER BY ce.sequence_index ASC, ce.event_id ASC
     ");
 
-    $stmt->execute([':parent_event_id' => (int)$day['id']]);
+    $stmt->execute([':parent_event_id' => (int)$day['_internal_id']]);
 
     $times = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    unset($day['_internal_id']);
 
     respond(200, [
         'status' => 'ok',
