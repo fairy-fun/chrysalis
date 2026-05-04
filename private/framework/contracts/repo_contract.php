@@ -100,6 +100,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'createCalendarSubevent' => [
+            'handler' => 'public_html/pecherie/chill-api/calendar/create_calendar_subevent.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'getCalendarNodeByChronologyAddress' => [
             'handler' => 'public_html/pecherie/chill-api/calendar/get_calendar_node_by_chronology_address.php',
             'method' => 'GET',

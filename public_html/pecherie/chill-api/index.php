@@ -141,6 +141,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/create_calendar_event.php';
         break;
 
+    case 'createCalendarSubevent':
+        require __DIR__ . '/calendar/create_calendar_subevent.php';
+        break;
+
     case 'getCalendarNodeByChronologyAddress':
         require __DIR__ . '/calendar/get_calendar_node_by_chronology_address.php';
         break;

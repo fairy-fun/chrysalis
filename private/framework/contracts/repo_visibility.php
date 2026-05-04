@@ -64,6 +64,7 @@ return [
         'createCalendarDay' => 'public_html/pecherie/chill-api/calendar/create_calendar_day.php',
         'createCalendarTime' => 'public_html/pecherie/chill-api/calendar/create_calendar_time.php',
         'createCalendarEvent' => 'public_html/pecherie/chill-api/calendar/create_calendar_event.php',
+        'createCalendarSubevent' => 'public_html/pecherie/chill-api/calendar/create_calendar_subevent.php',
         'getCalendarNodeByChronologyAddress' => 'public_html/pecherie/chill-api/calendar/get_calendar_node_by_chronology_address.php',
         'listYears' => 'public_html/pecherie/chill-api/reference/list_years.php',
         'listChoreographyTypes' => 'public_html/pecherie/chill-api/reference/list_choreography_types.php',
