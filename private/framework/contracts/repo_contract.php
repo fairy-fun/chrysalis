@@ -243,5 +243,10 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
         ],
 
+        'generateCalendarBatchFromProse' => [
+            'visibility' => 'public',
+            'writes' => false,
+        ]
+
     ],
 ];

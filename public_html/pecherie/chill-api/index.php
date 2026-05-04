@@ -173,6 +173,19 @@ switch ($operation) {
         require __DIR__ . '/prose/add_prose_annotations.php';
         break;
 
+    case 'generateCalendarBatchFromProse': {
+        $parentEventEntityId = (string)($input['parent_event_entity_id'] ?? '');
+        $prose = (string)($input['prose'] ?? '');
+
+        $result = generate_calendar_batch_from_prose(
+            $parentEventEntityId,
+            $prose
+        );
+
+        echo json_encode($result, JSON_PRETTY_PRINT);
+        exit;
+    }
+
     case 'auditTraversalStepChainIntegrity':
         require __DIR__ . '/audit/traversal_step_chain_integrity.php';
         break;
