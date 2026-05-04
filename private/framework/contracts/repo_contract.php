@@ -244,9 +244,11 @@ const FW_REPO_CONTRACT = [
         ],
 
         'generateCalendarBatchFromProse' => [
+            'handler' => 'public_html/pecherie/chill-api/calendar/generate_calendar_batch_from_prose.php',
             'visibility' => 'public',
             'writes' => false,
-        ]
+            'behaviour_tested' => false,
+        ],
 
     ],
 ];
