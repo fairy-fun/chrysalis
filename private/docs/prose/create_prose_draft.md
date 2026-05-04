@@ -1,19 +1,27 @@
-# 📦 Prose Draft Creation — JSON Contract (Canonical)
-## Endpoint
+=========================================
+
+## private/docs/prose/create_prose_draft.md
+
+=========================================
+# Prose Draft → Calendar Subevent Workflow (Canonical)
+Overview
+
+This is a two-step system:
+
+1. createProseDraft
+2. executeCalendarBatchFromProse
+
+No calendar subevents are created during draft creation.
+
+Step 1 — Create Prose Draft
+
 POST /pecherie/chill-api/index.php
-
-Headers:
-
-Content-Type: application/json
-X-API-Key: <required>
-
-## ✅ Minimal Working Payload (JSON)
 
 {
 "operation": "createProseDraft",
-"entity_id": "prose_draft:BOOK-001-W3-D1-T1-v1",
-"title": "Book 1 — Week 3 Sunday Early Morning",
-"prose_body": "Line 1\nLine 2\nLine 3",
+"entity_id": "prose_draft:example-1",
+"title": "Example",
+"prose_body": "Arrive\nSetup\nBegin session",
 "draft_status_id": "prose_status_draft",
 "author_entity_id": null,
 "projection": {
@@ -25,86 +33,83 @@ X-API-Key: <required>
 },
 "annotations": []
 }
+Result
+Prose is stored
+No calendar writes occur
+Step 2 — Execute Batch (PRIMARY)
 
-🔑 Critical Rules (DO NOT REDERIVE)
-1. JSON only (unless uploading file)
-   Use raw JSON
-   Do not use multipart unless sending prose_file
-2. prose_body formatting
-   Use \n for line breaks
-   No need to escape single quotes
-   Escape double quotes (\") if present
-3. draft_status_id
-   Must exist in:
-   entities.id
-   WHERE entity_type_id = 'entity_type_status'
-   Example:
-   "draft_status_id": "prose_status_draft"
-   ❌ NOT in classvals
-4. projection.target_entity_id
-   Must be a valid calendar_events.entity_id
-   Example:
-   "target_entity_id": "calendar_event:322"
-5. projection.role_id
-   Currently free text
-   Example:
-   "role_id": "primary"
-   ❌ Not validated
-   ❌ No foreign key constraint
-6. projection_type_id
-   Must exist in classvals
-   Example:
-   "projection_type_id": "projection_type_book"
-7. annotations
-   Must be an array
-   Can be empty:
-   "annotations": []
-   ⚠️ Database Constraints (IMPORTANT)
-   prose_drafts
-   draft_status_id → FK → entities(id)
-   prose_projections
-   role_id → NO FK (free text)
-   🧪 Verification Sequence
-   Create
-   operation: createProseDraft
+POST /pecherie/chill-api/index.php
 
-↓
+{
+"operation": "executeCalendarBatchFromProse",
+"parent_event_entity_id": "calendar_event:322",
+"prose": "Arrive\nSetup\nBegin session"
+}
+What Happens Internally
+Prose
+→ Planner (deterministic)
+→ operations[]
+→ plan_id
 
-Read training view
-operation: getProseTrainingView
+→ Orchestrator
+→ assigns client_id = <plan_id>:<index>
+→ executes in order
 
-Expected:
+→ Subevent Service (SSOT)
+→ idempotency check
+→ validation
+→ inheritance
+→ payload shaping
 
-"annotations": []
+→ Ensurer
+→ structural write
 
-↓
+→ DB
+→ UNIQUE(client_id)
+Identity Model
+1. Structural Identity
+   projection_entity_id
++ layer_id
++ parent_event_id
++ sequence_index
 
-Read annotations
-operation: getProseAnnotations
-🧠 Known Failure Modes
-Error	Cause
-Invalid draft_status_id	Validator still pointing to classvals
-FK 1216 on draft_status_id	FK not migrated to entities
-FK 1216 on role_id	FK still exists on prose_projections
-Hanging request	PHP error before response
-projection.role_id invalid	Old validator not removed
-### 🧩 Design Notes (LOCKED)
-Prose = canonical source
-Annotations = curated facts
-Training view = derived (read-only)
-No suggestion persistence
-No SQL business logic
+Prevents duplicate nodes.
 
-## 🔁 Calendar Integration (Deterministic)
+2. Execution Identity
+   client_id (UNIQUE)
 
-Prose can be converted into calendar subevents (beats) using:
+Prevents duplicate writes.
 
-operation: executeCalendarBatchFromProse
+3. Plan Identity
+   plan_id = hash(prose → operations)
 
-This process is:
+Ensures deterministic replay.
 
-- deterministic (same prose → same plan_id)
-- idempotent (safe to retry)
-- replay-safe (no duplicate writes)
+Replay Guarantees
 
-This is a separate API call and is NOT part of createProseDraft.
+Running the same request twice:
+
+First run
+executed_count = N
+idempotent_count = 0
+Second run
+executed_count = 0
+idempotent_count = N
+Same entity_ids returned
+No duplicates created
+Rules
+❌ Do NOT write directly to calendar_events
+❌ Do NOT generate your own client_id outside orchestration
+❌ Do NOT bypass batch endpoint for bulk creation
+❌ Do NOT persist inference
+✅ Use executeCalendarBatchFromProse for all prose-driven subevents
+Low-Level Endpoint (Advanced Only)
+{
+"operation": "createCalendarSubevent",
+"parent_event_entity_id": "calendar_event:322",
+"event_label": "Beat",
+"client_id": "plan_id:0"
+}
+Requires correct client_id
+Used by orchestrator
+Not intended for manual batch usage
