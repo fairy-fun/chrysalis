@@ -25,15 +25,27 @@ https://antheapeche.com/pecherie/chill-api/index.php
 
 Using:
 
+```text
 {
 "operation": "..."
 }
-Event Creation
-Operation
+```
+
+### Event Creation
+
+#### Operation
+```text
 createCalendarEvent
-Handler
+```
+
+#### Handler
+#### Operation
+```text
 public_html/pecherie/chill-api/calendar/create_calendar_event.php
-Request
+```
+
+### Request
+
 {
 "operation": "createCalendarEvent",
 "parent_time_entity_id": "calendar_event:TIME_ID",
