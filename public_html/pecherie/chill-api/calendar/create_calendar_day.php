@@ -5,8 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
-require_once __DIR__ . '/../../../../private/framework/calendar/calendar_day_creator.php';
-
+require_once __DIR__ . '/../../../../private/framework/calendar/calendar_layer_ensurers.php';
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(405, ['error' => 'Method not allowed']);
 }
@@ -56,12 +55,14 @@ $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
-    $day = create_calendar_day(
+    $day = ensure_calendar_day(
         $pdo,
         $parentWeekEntityId,
         $dayIndex,
-        $dayLabel,
-        $realDateId
+        [
+            'day_label' => $dayLabel,
+            'real_date_id' => $realDateId,
+        ]
     );
 
     respond(200, [
