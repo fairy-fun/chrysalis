@@ -35,6 +35,7 @@ function ensure_calendar_node(
         throw new InvalidArgumentException('summary is required');
     }
 
+    // 🔐 payload filtering (now includes client_id for subevents)
     $payload = filter_calendar_node_payload($layerId, $payload);
 
     while (true) {
@@ -76,6 +77,7 @@ function ensure_calendar_node(
             if (!is_calendar_structural_duplicate_key($e)) {
                 throw $e;
             }
+            // retry loop continues
         }
     }
 }
@@ -184,7 +186,8 @@ function insert_calendar_node(
                 domain_id,
                 class_type_id,
                 notes,
-                source_document
+                source_document,
+                client_id
             ) VALUES (
                 :entity_id,
                 :projection,
@@ -201,7 +204,8 @@ function insert_calendar_node(
                 :domain_id,
                 :class_type_id,
                 :notes,
-                :source_document
+                :source_document,
+                :client_id
             )
         ");
 
@@ -222,6 +226,9 @@ function insert_calendar_node(
             ':class_type_id' => $payload['class_type_id'] ?? null,
             ':notes' => $payload['notes'] ?? null,
             ':source_document' => $payload['source_document'] ?? null,
+
+            // ✅ NEW: execution idempotency key
+            ':client_id' => $payload['client_id'] ?? null,
         ]);
 
         $id = (int)$pdo->lastInsertId();
@@ -358,6 +365,7 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
             'class_type_id',
             'notes',
             'source_document',
+            'client_id', // ✅ NEW
         ],
     ];
 
