@@ -144,6 +144,7 @@ try {
         'prose' => $result['prose'],
         'projection' => $result['projection'],
         'annotations' => $result['annotations'],
+        'calendar' => $result['calendar'] ?? null,
     ]);
 
 } catch (InvalidArgumentException $e) {

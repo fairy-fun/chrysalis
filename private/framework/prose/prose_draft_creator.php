@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/prose_calendar_orchestrator.php';
 require_once __DIR__ . '/prose_projection_writer.php';
 
 function prose_required_string(array $source, string $key): string
@@ -436,6 +437,8 @@ function create_prose_draft(PDO $pdo, array $body): array
     $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
 
     $startedTransaction = false;
+    $projectionId = null;
+    $insertedAnnotations = 0;
 
     try {
         if (!$pdo->inTransaction()) {
@@ -489,22 +492,6 @@ function create_prose_draft(PDO $pdo, array $body): array
             $pdo->commit();
         }
 
-        return [
-            'prose' => [
-                'entity_id' => $entityId,
-                'title' => $title,
-            ],
-            'projection' => [
-                'id' => $projectionId,
-                'target_entity_id' => $targetEntityId,
-                'projection_type_id' => $projectionTypeId,
-                'role_id' => $roleId,
-            ],
-            'annotations' => [
-                'processed' => $insertedAnnotations,
-            ],
-        ];
-
     } catch (Throwable $e) {
         if ($startedTransaction && $pdo->inTransaction()) {
             $pdo->rollBack();
@@ -512,4 +499,31 @@ function create_prose_draft(PDO $pdo, array $body): array
 
         throw $e;
     }
+
+    $calendarResult = null;
+
+    if (str_starts_with($targetEntityId, 'calendar_event:')) {
+        $calendarResult = execute_calendar_batch_from_prose(
+            $pdo,
+            $targetEntityId,
+            $proseBody
+        );
+    }
+
+    return [
+        'prose' => [
+            'entity_id' => $entityId,
+            'title' => $title,
+        ],
+        'projection' => [
+            'id' => $projectionId,
+            'target_entity_id' => $targetEntityId,
+            'projection_type_id' => $projectionTypeId,
+            'role_id' => $roleId,
+        ],
+        'annotations' => [
+            'processed' => $insertedAnnotations,
+        ],
+        'calendar' => $calendarResult,
+    ];
 }
