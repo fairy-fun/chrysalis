@@ -6,7 +6,7 @@ All calendar writes must follow:
 
 ```text
 API → ensure_calendar_* → ensure_calendar_node → DB
-
+```
 The only allowed calendar write entry points are:
 
 ensure_calendar_week(...)
@@ -105,50 +105,86 @@ using chronology_address as identity
 using chronology_address as hierarchy
 using chronology_address as ordering
 looking up structural nodes directly by chronology_address
-Semantic Fields
+
+## Semantic Fields
 
 Semantic fields are payload data, not structure.
 
+They must not influence structural placement or ordering.
+
 Current semantic fields include:
 
-time_label_id
-event_type_id
-domain_id
-class_type_id
-location_id
-notes
-source_document
-Classval-backed fields
+- time_label_id
+- event_type_id
+- domain_id
+- class_type_id
+- location_id
+- notes
+- source_document
 
-These must be validated against their classval tables before calling the ensurer:
+### Classval-backed fields
 
-time_label_id  → calendar_time_label_classvals.id
-event_type_id  → calendar_event_type_classvals.id
-domain_id      → calendar_domain_classvals.id
-class_type_id  → calendar_class_type_classvals.id
-Reference fields
-location_id
+These fields derive their meaning strictly from classval tables.
 
-location_id is not a classval.
+They must be validated using their canonical classval IDs before calling the ensurer.
 
-It must not be validated through classval helpers.
+Canonical ID format is required.
 
-For now, it may be passed through as a reference field. If a location entity/table is formalised later, validation should target that reference model, not a classval table.
+Do not use:
+- symbolic codes
+- human-readable labels
 
-Display Fields
+Mappings:
+
+- time_label_id  → calendar_time_label_classvals.id
+- event_type_id  → calendar_event_type_classvals.id
+- domain_id      → calendar_domain_classvals.id
+- class_type_id  → calendar_class_type_classvals.id
+
+Rule:
+
+Semantic meaning exists only in classval tables.
+
+No semantic meaning may be introduced through:
+- summary
+- sequence_index
+- inferred logic
+
+## Time Node Semantics
+
+Time nodes are structural only.
+
+They do not carry semantic meaning by position.
+
+Rules:
+
+- sequence_index does not imply time-of-day
+- time nodes must not be interpreted as Morning/Afternoon/etc.
+- semantic labels must come exclusively from time_label_id
+
+Source of truth:
+
+calendar_time_label_classvals
+
+Not:
+- time nodes
+- sequence_index
+- summary
+
+## Display Fields
 summary
 
 summary is display text.
 
 For classval-backed time labels:
 
-time_label_id = semantic meaning
-summary       = display label derived from classval
-sequence_index = structural order
+time_label_id = semantic meaning (classval ID)
+summary       = display label (derived from classval.label)
+sequence_index = structural order only
 
-Do not treat free-text labels as canonical semantic values.
+summary must not be treated as a semantic source of truth.
 
-Idempotency
+## Idempotency
 
 Writes must be idempotent.
 
@@ -194,7 +230,7 @@ Chronology only helps humans find the node.
 
 ### `private/docs/calendar/calendar_write_surface.md`
 
-```md
+
 # Calendar System — Write Surface
 
 ## Purpose
@@ -207,6 +243,7 @@ All writes must enter through API endpoints, pass through layer ensurers, and te
 
 ```text
 API → ensure_calendar_* → ensure_calendar_node → DB
+```
 Allowed Framework Entry Points
 
 The only allowed write functions are:
@@ -275,13 +312,13 @@ Allowed input:
 }
 
 Payload to ensurer:
-
+```
 [
     'summary' => $dayLabel,
     'real_date_start_id' => $realDateId,
     'real_date_end_id' => $realDateId
 ]
-
+```
 Rules:
 
 day_label maps to summary
@@ -289,7 +326,9 @@ day_index maps to sequence_index
 real_date_id maps to start/end date fields
 parent is resolved by entity_id
 parent_event_id uses internal calendar_events.id
-Time Creation
+
+
+## Time Creation
 
 Endpoint:
 
@@ -298,26 +337,39 @@ create_calendar_time.php
 Allowed input:
 
 {
-  "operation": "createCalendarTime",
-  "parent_day_entity_id": "calendar_event:...",
-  "time_index": 1,
-  "time_label_id": "calendar_time_label_morning"
+"operation": "createCalendarTime",
+"parent_day_entity_id": "calendar_event:...",
+"time_index": 1,
+"time_label_id": "CLASSVAL-TIME-002"
 }
 
 Payload to ensurer:
-
+```
 [
-    'summary' => $labelFromClassval,
-    'time_label_id' => $timeLabelId
+'summary' => $labelFromClassval,
+'time_label_id' => $timeLabelId
 ]
-
+```
 Rules:
 
-time_index maps to sequence_index
-time_label_id must exist in calendar_time_label_classvals
-summary is derived from the classval label
-free-text time labels are not canonical
-Event Creation
+- time_index maps to sequence_index
+- time_label_id must be a valid calendar_time_label_classvals.id
+- time_label_id is the only source of semantic meaning
+- summary is derived from calendar_time_label_classvals.label
+
+### Legacy Fallback (Non-Canonical)
+
+If time_label_id is not provided:
+
+- a free-text time_label may be accepted
+- it is stored as summary only
+- no semantic classification is recorded
+
+This is legacy behavior.
+
+New writes must use time_label_id.
+
+## Event Creation
 
 Endpoint:
 
@@ -349,7 +401,7 @@ Payload to ensurer:
     'source_document' => $sourceDocument,
 ]
 
-Rules:
+## Rules:
 
 parent_time_entity_id is resolved by entity_id
 event is appended under the time node
@@ -396,7 +448,8 @@ subevents are calendar_layer_event nodes
 parent_event_entity_id must resolve to a calendar event node
 parent_event_id uses internal calendar_events.id
 sequence_index is allocated by ensure_calendar_node
-Classval Validation
+
+## Classval Validation
 
 Classval validation belongs at the API/helper layer.
 
