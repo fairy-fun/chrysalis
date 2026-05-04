@@ -60,8 +60,9 @@ try {
         $parentWeekEntityId,
         $dayIndex,
         [
-            'day_label' => $dayLabel,
-            'real_date_id' => $realDateId,
+            'summary' => $dayLabel,
+            'real_date_start_id' => $realDateId,
+            'real_date_end_id' => $realDateId,
         ]
     );
 
