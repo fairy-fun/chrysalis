@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * VERSIONING — critical for idempotency evolution
- */
 const CALENDAR_BEAT_EXTRACTOR_VERSION = 'v1';
 
 
@@ -12,6 +9,7 @@ function generate_calendar_batch_from_prose(
     string $parentEventEntityId,
     string $prose
 ): array {
+
     $parentEventEntityId = trim($parentEventEntityId);
     $prose = trim($prose);
 
@@ -23,13 +21,30 @@ function generate_calendar_batch_from_prose(
         throw new InvalidArgumentException('prose is required');
     }
 
+    // -----------------------------
+    // Beat extraction (deterministic)
+    // -----------------------------
     $beats = extract_calendar_beats($prose);
 
+    // -----------------------------
+    // Plan identity (stable)
+    // -----------------------------
+    $planSeed = json_encode([
+        'parent' => $parentEventEntityId,
+        'version' => CALENDAR_BEAT_EXTRACTOR_VERSION,
+        'beats' => $beats,
+    ]);
+
+    $planId = hash('sha256', $planSeed);
+
+    // -----------------------------
+    // Build operations
+    // -----------------------------
     $operations = [];
 
     foreach ($beats as $i => $beat) {
-        $summary = trim((string)($beat['summary'] ?? ''));
 
+        $summary = trim((string)($beat['summary'] ?? ''));
         if ($summary === '') {
             continue;
         }
@@ -41,7 +56,10 @@ function generate_calendar_batch_from_prose(
             'beat_type_id' => map_calendar_beat_code_to_id((string)$beat['type']),
             'beat_inference' => $beat['inference'] ?? null,
 
-            // ✅ NEW (non-breaking)
+            // ✅ idempotency
+            'client_id' => $planId . ':' . $i,
+
+            // ✅ stable ordering
             'order_index' => $i,
         ];
     }
@@ -50,14 +68,6 @@ function generate_calendar_batch_from_prose(
         throw new RuntimeException('Batch too large');
     }
 
-    // Optional but useful for future idempotency
-    $planId = hash('sha256',
-        $parentEventEntityId .
-        CALENDAR_BEAT_EXTRACTOR_VERSION .
-        json_encode($beats) .
-        json_encode($operations)
-    );
-
     return [
         'status' => 'ok',
         'mode' => 'plan_only',
@@ -65,27 +75,26 @@ function generate_calendar_batch_from_prose(
         'beat_extractor_version' => CALENDAR_BEAT_EXTRACTOR_VERSION,
         'plan_id' => $planId,
         'operation_count' => count($operations),
-        'beats' => $beats,              // ✅ NEW (auditable)
+        'beats' => $beats,
         'operations' => $operations,
     ];
 }
 
 
 # =========================================================
-# EXISTING SYSTEM — PRESERVED (but fed better segments)
+# BEAT PIPELINE
 # =========================================================
 
 function extract_calendar_beats(string $prose): array {
+
     $segments = split_prose_into_candidate_segments($prose);
 
     $beats = [];
 
     foreach ($segments as $segment) {
-        $summary = normalise_calendar_beat_summary($segment);
 
-        if ($summary === '') {
-            continue;
-        }
+        $summary = normalise_calendar_beat_summary($segment);
+        if ($summary === '') continue;
 
         $classification = classify_calendar_beat_type($summary);
 
@@ -101,22 +110,22 @@ function extract_calendar_beats(string $prose): array {
 
 
 # =========================================================
-# 🔥 REPLACED SEGMENTATION LAYER (CORE FIX)
+# 🔥 FIXED SEGMENTATION (core change)
 # =========================================================
 
 function split_prose_into_candidate_segments(string $prose): array
 {
-    // --- Normalize ---
     $text = str_replace(["\r\n", "\r"], "\n", $prose);
     $text = trim($text);
     $text = preg_replace("/\n{3,}/", "\n\n", $text);
 
-    // --- Primary split ---
+    // --- paragraph + scene split
     $parts = preg_split("/\n\n|(?:^|\n)(---|\*\*\*)(?:\n|$)/", $text);
 
     $fragments = [];
 
     foreach ($parts as $part) {
+
         $part = trim($part);
         if ($part === '') continue;
 
@@ -124,6 +133,7 @@ function split_prose_into_candidate_segments(string $prose): array
         $buffer = '';
 
         foreach ($lines as $line) {
+
             $line = trim($line);
             if ($line === '') continue;
 
@@ -145,10 +155,11 @@ function split_prose_into_candidate_segments(string $prose): array
         }
     }
 
-    // --- Secondary split ---
+    // --- secondary splits
     $segments = [];
 
     foreach ($fragments as $frag) {
+
         $parts = preg_split('/
             (?<=[.!?])\s+(?=(He|She|They|I|We)\s)
             |
@@ -163,7 +174,7 @@ function split_prose_into_candidate_segments(string $prose): array
         }
     }
 
-    // --- Merge small fragments ---
+    // --- merge small fragments
     $beats = [];
 
     foreach ($segments as $seg) {
@@ -174,7 +185,7 @@ function split_prose_into_candidate_segments(string $prose): array
         }
     }
 
-    // --- Final normalize ---
+    // --- final normalize
     return array_values(array_map(function ($b) {
         return trim(preg_replace('/\s+/', ' ', $b));
     }, $beats));
@@ -192,7 +203,7 @@ function starts_with_dialogue(string $line): bool
 
 
 # =========================================================
-# EXISTING CLASSIFICATION (UNCHANGED)
+# CLASSIFICATION (unchanged)
 # =========================================================
 
 function allowed_calendar_beat_types(): array {
@@ -227,6 +238,7 @@ function map_calendar_beat_code_to_id(string $code): string
 }
 
 function classify_calendar_beat_type(string $summary): array {
+
     $lower = mb_strtolower($summary);
 
     $rules = [
@@ -258,12 +270,11 @@ function classify_calendar_beat_type(string $summary): array {
 }
 
 function normalise_calendar_beat_summary(string $segment): string {
+
     $segment = trim($segment);
     $segment = preg_replace('/\s+/', ' ', $segment);
 
-    if ($segment === '') {
-        return '';
-    }
+    if ($segment === '') return '';
 
     if (mb_strlen($segment) > 140) {
         $segment = mb_substr($segment, 0, 137) . '...';
@@ -273,10 +284,12 @@ function normalise_calendar_beat_summary(string $segment): string {
 }
 
 function dedupe_calendar_beats(array $beats): array {
+
     $seen = [];
     $deduped = [];
 
     foreach ($beats as $beat) {
+
         $summary = trim((string)($beat['summary'] ?? ''));
         if ($summary === '') continue;
 
