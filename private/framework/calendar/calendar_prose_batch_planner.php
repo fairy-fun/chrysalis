@@ -17,22 +17,26 @@ function generate_calendar_batch_from_prose(
         throw new InvalidArgumentException('prose is required');
     }
 
-    $labels = split_calendar_prose_into_subevent_labels($prose);
+    $beats = extract_calendar_beats($prose);
 
     $operations = [];
 
-    foreach ($labels as $label) {
-        $label = trim($label);
+    foreach ($beats as $beat) {
+        $summary = trim((string)($beat['summary'] ?? ''));
 
-        if ($label === '') {
+        if ($summary === '') {
             continue;
         }
 
         $operations[] = [
             'operation' => 'createCalendarSubevent',
             'parent_event_entity_id' => $parentEventEntityId,
-            'event_label' => $label,
+            'event_label' => $summary,
         ];
+    }
+
+    if (count($operations) > 50) {
+        throw new RuntimeException('Batch too large');
     }
 
     return [
@@ -44,10 +48,33 @@ function generate_calendar_batch_from_prose(
     ];
 }
 
-function split_calendar_prose_into_subevent_labels(string $prose): array {
+function extract_calendar_beats(string $prose): array {
+    $segments = split_prose_into_candidate_segments($prose);
+
+    $beats = [];
+
+    foreach ($segments as $segment) {
+        $summary = normalise_calendar_beat_summary($segment);
+
+        if ($summary === '') {
+            continue;
+        }
+
+        $beats[] = [
+            'type' => classify_calendar_beat_type($summary),
+            'summary' => $summary,
+        ];
+    }
+
+    return dedupe_calendar_beats($beats);
+}
+
+function split_prose_into_candidate_segments(string $prose): array {
+    $prose = trim($prose);
+
     $lines = preg_split('/\R+/', $prose) ?: [];
 
-    $labels = [];
+    $segments = [];
 
     foreach ($lines as $line) {
         $line = trim($line);
@@ -58,12 +85,104 @@ function split_calendar_prose_into_subevent_labels(string $prose): array {
 
         $line = preg_replace('/^\s*[-*•]\s*/', '', $line);
         $line = preg_replace('/^\s*\d+[\).\s-]+/', '', $line);
-        $line = trim((string) $line);
+        $line = trim((string)$line);
 
-        if ($line !== '') {
-            $labels[] = $line;
+        if ($line === '') {
+            continue;
+        }
+
+        $sentenceParts = preg_split('/(?<=[.!?])\s+/', $line) ?: [$line];
+
+        foreach ($sentenceParts as $part) {
+            $part = trim($part);
+
+            if ($part !== '') {
+                $segments[] = $part;
+            }
         }
     }
 
-    return array_values(array_unique($labels));
+    return $segments;
+}
+
+function normalise_calendar_beat_summary(string $segment): string {
+    $segment = trim($segment);
+
+    $segment = preg_replace('/\s+/', ' ', $segment);
+    $segment = trim((string)$segment);
+
+    if ($segment === '') {
+        return '';
+    }
+
+    if (mb_strlen($segment) > 140) {
+        $segment = mb_substr($segment, 0, 137) . '...';
+    }
+
+    return ucfirst($segment);
+}
+
+function classify_calendar_beat_type(string $summary): string {
+    $lower = mb_strtolower($summary);
+
+    if (str_contains($lower, 'demonstrat')) {
+        return 'demonstration';
+    }
+
+    if (
+        str_contains($lower, 'correct') ||
+        str_contains($lower, 'adjust') ||
+        str_contains($lower, 'fix')
+    ) {
+        return 'correction';
+    }
+
+    if (
+        str_contains($lower, 'explain') ||
+        str_contains($lower, 'says') ||
+        str_contains($lower, 'tells')
+    ) {
+        return 'instruction';
+    }
+
+    if (
+        str_contains($lower, 'watch') ||
+        str_contains($lower, 'notice') ||
+        str_contains($lower, 'observe')
+    ) {
+        return 'observation';
+    }
+
+    if (
+        str_contains($lower, 'evaluate') ||
+        str_contains($lower, 'assess')
+    ) {
+        return 'evaluation';
+    }
+
+    return 'action';
+}
+
+function dedupe_calendar_beats(array $beats): array {
+    $seen = [];
+    $deduped = [];
+
+    foreach ($beats as $beat) {
+        $summary = trim((string)($beat['summary'] ?? ''));
+
+        if ($summary === '') {
+            continue;
+        }
+
+        $key = mb_strtolower($summary);
+
+        if (isset($seen[$key])) {
+            continue;
+        }
+
+        $seen[$key] = true;
+        $deduped[] = $beat;
+    }
+
+    return $deduped;
 }
