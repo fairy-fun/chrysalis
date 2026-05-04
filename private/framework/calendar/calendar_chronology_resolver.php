@@ -31,7 +31,7 @@ function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
             {$pathPartsSql}
         ),
         walk AS (
-            SELECT ce.id, ce.entity_id, 1 AS depth
+            SELECT ce.`id` AS _internal_id, ce.entity_id, 1 AS depth
             FROM sxnzlfun_chrysalis.calendar_events ce
             JOIN path_parts p
               ON p.depth = 1
@@ -40,12 +40,12 @@ function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
 
             UNION ALL
 
-            SELECT child.id, child.entity_id, walk.depth + 1
+            SELECT child.`id` AS _internal_id, child.entity_id, walk.depth + 1
             FROM walk
             JOIN path_parts p
               ON p.depth = walk.depth + 1
             JOIN sxnzlfun_chrysalis.calendar_events child
-              ON child.parent_event_id = walk.id
+              ON child.parent_event_id = walk._internal_id
              AND child.sequence_index = p.sequence_index
         )
         SELECT entity_id
