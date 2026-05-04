@@ -4,13 +4,13 @@
 
 ## Postman Request — Create Prose Draft
 
-**Method**
+**Method**  
 POST
 
-**URL**
+**URL**  
 https://antheapeche.com/pecherie/chill-api/index.php
 
-**Headers**
+**Headers**  
 Content-Type: application/json  
 X-API-Key: <your key>
 
@@ -33,30 +33,30 @@ X-API-Key: <your key>
   },
   "annotations": []
 }
-
 ```
 
-Purpose
+## Purpose
 
-Creates a prose draft that can later be converted into calendar subevents.
+Creates a prose draft used as input for deterministic calendar subevent generation.
 
-This endpoint does not create calendar nodes.
+This endpoint does not create calendar events or subevents.
 
-Behavior
+## Behavior
 Stores prose as canonical input
-Associates prose with a target calendar event via projection
+Associates prose with a target calendar event
 Does NOT:
 call planner
 generate plan_id
 assign client_id
 write to calendar_events
-Critical Rules
+## Critical Rules
 1. JSON Only
-   Use raw JSON
-   Do not use multipart unless uploading files
+Use raw JSON
+Do not use multipart unless uploading files
 2. prose_body
-   Use \n for line breaks
-   Each line becomes a candidate subevent (beat)
+Use \n for line breaks
+Each non-empty line represents exactly one subevent (beat)
+Line order is preserved and used for deterministic execution
 3. draft_status_id
 
 Must exist in:
@@ -64,12 +64,15 @@ Must exist in:
 entities.id WHERE entity_type_id = 'entity_type_status'
 4. projection.target_entity_id
 
-Must be a valid:
+Format:
 
 calendar_event:<id>
 
-This is the parent event for future batch execution.
+Rules:
 
+MUST refer to a calendar_layer_event node
+Subevents attach only to event nodes
+MUST match the parent_event_entity_id used during batch execution
 5. annotations
 
 Must always be an array:
@@ -77,17 +80,20 @@ Must always be an array:
 "annotations": []
 Next Step (REQUIRED)
 
-To generate calendar subevents:
+Execute batch to create subevents:
 
 POST /pecherie/chill-api/index.php
 
 {
-"operation": "executeCalendarBatchFromProse",
-"parent_event_entity_id": "calendar_event:322",
-"prose": "Line 1\nLine 2\nLine 3"
+  "operation": "executeCalendarBatchFromProse",
+  "parent_event_entity_id": "calendar_event:322",
+  "prose": "Line 1\nLine 2\nLine 3"
 }
-Execution Guarantees (Batch)
+Execution Input Rule
+executeCalendarBatchFromProse uses the provided "prose" string.
+It does NOT read from stored prose_draft records.
+Execution Guarantees
 Deterministic: same prose → same plan_id
 Idempotent: safe retries
 Replay-safe: no duplicate subevents
-Parallel-safe: DB-enforced uniqueness
+Parallel-safe: enforced by DB uniqueness

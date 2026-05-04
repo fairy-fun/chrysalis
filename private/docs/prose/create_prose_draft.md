@@ -1,17 +1,15 @@
 =========================================
-
-## private/docs/prose/create_prose_draft.md
-
+private/docs/prose/create_prose_draft.md
 =========================================
-# Prose Draft → Calendar Subevent Workflow (Canonical)
+Prose Draft → Calendar Subevent Workflow (Canonical)
 Overview
 
-This is a two-step system:
+This system is strictly two-step:
 
 1. createProseDraft
 2. executeCalendarBatchFromProse
 
-No calendar subevents are created during draft creation.
+No calendar writes occur in step 1.
 
 Step 1 — Create Prose Draft
 
@@ -35,8 +33,8 @@ POST /pecherie/chill-api/index.php
 }
 Result
 Prose is stored
-No calendar writes occur
-Step 2 — Execute Batch (PRIMARY)
+No calendar structure is modified
+Step 2 — Execute Batch (PRIMARY ENTRYPOINT)
 
 POST /pecherie/chill-api/index.php
 
@@ -45,7 +43,27 @@ POST /pecherie/chill-api/index.php
 "parent_event_entity_id": "calendar_event:322",
 "prose": "Arrive\nSetup\nBegin session"
 }
-What Happens Internally
+Parent Event Rules (CRITICAL)
+parent_event_entity_id MUST:
+- refer to a calendar_layer_event node
+- match projection.target_entity_id from the prose draft
+
+Subevents are never attached to:
+
+week
+day
+time
+
+Only:
+
+calendar_layer_event → calendar_layer_subevent
+Deterministic Mapping
+Each non-empty line in prose produces exactly one subevent,
+in order, with stable indexing.
+Execution Uses Provided Prose
+Batch execution uses the prose string in the request.
+It does NOT load or depend on stored prose_draft records.
+Internal Architecture
 Prose
 → Planner (deterministic)
 → operations[]
@@ -56,60 +74,62 @@ Prose
 → executes in order
 
 → Subevent Service (SSOT)
-→ idempotency check
+→ early idempotency lookup
 → validation
 → inheritance
 → payload shaping
+→ duplicate-key recovery
 
 → Ensurer
-→ structural write
+→ structural write only
 
 → DB
 → UNIQUE(client_id)
 Identity Model
-1. Structural Identity
-   projection_entity_id
+Structural Identity (Node Uniqueness)
+projection_entity_id
 + layer_id
 + parent_event_id
 + sequence_index
-
-Prevents duplicate nodes.
-
-2. Execution Identity
-   client_id (UNIQUE)
-
-Prevents duplicate writes.
-
-3. Plan Identity
-   plan_id = hash(prose → operations)
-
-Ensures deterministic replay.
-
-Replay Guarantees
-
-Running the same request twice:
-
-First run
-executed_count = N
-idempotent_count = 0
-Second run
-executed_count = 0
-idempotent_count = N
-Same entity_ids returned
-No duplicates created
-Rules
-❌ Do NOT write directly to calendar_events
-❌ Do NOT generate your own client_id outside orchestration
-❌ Do NOT bypass batch endpoint for bulk creation
-❌ Do NOT persist inference
-✅ Use executeCalendarBatchFromProse for all prose-driven subevents
-Low-Level Endpoint (Advanced Only)
-{
-"operation": "createCalendarSubevent",
-"parent_event_entity_id": "calendar_event:322",
-"event_label": "Beat",
-"client_id": "plan_id:0"
-}
-Requires correct client_id
-Used by orchestrator
-Not intended for manual batch usage
+  Execution Identity (Write Idempotency)
+  client_id (UNIQUE)
+  Plan Identity (Determinism)
+  plan_id = hash(parent_event_entity_id + operations)
+  Replay Behavior
+  First Run
+  executed_count = N
+  idempotent_count = 0
+  Second Identical Run
+  executed_count = 0
+  idempotent_count = N
+  Same entity_ids returned
+  No duplicates created
+  Response Shape
+  {
+  "success": true,
+  "data": {
+  "executed_count": 3,
+  "idempotent_count": 0,
+  "entity_ids": [
+  "calendar_event:901",
+  "calendar_event:902",
+  "calendar_event:903"
+  ]
+  }
+  }
+  Rules
+  ❌ Do NOT write directly to calendar_events
+  ❌ Do NOT attach subevents to non-event nodes
+  ❌ Do NOT generate client_id manually for batch use
+  ❌ Do NOT assume drafts are used during execution
+  ❌ Do NOT persist inference
+  ✅ Always use executeCalendarBatchFromProse for prose-driven subevents
+  Low-Level Endpoint (Restricted Use)
+  {
+  "operation": "createCalendarSubevent",
+  "parent_event_entity_id": "calendar_event:322",
+  "event_label": "Beat",
+  "client_id": "plan_id:0"
+  }
+  This endpoint MUST NOT be used for batch creation.
+  It exists only for controlled or orchestrated single writes.

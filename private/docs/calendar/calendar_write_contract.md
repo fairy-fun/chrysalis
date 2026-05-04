@@ -1,40 +1,38 @@
 =========================================
 private/docs/calendar/calendar_write_contract.md
 =========================================
-
-# Calendar System — Write Contract (Replay-Safe Architecture)
-
-## Core Write Path
+Calendar System — Write Contract (Replay-Safe Architecture)
+Core Write Path
 Planner → Orchestrator → Subevent Service → Ensurer → DB
 
-All calendar writes must terminate in:
+All writes terminate in:
 
 private/framework/calendar/calendar_node_ensurer.php
-
-### Identity Model
-#### Structural Identity (Node Uniqueness)
-
+Identity Model
+Structural Identity
 projection_entity_id
 + layer_id
 + parent_event_id
 + sequence_index
-  
-### Execution Identity (Write Idempotency)
-  client_id (UNIQUE)
-  Enforced by DB constraint
-  Prevents duplicate writes 
-  
-### Plan Identity (Determinism)
-  plan_id = hash(parent_event_entity_id + operations)
-  Same input → same plan_id
-  Stable across retries
-  Subevent Definition
 
-A subevent is:
+Ensures no duplicate nodes.
 
+Execution Identity
+client_id (UNIQUE)
+Enforced at DB level
+Prevents duplicate writes
+Plan Identity
+plan_id = hash(parent_event_entity_id + operations)
+Deterministic
+Stable across retries
+Subevent Definition
 layer_id = calendar_layer_subevent
 parent_event_id IS NOT NULL
-Batch Execution (PRIMARY ENTRYPOINT)
+
+Parent must be:
+
+calendar_layer_event
+Primary Write Endpoint
 
 POST /pecherie/chill-api/index.php
 
@@ -43,64 +41,79 @@ POST /pecherie/chill-api/index.php
 "parent_event_entity_id": "calendar_event:322",
 "prose": "Line 1\nLine 2\nLine 3"
 }
+Deterministic Execution Rule
+Each non-empty line → exactly one operation → exactly one subevent
+Order is preserved and stable
 Execution Flow
 1. Planner
    Deterministic
-   Produces ordered operations[]
+   Produces ordered operations
    Generates plan_id
 2. Orchestrator
-   Assigns:
-   client_id = <plan_id>:<index>
-   Executes sequentially
+
+Assigns:
+
+client_id = <plan_id>:<index>
+
+Executes in strict order.
+
 3. Subevent Service (SINGLE SOURCE OF TRUTH)
 
 Responsibilities:
 
-Early idempotency lookup by client_id
+Early lookup by client_id
 Parent validation
 Field inheritance
 Payload shaping
 Duplicate-key recovery
 
-All domain logic lives here.
+No domain logic exists outside this layer.
 
 4. Ensurer
    calendar_node_ensurer.php
 
 Responsibilities:
 
-Structural identity only
+Structural identity
 sequence_index allocation
-DB writes
+DB persistence
 
-No domain logic.
+No semantic logic.
 
 Idempotency Model
-Mechanisms
-Early lookup:
-SELECT by client_id
-DB enforcement:
-UNIQUE(client_id)
-Recovery:
-On duplicate key → fetch existing row
+1. Early Lookup
+   SELECT * FROM calendar_events WHERE client_id = ?
+2. DB Constraint
+   UNIQUE(client_id)
+3. Recovery
+
+On duplicate key:
+
+fetch existing row
+return existing entity_id
 Guarantees
 Safe retries
 Safe parallel execution
-Partial completion recovery
+Partial completion safe
 Deterministic outputs
-Direct Subevent Creation (LOW-LEVEL)
+Response Shape
+{
+"success": true,
+"data": {
+"executed_count": N,
+"idempotent_count": M,
+"entity_ids": []
+}
+}
+Low-Level Endpoint (Restricted)
 {
 "operation": "createCalendarSubevent",
 "parent_event_entity_id": "calendar_event:322",
 "event_label": "Beat",
 "client_id": "plan_id:0"
 }
-
-Rules:
-
-client_id strongly required for correctness
-Must be globally unique
-Used by orchestrator
+MUST NOT be used for batch creation.
+Used only by orchestrator or controlled single writes.
 Structural Rules
 ❌ client_id is NOT part of structural identity
 ❌ No direct INSERT into calendar_events
@@ -116,6 +129,6 @@ subevent (calendar_layer_subevent)
 Final Principle
 Planner defines intent
 Orchestrator defines execution
-Service defines meaning
+Service defines domain logic
 Ensurer defines structure
 DB enforces uniqueness
