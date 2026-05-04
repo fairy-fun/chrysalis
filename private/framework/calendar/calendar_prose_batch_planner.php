@@ -32,7 +32,8 @@ function generate_calendar_batch_from_prose(
             'operation' => 'createCalendarSubevent',
             'parent_event_entity_id' => $parentEventEntityId,
             'event_label' => $summary,
-            'beat_type' => $beat['type'],
+            'beat_type_id' => map_calendar_beat_code_to_id((string)$beat['type']),
+            'beat_inference' => $beat['inference'] ?? null,
         ];
     }
 
@@ -61,6 +62,25 @@ function allowed_calendar_beat_types(): array {
     ];
 }
 
+function map_calendar_beat_code_to_id(string $code): string
+{
+    static $map = [
+        'instruction' => 'BEAT_INSTRUCTION',
+        'demonstration' => 'BEAT_DEMONSTRATION',
+        'correction' => 'BEAT_CORRECTION',
+        'interaction' => 'BEAT_INTERACTION',
+        'evaluation' => 'BEAT_EVALUATION',
+        'reflection' => 'BEAT_REFLECTION',
+        'transition' => 'BEAT_TRANSITION',
+    ];
+
+    if (!isset($map[$code])) {
+        throw new RuntimeException('Unknown beat code: ' . $code);
+    }
+
+    return $map[$code];
+}
+
 function extract_calendar_beats(string $prose): array {
     $segments = split_prose_into_candidate_segments($prose);
 
@@ -73,9 +93,12 @@ function extract_calendar_beats(string $prose): array {
             continue;
         }
 
+        $classification = classify_calendar_beat_type($summary);
+
         $beats[] = [
-            'type' => classify_calendar_beat_type($summary),
+            'type' => $classification['code'],
             'summary' => $summary,
+            'inference' => $classification,
         ];
     }
 
@@ -135,74 +158,75 @@ function normalise_calendar_beat_summary(string $segment): string {
     return ucfirst($segment);
 }
 
-function classify_calendar_beat_type(string $summary): string {
+function classify_calendar_beat_type(string $summary): array {
     $lower = mb_strtolower($summary);
 
-    if (
-        str_contains($lower, 'explain') ||
-        str_contains($lower, 'rule') ||
-        str_contains($lower, 'principle') ||
-        str_contains($lower, 'concept') ||
-        str_contains($lower, 'frame')
-    ) {
-        return 'instruction';
+    $rules = [
+        'instruction' => [
+            'explain',
+            'rule',
+            'principle',
+            'concept',
+            'frame',
+        ],
+        'demonstration' => [
+            'demonstrat',
+            'show',
+            'perform',
+            'model',
+        ],
+        'correction' => [
+            'correct',
+            'incorrect',
+            'error',
+            'fix',
+            'adjust',
+        ],
+        'interaction' => [
+            'touch',
+            'takes my',
+            'dialogue',
+            'asks',
+            'answers',
+            'responds',
+        ],
+        'evaluation' => [
+            'acceptable',
+            'good',
+            'nods',
+            'judges',
+            'approval',
+            'assess',
+        ],
+        'reflection' => [
+            'i think',
+            'i realise',
+            'i realize',
+            'i notice',
+            'has been downgraded',
+            'system',
+            'meta',
+        ],
+    ];
+
+    foreach ($rules as $code => $keywords) {
+        foreach ($keywords as $keyword) {
+            if (str_contains($lower, $keyword)) {
+                return [
+                    'code' => $code,
+                    'rule' => 'keyword:' . $keyword,
+                    'confidence' => 'rule',
+                ];
+            }
+        }
     }
 
-    if (
-        str_contains($lower, 'demonstrat') ||
-        str_contains($lower, 'show') ||
-        str_contains($lower, 'perform') ||
-        str_contains($lower, 'model')
-    ) {
-        return 'demonstration';
-    }
-
-    if (
-        str_contains($lower, 'correct') ||
-        str_contains($lower, 'incorrect') ||
-        str_contains($lower, 'error') ||
-        str_contains($lower, 'fix') ||
-        str_contains($lower, 'adjust')
-    ) {
-        return 'correction';
-    }
-
-    if (
-        str_contains($lower, 'touch') ||
-        str_contains($lower, 'takes my') ||
-        str_contains($lower, 'dialogue') ||
-        str_contains($lower, 'asks') ||
-        str_contains($lower, 'answers') ||
-        str_contains($lower, 'responds')
-    ) {
-        return 'interaction';
-    }
-
-    if (
-        str_contains($lower, 'acceptable') ||
-        str_contains($lower, 'good') ||
-        str_contains($lower, 'nods') ||
-        str_contains($lower, 'judges') ||
-        str_contains($lower, 'approval') ||
-        str_contains($lower, 'assess')
-    ) {
-        return 'evaluation';
-    }
-
-    if (
-        str_contains($lower, 'i think') ||
-        str_contains($lower, 'i realise') ||
-        str_contains($lower, 'i notice') ||
-        str_contains($lower, 'has been downgraded') ||
-        str_contains($lower, 'system') ||
-        str_contains($lower, 'meta')
-    ) {
-        return 'reflection';
-    }
-
-    return 'transition';
+    return [
+        'code' => 'transition',
+        'rule' => 'default:no_keyword_match',
+        'confidence' => 'fallback',
+    ];
 }
-
 
 function dedupe_calendar_beats(array $beats): array {
     $seen = [];
