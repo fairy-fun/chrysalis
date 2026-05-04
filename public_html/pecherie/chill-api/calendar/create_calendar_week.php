@@ -60,7 +60,7 @@ try {
         $bookCode,
         $weekIndex,
         [
-            'week_label' => $weekLabel,
+            'summary' => $weekLabel,
             'real_date_start_id' => $realDateStartId,
         ]
     );
