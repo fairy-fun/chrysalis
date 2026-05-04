@@ -28,6 +28,9 @@ $beatTypeId = $body['beat_type_id'] ?? null;
 $notes = $body['notes'] ?? null;
 $sourceDocument = $body['source_document'] ?? null;
 
+/** ✅ NEW: client_id intake */
+$clientId = $body['client_id'] ?? null;
+
 /**
  * Type validation
  */
@@ -40,6 +43,7 @@ foreach ([
              'beat_type_id' => $beatTypeId,
              'notes' => $notes,
              'source_document' => $sourceDocument,
+             'client_id' => $clientId,
          ] as $field => $value) {
     if ($value !== null && !is_string($value)) {
         respond(400, [
@@ -61,6 +65,7 @@ $classTypeId = is_string($classTypeId) ? trim($classTypeId) : null;
 $beatTypeId = is_string($beatTypeId) ? trim($beatTypeId) : null;
 $notes = is_string($notes) ? trim($notes) : null;
 $sourceDocument = is_string($sourceDocument) ? trim($sourceDocument) : null;
+$clientId = is_string($clientId) ? trim($clientId) : null;
 
 if (!is_string($parentEventEntityId) || $parentEventEntityId === '') {
     respond(400, [
@@ -71,6 +76,35 @@ if (!is_string($parentEventEntityId) || $parentEventEntityId === '') {
 
 $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
+
+/**
+ * ✅ Early idempotency check (fast path)
+ */
+if ($clientId !== null && $clientId !== '') {
+
+    $stmt = $pdo->prepare("
+        SELECT entity_id
+        FROM sxnzlfun_chrysalis.calendar_events
+        WHERE client_id = :client_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':client_id' => $clientId,
+    ]);
+
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existing) {
+        respond(200, [
+            'status' => 'ok',
+            'idempotent' => true,
+            'event' => [
+                'entity_id' => $existing['entity_id'],
+            ],
+        ]);
+    }
+}
 
 try {
 
@@ -99,7 +133,7 @@ try {
     }
 
     /**
-     * Load parent event (for inheritance)
+     * Load parent event
      */
     $stmt = $pdo->prepare("
         SELECT
@@ -166,13 +200,17 @@ try {
     );
 
     /**
-     * Resolve effective domain (after inheritance)
+     * ✅ Attach client_id only if present
+     */
+    if ($clientId !== null && $clientId !== '') {
+        $payload['client_id'] = $clientId;
+    }
+
+    /**
+     * Beat-domain enforcement
      */
     $effectiveDomainId = $payload['domain_id'] ?? null;
 
-    /**
-     * 🔒 Beat-domain enforcement (DB-driven)
-     */
     if ($beatTypeId !== null && $beatTypeId !== '') {
 
         $stmt = $pdo->prepare("
@@ -201,14 +239,52 @@ try {
     }
 
     /**
-     * Create subevent
+     * Create subevent (with race-safe idempotency)
      */
-    $result = ensure_calendar_subevent(
-        $pdo,
-        $parentEventEntityId,
-        null,
-        $payload
-    );
+    try {
+        $result = ensure_calendar_subevent(
+            $pdo,
+            $parentEventEntityId,
+            null,
+            $payload
+        );
+    } catch (PDOException $e) {
+
+        $info = $e->errorInfo ?? null;
+
+        $isClientDup =
+            is_array($info) &&
+            (int)($info[1] ?? 0) === 1062 &&
+            str_contains((string)($info[2] ?? ''), 'uq_calendar_events_client_id');
+
+        if ($isClientDup && $clientId !== null && $clientId !== '') {
+
+            $stmt = $pdo->prepare("
+                SELECT entity_id
+                FROM sxnzlfun_chrysalis.calendar_events
+                WHERE client_id = :client_id
+                LIMIT 1
+            ");
+
+            $stmt->execute([
+                ':client_id' => $clientId,
+            ]);
+
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                respond(200, [
+                    'status' => 'ok',
+                    'idempotent' => true,
+                    'event' => [
+                        'entity_id' => $existing['entity_id'],
+                    ],
+                ]);
+            }
+        }
+
+        throw $e;
+    }
 
     respond(200, [
         'status' => 'ok',
