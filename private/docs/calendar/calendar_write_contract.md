@@ -1,188 +1,451 @@
 # Calendar System — Write Contract
 
-## Overview
+## Core Rule
 
-This document defines the **required behavior for all write operations** to the calendar system.
-
-All create/update flows MUST follow this contract.
-
-This applies to:
-- Week creation
-- Day creation
-- Time/Event/Subevent creation
-- Any future calendar mutations
-
----
-
-## 1. Core Principle
+All calendar writes must follow:
 
 ```text
-All writes must be:
-- deterministic
-- idempotent
-- race-safe
-- invariant-preserving
-```
+API → ensure_calendar_* → ensure_calendar_node → DB
 
-## 2. Required Write Sequence
+The only allowed calendar write entry points are:
 
-Every calendar event creation MUST follow this exact order:
+ensure_calendar_week(...)
+ensure_calendar_day(...)
+ensure_calendar_time(...)
+ensure_calendar_event(...)
+
+No API endpoint, helper, migration, or framework file may write directly to calendar_events except:
+
+private/framework/calendar/calendar_node_ensurer.php
+Identity Model
+calendar_events.id        = internal structural node id
+calendar_events.event_id  = stable business id
+calendar_events.entity_id = external API identity
+
+Hard rule:
+
+parent_event_id always points to calendar_events.id
+parent_event_id never points to calendar_events.event_id
+Structure Model
+
+Calendar structure is defined only by:
+
+parent_event_id + sequence_index
+
+Layers:
+
+week
+day
+time
+event
+
+Subevents are also calendar_layer_event nodes whose parent is another event node.
+
+Write Responsibilities
+API Layer
+
+The API layer owns:
+
+input validation
+semantic validation
+classval validation
+payload shaping
+
+The API layer must not:
+
+INSERT INTO calendar_events
+allocate sequence_index manually
+write chronology_address
+use event_id for parent linkage
+construct structural paths
+Boundary Layer
+
+The boundary layer is:
+
+private/framework/calendar/calendar_layer_ensurers.php
+
+It owns:
+
+parent resolution by entity_id
+layer transition validation
+semantic parent-child validation
+delegation to ensure_calendar_node(...)
+Primitive Layer
+
+The primitive layer is:
+
+private/framework/calendar/calendar_node_ensurer.php
+
+It owns:
+
+structural identity
+idempotency
+sequence_index allocation
+entity row creation
+calendar_events insert
+duplicate-key retry behaviour
+
+Do not move semantic validation into the primitive.
+
+Chronology Rule
+
+Chronology is read-only navigation.
+
+Allowed:
+
+resolve human-readable chronology addresses
+walk the tree by parent_event_id + sequence_index
+display chronology paths
+search by chronology through resolver logic
+
+Forbidden:
+
+writing chronology_address
+using chronology_address as identity
+using chronology_address as hierarchy
+using chronology_address as ordering
+looking up structural nodes directly by chronology_address
+Semantic Fields
+
+Semantic fields are payload data, not structure.
+
+Current semantic fields include:
+
+time_label_id
+event_type_id
+domain_id
+class_type_id
+location_id
+notes
+source_document
+Classval-backed fields
+
+These must be validated against their classval tables before calling the ensurer:
+
+time_label_id  → calendar_time_label_classvals.id
+event_type_id  → calendar_event_type_classvals.id
+domain_id      → calendar_domain_classvals.id
+class_type_id  → calendar_class_type_classvals.id
+Reference fields
+location_id
+
+location_id is not a classval.
+
+It must not be validated through classval helpers.
+
+For now, it may be passed through as a reference field. If a location entity/table is formalised later, validation should target that reference model, not a classval table.
+
+Display Fields
+summary
+
+summary is display text.
+
+For classval-backed time labels:
+
+time_label_id = semantic meaning
+summary       = display label derived from classval
+sequence_index = structural order
+
+Do not treat free-text labels as canonical semantic values.
+
+Idempotency
+
+Writes must be idempotent.
+
+Repeated calls with the same structural identity must return the existing node instead of creating duplicates.
+
+Structural identity is:
+
+projection_entity_id
+layer_id
+parent_event_id
+sequence_index
+
+For append-style event creation, the API passes:
+
+sequenceIndex: null
+
+The primitive allocates the next valid sequence_index.
+
+Forbidden Patterns
+
+These are contract violations:
+
+INSERT INTO calendar_events outside calendar_node_ensurer.php
+legacy create_calendar_event* usage
+manual sequence_index allocation outside primitive
+parent_event_id = event_id
+WHERE chronology_address = ...
+UPDATE calendar_events SET chronology_address = ...
+free-text canonical classval values
+classval validation for location_id
+Final Principle
+
+Structure creates the node.
+
+Identity exposes the node.
+
+Semantics describe the node.
+
+Display names the node.
+
+Chronology only helps humans find the node.
+
+
+### `private/docs/calendar/calendar_write_surface.md`
+
+```md
+# Calendar System — Write Surface
+
+## Purpose
+
+This document defines the public write surface for the calendar system.
+
+The write surface is intentionally narrow.
+
+All writes must enter through API endpoints, pass through layer ensurers, and terminate in the single primitive node ensurer.
+
 ```text
-1. Resolve parent (if applicable)
-2. Check for existing record (idempotency check)
-3. Allocate event_id
-4. Create entity
-5. Insert calendar_events row
-6. Insert projection membership
-7. Handle duplicate-key race (if triggered)
-```
-## 3. Idempotency Rule
-### Definition
+API → ensure_calendar_* → ensure_calendar_node → DB
+Allowed Framework Entry Points
 
-A write operation is idempotent if:
-```text
-Repeated calls with the same inputs return the same result
-without creating duplicate rows
-```
-### Required Pattern
-```sql
--- Step 1: Check existing
-SELECT id
-FROM calendar_events
-WHERE parent_event_id = :parent_id
-  AND layer_id = :layer_id
-  AND <layer_index> = :index
-LIMIT 1;
-```
-```text
-IF found:
-  return existing row
-ELSE:
-  attempt insert
-```
----
+The only allowed write functions are:
 
-## 4. Race Condition Handling
+ensure_calendar_week(...)
+ensure_calendar_day(...)
+ensure_calendar_time(...)
+ensure_calendar_event(...)
 
-Even with a pre-check, concurrent requests may collide.
+These live in:
 
-Required behavior
-```text
-IF insert fails with duplicate key:
-→ re-select existing row
-→ return it
-```
-Never:
-fail the request due to duplicate key
+private/framework/calendar/calendar_layer_ensurers.php
 
-## 5. Entity Creation (Non-Negotiable)
+All of them delegate to:
 
-   Required
-```php
-    $eventId = next_calendar_event_id($pdo);
-    $entityId = 'calendar_event:' . $eventId;
+private/framework/calendar/calendar_node_ensurer.php
+API Endpoints
 
-    create_entity($pdo, $entityId, 'entity_type_calendar_event');
-```
-** Rule **
-```text
-Entity must exist BEFORE inserting calendar_events row
-```
+Current calendar write endpoints:
 
-## 6. Insert Requirements
+public_html/pecherie/chill-api/calendar/create_calendar_week.php
+public_html/pecherie/chill-api/calendar/create_calendar_day.php
+public_html/pecherie/chill-api/calendar/create_calendar_time.php
+public_html/pecherie/chill-api/calendar/create_calendar_event.php
+public_html/pecherie/chill-api/calendar/create_calendar_subevent.php
+Week Creation
 
-   calendar_events insert must include:
-   entity_id
-   layer_id
-   parent_event_id
-   <layer-specific index>
-   event_id
-   chronology_address
-   parent_event_id rule
-   Always references calendar_events.id (NOT event_id)
-## 7. Projection Membership (Required)
+Endpoint:
 
-Every event must be linked to a projection.
+create_calendar_week.php
 
-** Rule**
-A calendar event is not valid until membership is inserted
-Inheritance pattern
-INSERT INTO calendar_event_projection_membership (calendar_event_id, projection_entity_id)
-SELECT :new_event_id, projection_entity_id
-FROM calendar_event_projection_membership
-WHERE calendar_event_id = :parent_event_id;
+Allowed input:
 
-## 8. Chronology Address Construction
+{
+  "operation": "createCalendarWeek",
+  "projection_entity_id": "prose_projection:...",
+  "week_index": 1,
+  "week_label": "Week 1"
+}
 
-   Rule
-   chronology_address must reflect hierarchical position
-   Examples
-   Week: "3"
-   Day: "3.1"
-   Time: "3.1.1"
-   Event: "3.1.1.1"
-   Construction
-   child_address = parent_address + '.' + index
+Payload to ensurer:
 
-## 9. Error Handling Rules
+[
+    'summary' => $weekLabel,
+]
 
-   Allowed outcomes
-- success (new row created)
-- success (existing row returned)
-  Disallowed outcomes
-- partial writes
-- orphaned entities
-- duplicate logical rows
-- missing projection membership
+Rules:
 
-## 10. Transaction Boundaries
+week_label maps to summary
+week_index maps to sequence_index
+no chronology writes
+Day Creation
 
-Recommended:
+Endpoint:
 
-Wrap the full write flow in a transaction
+create_calendar_day.php
 
-Especially for:
+Allowed input:
 
-entity creation
-event insert
-membership insert
+{
+  "operation": "createCalendarDay",
+  "parent_week_entity_id": "calendar_event:...",
+  "day_index": 1,
+  "day_label": "Sunday",
+  "real_date_id": "DATE-..."
+}
 
-## 11. Validation Requirements
+Payload to ensurer:
 
-Before insert:
+[
+    'summary' => $dayLabel,
+    'real_date_start_id' => $realDateId,
+    'real_date_end_id' => $realDateId
+]
 
-- parent exists (if applicable)
-- correct layer_id
-- index within valid range (e.g. day 1..7)
+Rules:
 
-## 12. Layer-Specific Index Rules
+day_label maps to summary
+day_index maps to sequence_index
+real_date_id maps to start/end date fields
+parent is resolved by entity_id
+parent_event_id uses internal calendar_events.id
+Time Creation
 
-Each layer must validate its own index:
+Endpoint:
 
-Week       → week_index > 0
-Day        → 1 ≤ day_index ≤ 7
-Time       → time_index ≥ 1
-Event      → event_index ≥ 1
-Subevent   → subevent_index ≥ 1
+create_calendar_time.php
 
-## 13. No Placeholder Values
+Allowed input:
 
-    Forbidden
-    NULL chronology_address
-    temporary entity IDs
-    fake parent references
-## 14. Write Contract Violation Symptoms
+{
+  "operation": "createCalendarTime",
+  "parent_day_entity_id": "calendar_event:...",
+  "time_index": 1,
+  "time_label_id": "calendar_time_label_morning"
+}
 
-If this contract is broken, you will see:
+Payload to ensurer:
 
-- duplicate rows
-- missing days/weeks in queries
-- broken hierarchy traversal
-- inconsistent chronology addresses
-- FK constraint failures
-## 15. Final Principle
-    Every write must either:
-- fully succeed
-- or behave as if it already succeeded
+[
+    'summary' => $labelFromClassval,
+    'time_label_id' => $timeLabelId
+]
 
-There is no third state.
+Rules:
+
+time_index maps to sequence_index
+time_label_id must exist in calendar_time_label_classvals
+summary is derived from the classval label
+free-text time labels are not canonical
+Event Creation
+
+Endpoint:
+
+create_calendar_event.php
+
+Allowed input:
+
+{
+  "operation": "createCalendarEvent",
+  "parent_time_entity_id": "calendar_event:...",
+  "event_label": "Foxtrot tutorial",
+  "event_type_id": "calendar_event_type_...",
+  "location_id": "PLACE-013",
+  "domain_id": "calendar_domain_...",
+  "class_type_id": "calendar_class_type_...",
+  "notes": "...",
+  "source_document": "..."
+}
+
+Payload to ensurer:
+
+[
+    'summary' => $eventLabel,
+    'event_type_id' => $eventTypeId,
+    'location_id' => $locationId,
+    'domain_id' => $domainId,
+    'class_type_id' => $classTypeId,
+    'notes' => $notes,
+    'source_document' => $sourceDocument,
+]
+
+Rules:
+
+parent_time_entity_id is resolved by entity_id
+event is appended under the time node
+sequence_index is allocated by ensure_calendar_node
+event_type_id must be classval-valid
+domain_id must be classval-valid
+class_type_id must be classval-valid
+location_id is not a classval
+Subevent Creation
+
+Endpoint:
+
+create_calendar_subevent.php
+
+Allowed input:
+
+{
+  "operation": "createCalendarSubevent",
+  "parent_event_entity_id": "calendar_event:...",
+  "event_label": "Sub-beat",
+  "event_type_id": "calendar_event_type_...",
+  "location_id": "PLACE-013",
+  "domain_id": "calendar_domain_...",
+  "class_type_id": "calendar_class_type_...",
+  "notes": "...",
+  "source_document": "..."
+}
+
+Payload to ensurer:
+
+[
+    'summary' => $eventLabel,
+    'event_type_id' => $eventTypeId,
+    'location_id' => $locationId,
+    'domain_id' => $domainId,
+    'class_type_id' => $classTypeId,
+    'notes' => $notes,
+    'source_document' => $sourceDocument,
+]
+
+Rules:
+
+subevents are calendar_layer_event nodes
+parent_event_entity_id must resolve to a calendar event node
+parent_event_id uses internal calendar_events.id
+sequence_index is allocated by ensure_calendar_node
+Classval Validation
+
+Classval validation belongs at the API/helper layer.
+
+Valid classval-backed calendar fields:
+
+time_label_id  → calendar_time_label_classvals
+event_type_id  → calendar_event_type_classvals
+domain_id      → calendar_domain_classvals
+class_type_id  → calendar_class_type_classvals
+
+Shared helper:
+
+private/framework/classvals/classval_validation.php
+
+Required helper:
+
+assert_valid_classval(...)
+Reference Fields
+location_id
+
+location_id is a reference field.
+
+It is not part of the classval system.
+
+Do not validate it with:
+
+assert_valid_classval(...)
+
+If location validation is added later, validate against the real location/entity model.
+
+Forbidden Write Surface
+
+Do not use or reintroduce:
+
+create_calendar_event*
+create_calendar_event_under_*
+direct INSERT INTO calendar_events
+manual sequence_index
+chronology_address writes
+event_id as structural parent
+location_id classval validation
+Final Rule
+
+The write surface should stay boring.
+
+APIs validate and shape payloads.
+
+Layer ensurers resolve and guard parents.
+
+The primitive writes structure.
+
+Nothing else writes calendar nodes.
