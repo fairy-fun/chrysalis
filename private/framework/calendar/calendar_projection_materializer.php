@@ -380,3 +380,4 @@ function assert_calendar_projection_row_integrity(array $row, string $projection
         }
     }
 }
+
