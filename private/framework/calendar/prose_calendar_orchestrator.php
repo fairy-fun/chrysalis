@@ -15,6 +15,7 @@ function execute_calendar_batch_from_prose(
 ): array {
 
     $plan = generate_calendar_batch_from_prose(
+        $pdo,
         $parentEventEntityId,
         $prose
     );

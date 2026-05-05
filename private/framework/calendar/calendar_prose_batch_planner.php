@@ -6,10 +6,10 @@ const CALENDAR_BEAT_EXTRACTOR_VERSION = 'v1';
 
 
 function generate_calendar_batch_from_prose(
+    PDO $pdo,
     string $parentEventEntityId,
     string $prose
 ): array {
-
     $parentEventEntityId = trim($parentEventEntityId);
     $prose = trim($prose);
 
