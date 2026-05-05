@@ -360,64 +360,91 @@ function classify_calendar_beat_type(
     string $classsetCode,
     array $allowedCodes
 ): array {
-    $classsetCode = strtoupper(trim($classsetCode));
-    $lower = mb_strtolower($summary);
+    global $pdo; // or pass it in properly if you prefer
 
-    switch ($classsetCode) {
-        case 'DEFAULT':
-            $rules = [
-                'instruction' => ['explain', 'rule', 'principle', 'concept', 'frame'],
-                'demonstration' => ['demonstrat', 'show', 'perform', 'model'],
-                'correction' => ['correct', 'incorrect', 'error', 'fix', 'adjust'],
-                'interaction' => ['touch', 'takes my', 'dialogue', 'asks', 'answers', 'responds'],
-                'evaluation' => ['acceptable', 'good', 'nods', 'judges', 'approval', 'assess'],
-                'reflection' => ['i think', 'i realise', 'i realize', 'i notice', 'system', 'meta'],
-            ];
-            break;
+    // Resolve classsetId from code (you may already have this upstream)
+    static $classsetStmt = null;
 
-        case 'PERSONAL':
-            $rules = [
-                'realization' => ['i realize', 'i realise', 'it hits me', 'i understand', 'i finally see'],
-                'confession' => ['i admit', 'i confess', 'i have to say', 'the truth is'],
-                'doubt' => ['i hesitate', 'i doubt', 'not sure', 'uncertain', 'second-guess'],
-                'intention' => ['i will', 'i decide', 'i choose', 'i mean to', 'i intend'],
-                'emotional_shift' => ['i feel', 'my mood', 'something shifts', 'suddenly i feel'],
-                'reflection' => ['i think', 'i wonder', 'i reflect', 'i notice'],
-            ];
-            break;
-
-        case 'INTIMATE':
-            $rules = [
-                'contact' => ['touch', 'holds', 'grabs', 'kisses', 'takes my hand'],
-                'approach' => ['moves closer', 'leans in', 'steps toward', 'comes closer'],
-                'withdrawal' => ['pulls away', 'steps back', 'withdraws', 'turns away'],
-                'tension' => ['pause', 'hesitates', 'silence', 'uncertain moment'],
-                'vulnerability' => ['admits', 'opens up', 'reveals', 'voice softens'],
-                'reassurance' => ['it’s okay', "it's okay", 'you’re safe', "you're safe", 'calms', 'comforts'],
-            ];
-            break;
-
-        default:
-            throw new RuntimeException('Unknown beat classset code: ' . $classsetCode);
+    if ($classsetStmt === null) {
+        $classsetStmt = $pdo->prepare("
+            SELECT id FROM calendar_beat_classsets
+            WHERE code = :code
+            LIMIT 1
+        ");
     }
 
-    foreach ($rules as $code => $keywords) {
-        foreach ($keywords as $keyword) {
-            if (str_contains($lower, $keyword)) {
-                return validate_calendar_beat_classification([
-                    'code' => $code,
-                    'rule' => 'keyword:' . $keyword,
-                    'confidence' => 'rule',
-                    'classset' => $classsetCode,
-                ], $allowedCodes);
-            }
+    $classsetStmt->execute([':code' => $classsetCode]);
+    $classsetId = $classsetStmt->fetchColumn();
+
+    if (!$classsetId) {
+        throw new RuntimeException('Unknown classset: ' . $classsetCode);
+    }
+
+    // Load rules
+    static $rulesStmt = null;
+
+    if ($rulesStmt === null) {
+        $rulesStmt = $pdo->prepare("
+            SELECT code, pattern, match_type, weight, priority
+            FROM calendar_beat_type_rules
+            WHERE set_id = :set_id
+              AND is_active = 1
+            ORDER BY priority DESC, weight DESC, id ASC
+        ");
+    }
+
+    $rulesStmt->execute([':set_id' => $classsetId]);
+    $rules = $rulesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $summaryLower = mb_strtolower($summary);
+
+    $scores = [];
+
+    foreach ($rules as $rule) {
+        $pattern = mb_strtolower(trim($rule['pattern']));
+        $code = mb_strtolower(trim($rule['code']));
+        $match = false;
+
+        switch ($rule['match_type']) {
+            case 'exact':
+                $match = ($summaryLower === $pattern);
+                break;
+
+            case 'prefix':
+                $match = str_starts_with($summaryLower, $pattern);
+                break;
+
+            case 'regex':
+                $match = preg_match($pattern, $summary) === 1;
+                break;
+
+            case 'contains':
+            default:
+                $match = str_contains($summaryLower, $pattern);
+                break;
+        }
+
+        if ($match) {
+            $scores[$code] = ($scores[$code] ?? 0) + (int)$rule['weight'];
         }
     }
 
+    if (empty($scores)) {
+        return validate_calendar_beat_classification([
+            'code' => 'transition',
+            'rule' => 'db:no_match',
+            'confidence' => 'fallback',
+            'classset' => $classsetCode,
+        ], $allowedCodes);
+    }
+
+    arsort($scores);
+    $bestCode = array_key_first($scores);
+
     return validate_calendar_beat_classification([
-        'code' => 'transition',
-        'rule' => 'default:no_keyword_match',
-        'confidence' => 'fallback',
+        'code' => $bestCode,
+        'rule' => 'db:scored',
+        'confidence' => 'rule',
         'classset' => $classsetCode,
     ], $allowedCodes);
 }
