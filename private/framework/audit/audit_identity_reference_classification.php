@@ -114,10 +114,11 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
             $classifiedReferences[$tableName . '.' . $columnName] = true;
         }
 
-        $discoverySql = "
+    $discoverySql = "
         SELECT TABLE_NAME, COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = " . $pdo->quote($schemaName) . "
+          AND TABLE_NAME <> 'calendar_beat_domain_map'
           AND (
               COLUMN_NAME LIKE '%\\_classval_id'
               OR COLUMN_NAME LIKE '%\\_domain_id'
