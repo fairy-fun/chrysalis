@@ -5,7 +5,21 @@ declare(strict_types=1);
 // See: private/docs/calendar/beat_classsets.md
 // for classset definitions and classifier contract.
 
-const CALENDAR_BEAT_EXTRACTOR_VERSION = 'v2-classset-aware';
+const CALENDAR_BEAT_EXTRACTOR_VERSION = 'v3-db-rules-classset-id';
+
+/**
+ * Optional classset-specific fallback overrides.
+ *
+ * Prefer explicit classset defaults over global transition fallback.
+ *
+ * Example:
+ * const CALENDAR_BEAT_CLASSSET_DEFAULT_CODES = [
+ *     'DEFAULT' => 'transition',
+ *     'PERSONAL' => 'reflection',
+ *     'INTIMATE' => 'tension',
+ * ];
+ */
+const CALENDAR_BEAT_CLASSSET_DEFAULT_CODES = [];
 
 function generate_calendar_batch_from_prose(
     PDO $pdo,
@@ -25,12 +39,18 @@ function generate_calendar_batch_from_prose(
 
     $classset = resolve_classset_for_event($pdo, $parentEventEntityId);
 
-    $classsetId = $classset['id'];
-    $classsetCode = $classset['code'];
+    $classsetId = (string)$classset['id'];
+    $classsetCode = (string)$classset['code'];
 
     $allowedCodes = get_allowed_beat_codes_for_classset($pdo, $classsetId);
 
-    $beats = extract_calendar_beats($prose, $classsetCode, $allowedCodes);
+    $beats = extract_calendar_beats(
+        $pdo,
+        $prose,
+        $classsetId,
+        $classsetCode,
+        $allowedCodes
+    );
 
     $planSeed = json_encode([
         'parent' => $parentEventEntityId,
@@ -236,7 +256,9 @@ function resolve_beat_type_id(PDO $pdo, string $classsetId, string $code): strin
 }
 
 function extract_calendar_beats(
+    PDO $pdo,
     string $prose,
+    string $classsetId,
     string $classsetCode,
     array $allowedCodes
 ): array {
@@ -245,14 +267,16 @@ function extract_calendar_beats(
     $beats = [];
 
     foreach ($segments as $segment) {
-        $summary = normalise_calendar_beat_summary($segment);
+        $summary = normalise_calendar_beat_summary((string)$segment);
 
         if ($summary === '') {
             continue;
         }
 
         $classification = classify_calendar_beat_type(
+            $pdo,
             $summary,
+            $classsetId,
             $classsetCode,
             $allowedCodes
         );
@@ -265,6 +289,222 @@ function extract_calendar_beats(
     }
 
     return dedupe_calendar_beats($beats);
+}
+
+function classify_calendar_beat_type(
+    PDO $pdo,
+    string $summary,
+    string $classsetId,
+    string $classsetCode,
+    array $allowedCodes
+): array {
+    static $rulesCache = [];
+    static $stmt = null;
+
+    $classsetId = trim($classsetId);
+    $classsetCode = trim($classsetCode);
+    $allowedCodes = normalise_calendar_allowed_codes($allowedCodes);
+
+    if ($classsetId === '') {
+        throw new RuntimeException('Missing classset id');
+    }
+
+    if ($allowedCodes === []) {
+        throw new RuntimeException('No allowed beat codes supplied for classset ' . $classsetCode);
+    }
+
+    if (!isset($rulesCache[$classsetId])) {
+        if ($stmt === null) {
+            $stmt = $pdo->prepare("
+                SELECT id, code, pattern, match_type, weight, priority
+                FROM calendar_beat_type_rules
+                WHERE set_id = :set_id
+                  AND is_active = 1
+                ORDER BY priority DESC, weight DESC, id ASC
+            ");
+        }
+
+        $stmt->execute([
+            ':set_id' => $classsetId,
+        ]);
+
+        $rulesCache[$classsetId] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $summaryNorm = normalise_calendar_rule_text($summary);
+    $matches = [];
+
+    foreach ($rulesCache[$classsetId] as $rule) {
+        $code = mb_strtolower(trim((string)($rule['code'] ?? '')));
+        $pattern = trim((string)($rule['pattern'] ?? ''));
+        $matchType = mb_strtolower(trim((string)($rule['match_type'] ?? '')), 'UTF-8');
+
+        if ($code === '' || $pattern === '') {
+            continue;
+        }
+
+        // Critical invariant guard:
+        // classifier may only emit codes allowed for the already-resolved classset.
+        if (!in_array($code, $allowedCodes, true)) {
+            continue;
+        }
+
+        if (!calendar_beat_rule_matches($summaryNorm, $pattern, $matchType)) {
+            continue;
+        }
+
+        $matches[] = [
+            'code' => $code,
+            'rule_id' => (int)$rule['id'],
+            'priority' => (int)$rule['priority'],
+            'weight' => (int)$rule['weight'],
+        ];
+    }
+
+    if ($matches === []) {
+        $fallbackCode = resolve_calendar_beat_fallback_code(
+            $classsetCode,
+            $allowedCodes
+        );
+
+        return validate_calendar_beat_classification([
+            'code' => $fallbackCode,
+            'rule' => 'db:no_match',
+            'rule_id' => null,
+            'confidence' => 'fallback',
+            'classset' => $classsetCode,
+        ], $allowedCodes);
+    }
+
+    usort($matches, static function (array $a, array $b): int {
+        return [$b['priority'], $b['weight'], $a['rule_id']]
+            <=> [$a['priority'], $a['weight'], $b['rule_id']];
+    });
+
+    $winner = $matches[0];
+
+    return validate_calendar_beat_classification([
+        'code' => $winner['code'],
+        'rule' => 'db:rule_match',
+        'rule_id' => $winner['rule_id'],
+        'confidence' => 'rule',
+        'classset' => $classsetCode,
+    ], $allowedCodes);
+}
+
+function calendar_beat_rule_matches(
+    string $summaryNorm,
+    string $pattern,
+    string $matchType
+): bool {
+    $patternNorm = normalise_calendar_rule_text($pattern);
+
+    return match ($matchType) {
+        'exact' => $summaryNorm === $patternNorm,
+
+        'prefix' => $patternNorm !== ''
+            && str_starts_with($summaryNorm, $patternNorm),
+
+        'regex' => calendar_beat_regex_matches($summaryNorm, $pattern),
+
+        'contains' => $patternNorm !== ''
+            && str_contains($summaryNorm, $patternNorm),
+
+        default => false,
+    };
+}
+
+function calendar_beat_regex_matches(string $summaryNorm, string $pattern): bool
+{
+    if (trim($pattern) === '') {
+        return false;
+    }
+
+    $regex = $pattern;
+
+    if (@preg_match($regex, '') === false) {
+        $regex = '/' . str_replace('/', '\/', $pattern) . '/u';
+    }
+
+    return @preg_match($regex, $summaryNorm) === 1;
+}
+
+function resolve_calendar_beat_fallback_code(
+    string $classsetCode,
+    array $allowedCodes
+): string {
+    $classsetCode = trim($classsetCode);
+
+    $configuredDefault = CALENDAR_BEAT_CLASSSET_DEFAULT_CODES[$classsetCode]
+        ?? CALENDAR_BEAT_CLASSSET_DEFAULT_CODES[strtoupper($classsetCode)]
+        ?? null;
+
+    if (is_string($configuredDefault) && trim($configuredDefault) !== '') {
+        $configuredDefault = mb_strtolower(trim($configuredDefault));
+
+        if (!in_array($configuredDefault, $allowedCodes, true)) {
+            throw new RuntimeException(
+                'Configured fallback beat code "' . $configuredDefault .
+                '" is not allowed for classset ' . $classsetCode
+            );
+        }
+
+        return $configuredDefault;
+    }
+
+    // Temporary migration fallback only.
+    if (in_array('transition', $allowedCodes, true)) {
+        return 'transition';
+    }
+
+    throw new RuntimeException(
+        'No fallback beat code configured for classset ' . $classsetCode .
+        '; configure CALENDAR_BEAT_CLASSSET_DEFAULT_CODES or allow transition explicitly.'
+    );
+}
+
+function normalise_calendar_allowed_codes(array $allowedCodes): array
+{
+    $normalised = [];
+
+    foreach ($allowedCodes as $code) {
+        $code = mb_strtolower(trim((string)$code));
+
+        if ($code !== '') {
+            $normalised[] = $code;
+        }
+    }
+
+    return array_values(array_unique($normalised));
+}
+
+function normalise_calendar_rule_text(string $text): string
+{
+    $text = mb_strtolower(trim($text), 'UTF-8');
+    $text = preg_replace('/\s+/u', ' ', $text);
+
+    return $text ?? '';
+}
+
+function validate_calendar_beat_classification(array $classification, array $allowedCodes): array
+{
+    $code = mb_strtolower(trim((string)($classification['code'] ?? '')));
+
+    if ($code === '') {
+        throw new RuntimeException('Classifier emitted empty beat code');
+    }
+
+    $allowedCodes = normalise_calendar_allowed_codes($allowedCodes);
+
+    if (!in_array($code, $allowedCodes, true)) {
+        throw new RuntimeException(
+            "Classifier emitted invalid beat code '{$code}' for resolved classset"
+        );
+    }
+
+    $classification['code'] = $code;
+
+    return $classification;
 }
 
 function split_prose_into_candidate_segments(string $prose): array
@@ -353,124 +593,6 @@ function starts_with_dialogue(string $line): bool
     return $first === '"' ||
         $first === "'" ||
         $first === '—';
-}
-
-function classify_calendar_beat_type(
-    string $summary,
-    string $classsetCode,
-    array $allowedCodes
-): array {
-    global $pdo; // or pass it in properly if you prefer
-
-    // Resolve classsetId from code (you may already have this upstream)
-    static $classsetStmt = null;
-
-    if ($classsetStmt === null) {
-        $classsetStmt = $pdo->prepare("
-            SELECT id FROM calendar_beat_classsets
-            WHERE code = :code
-            LIMIT 1
-        ");
-    }
-
-    $classsetStmt->execute([':code' => $classsetCode]);
-    $classsetId = $classsetStmt->fetchColumn();
-
-    if (!$classsetId) {
-        throw new RuntimeException('Unknown classset: ' . $classsetCode);
-    }
-
-    // Load rules
-    static $rulesStmt = null;
-
-    if ($rulesStmt === null) {
-        $rulesStmt = $pdo->prepare("
-            SELECT code, pattern, match_type, weight, priority
-            FROM calendar_beat_type_rules
-            WHERE set_id = :set_id
-              AND is_active = 1
-            ORDER BY priority DESC, weight DESC, id ASC
-        ");
-    }
-
-    $rulesStmt->execute([':set_id' => $classsetId]);
-    $rules = $rulesStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $summaryLower = mb_strtolower($summary);
-
-    $scores = [];
-
-    foreach ($rules as $rule) {
-        $pattern = mb_strtolower(trim($rule['pattern']));
-        $code = mb_strtolower(trim($rule['code']));
-        $match = false;
-
-        switch ($rule['match_type']) {
-            case 'exact':
-                $match = ($summaryLower === $pattern);
-                break;
-
-            case 'prefix':
-                $match = str_starts_with($summaryLower, $pattern);
-                break;
-
-            case 'regex':
-                $match = preg_match($pattern, $summary) === 1;
-                break;
-
-            case 'contains':
-            default:
-                $match = str_contains($summaryLower, $pattern);
-                break;
-        }
-
-        if ($match) {
-            $scores[$code] = ($scores[$code] ?? 0) + (int)$rule['weight'];
-        }
-    }
-
-    if (empty($scores)) {
-        return validate_calendar_beat_classification([
-            'code' => 'transition',
-            'rule' => 'db:no_match',
-            'confidence' => 'fallback',
-            'classset' => $classsetCode,
-        ], $allowedCodes);
-    }
-
-    arsort($scores);
-    $bestCode = array_key_first($scores);
-
-    return validate_calendar_beat_classification([
-        'code' => $bestCode,
-        'rule' => 'db:scored',
-        'confidence' => 'rule',
-        'classset' => $classsetCode,
-    ], $allowedCodes);
-}
-
-function validate_calendar_beat_classification(array $classification, array $allowedCodes): array
-{
-    $code = mb_strtolower(trim((string)($classification['code'] ?? '')));
-
-    if ($code === '') {
-        throw new RuntimeException('Classifier emitted empty beat code');
-    }
-
-    $allowedCodes = array_map(
-        static fn($value): string => mb_strtolower(trim((string)$value)),
-        $allowedCodes
-    );
-
-    if (!in_array($code, $allowedCodes, true)) {
-        throw new RuntimeException(
-            "Classifier emitted invalid beat code '{$code}' for resolved classset"
-        );
-    }
-
-    $classification['code'] = $code;
-
-    return $classification;
 }
 
 function normalise_calendar_beat_summary(string $segment): string
