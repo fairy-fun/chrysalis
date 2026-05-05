@@ -51,7 +51,7 @@ $audits = [
     'calendar event hierarchy' => fn () => assert_calendar_event_hierarchy($pdo, $schemaName),
     'calendar event creation paths' => fn () => assert_calendar_event_creation_paths(),
     'calendar beat classset integrity' => fn () => assert_calendar_beat_classset_integrity($pdo, $schemaName),
-    'deprecated calendar beat domain map usage' => fn () => assert_deprecated_calendar_beat_domain_map_usage(),
+    'deprecated calendar beat-domain usage' => fn () => assert_deprecated_calendar_beat_domain_map_usage(),
 ];
 
 foreach ($audits as $auditName => $runAudit) {
