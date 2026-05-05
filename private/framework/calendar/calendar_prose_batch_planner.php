@@ -21,6 +21,8 @@ function generate_calendar_batch_from_prose(
         throw new InvalidArgumentException('prose is required');
     }
 
+    $classsetId = resolve_classset_for_event($pdo, $parentEventEntityId);
+
     // -----------------------------
     // Beat extraction (deterministic)
     // -----------------------------
@@ -43,8 +45,8 @@ function generate_calendar_batch_from_prose(
     $operations = [];
 
     foreach ($beats as $i => $beat) {
-
         $summary = trim((string)($beat['summary'] ?? ''));
+
         if ($summary === '') {
             continue;
         }
@@ -55,14 +57,15 @@ function generate_calendar_batch_from_prose(
             'operation' => 'createCalendarSubevent',
             'parent_event_entity_id' => $parentEventEntityId,
             'event_label' => $summary,
-            'beat_type_id' => map_calendar_beat_code_to_id((string)$beat['type']),
+            'beat_type_id' => resolve_beat_type_id(
+                $pdo,
+                $classsetId,
+                (string)$beat['type']
+            ),
             'beat_inference' => $beat['inference'] ?? null,
-
-            // ✅ STABLE SLOT IDENTITY (core change)
             'client_id' => 'calendar_event:' . $parentEventEntityId . ':slot:' . $i,
-
             'order_index' => $i,
-            'beat_hash' => $beatHash, // diagnostic only
+            'beat_hash' => $beatHash,
         ];
     }
 
@@ -75,11 +78,92 @@ function generate_calendar_batch_from_prose(
         'mode' => 'plan_only',
         'parent_event_entity_id' => $parentEventEntityId,
         'beat_extractor_version' => CALENDAR_BEAT_EXTRACTOR_VERSION,
-        'plan_id' => $planId, // retained for debugging/visibility
+        'plan_id' => $planId,
         'operation_count' => count($operations),
         'beats' => $beats,
         'operations' => $operations,
     ];
+}
+
+
+function resolve_classset_for_event(PDO $pdo, string $eventEntityId): string
+{
+    static $stmt = null;
+
+    if ($stmt === null) {
+        $stmt = $pdo->prepare("
+            SELECT
+                COALESCE(m.classset_id, 'CLASSSET-CALENDAR-BEAT-001') AS classset_id
+            FROM calendar_events e
+            LEFT JOIN calendar_domain_beat_classset_map m
+                ON m.domain_id = e.domain_id
+            WHERE e.entity_id = :event_entity_id
+            LIMIT 1
+        ");
+    }
+
+    $stmt->execute([
+        ':event_entity_id' => $eventEntityId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        throw new RuntimeException('Parent event not found: ' . $eventEntityId);
+    }
+
+    return (string)$row['classset_id'];
+}
+
+
+function resolve_beat_type_id(PDO $pdo, string $classsetId, string $code): string
+{
+    static $cache = [];
+    static $stmt = null;
+
+    $classsetId = trim($classsetId);
+    $code = mb_strtolower(trim($code));
+
+    if ($classsetId === '') {
+        throw new RuntimeException('Missing beat classset id');
+    }
+
+    if ($code === '') {
+        throw new RuntimeException('Missing beat code');
+    }
+
+    $cacheKey = $classsetId . '::' . $code;
+
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
+    if ($stmt === null) {
+        $stmt = $pdo->prepare("
+            SELECT id
+            FROM cvt_calendar_beat_type
+            WHERE set_id = :set_id
+              AND code = :code
+            LIMIT 1
+        ");
+    }
+
+    $stmt->execute([
+        ':set_id' => $classsetId,
+        ':code' => $code,
+    ]);
+
+    $id = $stmt->fetchColumn();
+
+    if (!is_string($id) || $id === '') {
+        throw new RuntimeException(
+            'Unknown beat type for classset ' . $classsetId . ': ' . $code
+        );
+    }
+
+    $cache[$cacheKey] = $id;
+
+    return $id;
 }
 
 
@@ -205,39 +289,8 @@ function starts_with_dialogue(string $line): bool
 
 
 # =========================================================
-# CLASSIFICATION (unchanged)
+# CLASSIFICATION
 # =========================================================
-
-function allowed_calendar_beat_types(): array {
-    return [
-        'instruction',
-        'demonstration',
-        'correction',
-        'interaction',
-        'evaluation',
-        'reflection',
-        'transition',
-    ];
-}
-
-function map_calendar_beat_code_to_id(string $code): string
-{
-    static $map = [
-        'instruction' => 'BEAT_INSTRUCTION',
-        'demonstration' => 'BEAT_DEMONSTRATION',
-        'correction' => 'BEAT_CORRECTION',
-        'interaction' => 'BEAT_INTERACTION',
-        'evaluation' => 'BEAT_EVALUATION',
-        'reflection' => 'BEAT_REFLECTION',
-        'transition' => 'BEAT_TRANSITION',
-    ];
-
-    if (!isset($map[$code])) {
-        throw new RuntimeException('Unknown beat code: ' . $code);
-    }
-
-    return $map[$code];
-}
 
 function classify_calendar_beat_type(string $summary): array {
 
