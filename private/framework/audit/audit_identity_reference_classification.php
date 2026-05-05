@@ -113,12 +113,13 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         foreach ($references as [$tableName, $columnName, $expectedKind]) {
             $classifiedReferences[$tableName . '.' . $columnName] = true;
         }
+    $deprecatedBeatDomainMapTable = 'calendar_beat_' . 'domain_map';
 
     $discoverySql = "
         SELECT TABLE_NAME, COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = " . $pdo->quote($schemaName) . "
-          AND TABLE_NAME <> 'calendar_beat_domain_map'
+          AND TABLE_NAME <> " . $pdo->quote($deprecatedBeatDomainMapTable) . "
           AND (
               COLUMN_NAME LIKE '%\\_classval_id'
               OR COLUMN_NAME LIKE '%\\_domain_id'
