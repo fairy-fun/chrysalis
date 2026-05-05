@@ -38,6 +38,17 @@ Derived temporal span:
 Week 1 → 2025-01-19
 Week 3 → 2025-02-08
 
+⚠️ Implementation Note
+
+The current binding via projection_code is a pragmatic deviation from the intended
+entity-based architecture.
+
+Future migration may enforce:
+
+calendar_events.projection_entity_id → calendar_projections.entity_id
+
+All queries in this document reflect the CURRENT enforced behavior.
+
 ---
 
 ## Core Principle
