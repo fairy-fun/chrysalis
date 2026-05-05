@@ -9,6 +9,35 @@ This mapping enables dual projection:
 * `book1` → narrative structure
 * `time` → real-world chronology
 
+
+## Projection Scope (Book 1)
+
+Projection code:
+
+book_projection_BOOK-001
+
+Current projection binding (ENFORCED IN DB):
+
+calendar_events.projection_entity_id = calendar_projections.projection_code
+
+Note:
+
+- calendar_projections.entity_id is not currently used for binding
+- all projection-scoped queries MUST join on projection_code
+
+---
+
+## Current Coverage
+
+Book 1 projection currently contains:
+
+week_index ∈ {1, 2, 3}
+
+Derived temporal span:
+
+Week 1 → 2025-01-19
+Week 3 → 2025-02-08
+
 ---
 
 ## Core Principle
