@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-const CALENDAR_BEAT_EXTRACTOR_VERSION = 'v1';
+// See: private/docs/calendar/beat_classsets.md
+// for classset definitions and classifier contract.
 
+const CALENDAR_BEAT_EXTRACTOR_VERSION = 'v2-classset-aware';
 
 function generate_calendar_batch_from_prose(
     PDO $pdo,
@@ -21,27 +23,25 @@ function generate_calendar_batch_from_prose(
         throw new InvalidArgumentException('prose is required');
     }
 
-    $classsetId = resolve_classset_for_event($pdo, $parentEventEntityId);
+    $classset = resolve_classset_for_event($pdo, $parentEventEntityId);
 
-    // -----------------------------
-    // Beat extraction (deterministic)
-    // -----------------------------
-    $beats = extract_calendar_beats($prose);
+    $classsetId = $classset['id'];
+    $classsetCode = $classset['code'];
 
-    // -----------------------------
-    // Plan identity (diagnostic only)
-    // -----------------------------
+    $allowedCodes = get_allowed_beat_codes_for_classset($pdo, $classsetId);
+
+    $beats = extract_calendar_beats($prose, $classsetCode, $allowedCodes);
+
     $planSeed = json_encode([
         'parent' => $parentEventEntityId,
         'version' => CALENDAR_BEAT_EXTRACTOR_VERSION,
+        'classset_id' => $classsetId,
+        'classset_code' => $classsetCode,
         'beats' => $beats,
     ]);
 
-    $planId = hash('sha256', $planSeed);
+    $planId = hash('sha256', (string)$planSeed);
 
-    // -----------------------------
-    // Build operations
-    // -----------------------------
     $operations = [];
 
     foreach ($beats as $i => $beat) {
@@ -78,6 +78,8 @@ function generate_calendar_batch_from_prose(
         'mode' => 'plan_only',
         'parent_event_entity_id' => $parentEventEntityId,
         'beat_extractor_version' => CALENDAR_BEAT_EXTRACTOR_VERSION,
+        'classset_id' => $classsetId,
+        'classset_code' => $classsetCode,
         'plan_id' => $planId,
         'operation_count' => count($operations),
         'beats' => $beats,
@@ -85,18 +87,21 @@ function generate_calendar_batch_from_prose(
     ];
 }
 
-
-function resolve_classset_for_event(PDO $pdo, string $eventEntityId): string
+function resolve_classset_for_event(PDO $pdo, string $eventEntityId): array
 {
     static $stmt = null;
 
     if ($stmt === null) {
         $stmt = $pdo->prepare("
             SELECT
-                COALESCE(m.classset_id, 'CLASSSET-CALENDAR-BEAT-001') AS classset_id
+                COALESCE(m.classset_id, 'CLASSSET-CALENDAR-BEAT-001') AS classset_id,
+                cs.code AS classset_code,
+                cs.label AS classset_label
             FROM calendar_events e
             LEFT JOIN calendar_domain_beat_classset_map m
                 ON m.domain_id = e.domain_id
+            LEFT JOIN calendar_beat_classsets cs
+                ON cs.id = COALESCE(m.classset_id, 'CLASSSET-CALENDAR-BEAT-001')
             WHERE e.entity_id = :event_entity_id
             LIMIT 1
         ");
@@ -112,9 +117,73 @@ function resolve_classset_for_event(PDO $pdo, string $eventEntityId): string
         throw new RuntimeException('Parent event not found: ' . $eventEntityId);
     }
 
-    return (string)$row['classset_id'];
+    $classsetId = trim((string)$row['classset_id']);
+    $classsetCode = trim((string)$row['classset_code']);
+    $classsetLabel = trim((string)$row['classset_label']);
+
+    if ($classsetId === '') {
+        throw new RuntimeException('Missing classset id for event: ' . $eventEntityId);
+    }
+
+    if ($classsetCode === '') {
+        throw new RuntimeException('Missing classset code for classset_id: ' . $classsetId);
+    }
+
+    return [
+        'id' => $classsetId,
+        'code' => $classsetCode,
+        'label' => $classsetLabel,
+    ];
 }
 
+function get_allowed_beat_codes_for_classset(PDO $pdo, string $classsetId): array
+{
+    static $cache = [];
+    static $stmt = null;
+
+    $classsetId = trim($classsetId);
+
+    if ($classsetId === '') {
+        throw new RuntimeException('Missing beat classset id');
+    }
+
+    if (isset($cache[$classsetId])) {
+        return $cache[$classsetId];
+    }
+
+    if ($stmt === null) {
+        $stmt = $pdo->prepare("
+            SELECT code
+            FROM cvt_calendar_beat_type
+            WHERE set_id = :set_id
+            ORDER BY code
+        ");
+    }
+
+    $stmt->execute([
+        ':set_id' => $classsetId,
+    ]);
+
+    $codes = [];
+
+    while (($code = $stmt->fetchColumn()) !== false) {
+        $code = mb_strtolower(trim((string)$code));
+
+        if ($code !== '') {
+            $codes[] = $code;
+        }
+    }
+
+    $codes = array_values(array_unique($codes));
+
+    if ($codes === []) {
+        throw new RuntimeException('No beat codes registered for classset: ' . $classsetId);
+    }
+
+    $cache[$classsetId] = $codes;
+
+    return $codes;
+}
 
 function resolve_beat_type_id(PDO $pdo, string $classsetId, string $code): string
 {
@@ -166,23 +235,27 @@ function resolve_beat_type_id(PDO $pdo, string $classsetId, string $code): strin
     return $id;
 }
 
-
-# =========================================================
-# BEAT PIPELINE
-# =========================================================
-
-function extract_calendar_beats(string $prose): array {
-
+function extract_calendar_beats(
+    string $prose,
+    string $classsetCode,
+    array $allowedCodes
+): array {
     $segments = split_prose_into_candidate_segments($prose);
 
     $beats = [];
 
     foreach ($segments as $segment) {
-
         $summary = normalise_calendar_beat_summary($segment);
-        if ($summary === '') continue;
 
-        $classification = classify_calendar_beat_type($summary);
+        if ($summary === '') {
+            continue;
+        }
+
+        $classification = classify_calendar_beat_type(
+            $summary,
+            $classsetCode,
+            $allowedCodes
+        );
 
         $beats[] = [
             'type' => $classification['code'],
@@ -194,40 +267,39 @@ function extract_calendar_beats(string $prose): array {
     return dedupe_calendar_beats($beats);
 }
 
-
-# =========================================================
-# 🔥 FIXED SEGMENTATION (core change)
-# =========================================================
-
 function split_prose_into_candidate_segments(string $prose): array
 {
     $text = str_replace(["\r\n", "\r"], "\n", $prose);
     $text = trim($text);
     $text = preg_replace("/\n{3,}/", "\n\n", $text);
 
-    // --- paragraph + scene split
     $parts = preg_split("/\n\n|(?:^|\n)(---|\*\*\*)(?:\n|$)/", $text);
 
     $fragments = [];
 
     foreach ($parts as $part) {
+        $part = trim((string)$part);
 
-        $part = trim($part);
-        if ($part === '') continue;
+        if ($part === '') {
+            continue;
+        }
 
         $lines = explode("\n", $part);
         $buffer = '';
 
         foreach ($lines as $line) {
-
             $line = trim($line);
-            if ($line === '') continue;
+
+            if ($line === '') {
+                continue;
+            }
 
             if (starts_with_dialogue($line)) {
                 if ($buffer !== '') {
                     $fragments[] = trim($buffer);
                     $buffer = '';
                 }
+
                 $fragments[] = $line;
             } else {
                 $buffer = $buffer === ''
@@ -241,11 +313,9 @@ function split_prose_into_candidate_segments(string $prose): array
         }
     }
 
-    // --- secondary splits
     $segments = [];
 
     foreach ($fragments as $frag) {
-
         $parts = preg_split('/
             (?<=[.!?])\s+(?=(He|She|They|I|We)\s)
             |
@@ -253,14 +323,14 @@ function split_prose_into_candidate_segments(string $prose): array
         /x', $frag);
 
         foreach ($parts as $p) {
-            $p = trim($p);
+            $p = trim((string)$p);
+
             if ($p !== '') {
                 $segments[] = $p;
             }
         }
     }
 
-    // --- merge small fragments
     $beats = [];
 
     foreach ($segments as $seg) {
@@ -271,12 +341,10 @@ function split_prose_into_candidate_segments(string $prose): array
         }
     }
 
-    // --- final normalize
     return array_values(array_map(function ($b) {
-        return trim(preg_replace('/\s+/', ' ', $b));
+        return trim((string)preg_replace('/\s+/', ' ', $b));
     }, $beats));
 }
-
 
 function starts_with_dialogue(string $line): bool
 {
@@ -287,49 +355,105 @@ function starts_with_dialogue(string $line): bool
         $first === '—';
 }
 
-
-# =========================================================
-# CLASSIFICATION
-# =========================================================
-
-function classify_calendar_beat_type(string $summary): array {
-
+function classify_calendar_beat_type(
+    string $summary,
+    string $classsetCode,
+    array $allowedCodes
+): array {
+    $classsetCode = strtoupper(trim($classsetCode));
     $lower = mb_strtolower($summary);
 
-    $rules = [
-        'instruction' => ['explain','rule','principle','concept','frame'],
-        'demonstration' => ['demonstrat','show','perform','model'],
-        'correction' => ['correct','incorrect','error','fix','adjust'],
-        'interaction' => ['touch','takes my','dialogue','asks','answers','responds'],
-        'evaluation' => ['acceptable','good','nods','judges','approval','assess'],
-        'reflection' => ['i think','i realise','i realize','i notice','system','meta'],
-    ];
+    switch ($classsetCode) {
+        case 'DEFAULT':
+            $rules = [
+                'instruction' => ['explain', 'rule', 'principle', 'concept', 'frame'],
+                'demonstration' => ['demonstrat', 'show', 'perform', 'model'],
+                'correction' => ['correct', 'incorrect', 'error', 'fix', 'adjust'],
+                'interaction' => ['touch', 'takes my', 'dialogue', 'asks', 'answers', 'responds'],
+                'evaluation' => ['acceptable', 'good', 'nods', 'judges', 'approval', 'assess'],
+                'reflection' => ['i think', 'i realise', 'i realize', 'i notice', 'system', 'meta'],
+            ];
+            break;
+
+        case 'PERSONAL':
+            $rules = [
+                'realization' => ['i realize', 'i realise', 'it hits me', 'i understand', 'i finally see'],
+                'confession' => ['i admit', 'i confess', 'i have to say', 'the truth is'],
+                'doubt' => ['i hesitate', 'i doubt', 'not sure', 'uncertain', 'second-guess'],
+                'intention' => ['i will', 'i decide', 'i choose', 'i mean to', 'i intend'],
+                'emotional_shift' => ['i feel', 'my mood', 'something shifts', 'suddenly i feel'],
+                'reflection' => ['i think', 'i wonder', 'i reflect', 'i notice'],
+            ];
+            break;
+
+        case 'INTIMATE':
+            $rules = [
+                'contact' => ['touch', 'holds', 'grabs', 'kisses', 'takes my hand'],
+                'approach' => ['moves closer', 'leans in', 'steps toward', 'comes closer'],
+                'withdrawal' => ['pulls away', 'steps back', 'withdraws', 'turns away'],
+                'tension' => ['pause', 'hesitates', 'silence', 'uncertain moment'],
+                'vulnerability' => ['admits', 'opens up', 'reveals', 'voice softens'],
+                'reassurance' => ['it’s okay', "it's okay", 'you’re safe', "you're safe", 'calms', 'comforts'],
+            ];
+            break;
+
+        default:
+            throw new RuntimeException('Unknown beat classset code: ' . $classsetCode);
+    }
 
     foreach ($rules as $code => $keywords) {
         foreach ($keywords as $keyword) {
             if (str_contains($lower, $keyword)) {
-                return [
+                return validate_calendar_beat_classification([
                     'code' => $code,
                     'rule' => 'keyword:' . $keyword,
                     'confidence' => 'rule',
-                ];
+                    'classset' => $classsetCode,
+                ], $allowedCodes);
             }
         }
     }
 
-    return [
+    return validate_calendar_beat_classification([
         'code' => 'transition',
         'rule' => 'default:no_keyword_match',
         'confidence' => 'fallback',
-    ];
+        'classset' => $classsetCode,
+    ], $allowedCodes);
 }
 
-function normalise_calendar_beat_summary(string $segment): string {
+function validate_calendar_beat_classification(array $classification, array $allowedCodes): array
+{
+    $code = mb_strtolower(trim((string)($classification['code'] ?? '')));
 
+    if ($code === '') {
+        throw new RuntimeException('Classifier emitted empty beat code');
+    }
+
+    $allowedCodes = array_map(
+        static fn($value): string => mb_strtolower(trim((string)$value)),
+        $allowedCodes
+    );
+
+    if (!in_array($code, $allowedCodes, true)) {
+        throw new RuntimeException(
+            "Classifier emitted invalid beat code '{$code}' for resolved classset"
+        );
+    }
+
+    $classification['code'] = $code;
+
+    return $classification;
+}
+
+function normalise_calendar_beat_summary(string $segment): string
+{
     $segment = trim($segment);
     $segment = preg_replace('/\s+/', ' ', $segment);
 
-    if ($segment === '') return '';
+    if ($segment === '') {
+        return '';
+    }
 
     if (mb_strlen($segment) > 140) {
         $segment = mb_substr($segment, 0, 137) . '...';
@@ -338,19 +462,23 @@ function normalise_calendar_beat_summary(string $segment): string {
     return ucfirst($segment);
 }
 
-function dedupe_calendar_beats(array $beats): array {
-
+function dedupe_calendar_beats(array $beats): array
+{
     $seen = [];
     $deduped = [];
 
     foreach ($beats as $beat) {
-
         $summary = trim((string)($beat['summary'] ?? ''));
-        if ($summary === '') continue;
+
+        if ($summary === '') {
+            continue;
+        }
 
         $key = mb_strtolower($summary);
 
-        if (isset($seen[$key])) continue;
+        if (isset($seen[$key])) {
+            continue;
+        }
 
         $seen[$key] = true;
         $deduped[] = $beat;
