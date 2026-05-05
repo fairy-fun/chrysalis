@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/calendar_date_resolver.php';
+
 function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
 {
     $buildId = null;
@@ -85,6 +87,7 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
 
         foreach ($events as $sequence => $event) {
             $row = build_calendar_projection_row(
+                $pdo,
                 $event,
                 $projectionId,
                 $buildId,
@@ -134,6 +137,7 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
 }
 
 function build_calendar_projection_row(
+    PDO $pdo,
     array $event,
     int $projectionId,
     int $buildId,
@@ -154,13 +158,20 @@ function build_calendar_projection_row(
         'parent_projection_row_id' => null,
         'projection_sequence' => $sequence,
 
-        'render_label' => $event['render_label'] ?? $event['label'] ?? $event['title'] ?? null,
+        'render_label' => $event['render_label'] ?? $event['summary'] ?? null,
         'notes' => $event['notes'] ?? null,
     ];
 
     if ($projectionType === 'time') {
-        $row['projection_starts_at'] = $event['starts_at'] ?? null;
-        $row['projection_ends_at'] = $event['ends_at'] ?? null;
+        $row['projection_starts_at'] = resolve_calendar_datetime(
+            $pdo,
+            $event['real_date_start_id'] ?? null
+        );
+
+        $row['projection_ends_at'] = resolve_calendar_datetime(
+            $pdo,
+            $event['real_date_end_id'] ?? null
+        );
     } elseif ($projectionType === 'structure') {
         $row['projection_address'] = $event['projection_address'] ?? $event['address'] ?? null;
     } elseif ($projectionType === 'book1') {
@@ -227,6 +238,7 @@ function fetch_projection_source_events(PDO $pdo, int $projectionId): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+
 function assert_projection_build_integrity(
     PDO $pdo,
     int $buildId,
@@ -270,6 +282,7 @@ function assert_projection_build_integrity(
         }
     }
 
+
     if ($projectionType === 'structure') {
         $stmt = $pdo->prepare("
             SELECT COUNT(*)
@@ -308,6 +321,8 @@ function assert_projection_build_integrity(
         }
     }
 }
+
+
 
 function assert_calendar_projection_row_integrity(array $row, string $projectionType): void
 {
