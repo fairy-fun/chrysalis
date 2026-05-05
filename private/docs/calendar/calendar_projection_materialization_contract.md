@@ -78,7 +78,8 @@ calendar_events.parent_event_id
 For any event that has at least one row in `calendar_event_books`,
 a corresponding row MUST exist in `calendar_event_projections`.
 
-
+This requirement ensures that projections are a complete execution surface
+for all book-assigned events and prevents partial or inconsistent projections.
 
 ### 5. Projection Scope Consistency
 
@@ -136,9 +137,9 @@ If any invariant is violated:
 * ❌ Abort materialization
 * ❌ Do not partially write projection
 * ❌ Do not “fix” data silently
-Relationship to Tree Builder
+## Relationship to Tree Builder
 
-build_calendar_tree() assumes:
+`build_calendar_tree()` assumes:
 
 all parents exist
 all chronology is valid
@@ -151,14 +152,14 @@ throw on invalid chronology
 
 But it is not responsible for fixing data.
 
-Relationship to Chronology Resolver
-calendar_chronology_resolver.php
+## Relationship to Chronology Resolver
+`calendar_chronology_resolver.php`
 
 Defines:
 
-valid chronology format
-path semantics
-uniqueness expectations
+* valid chronology format
+* path semantics
+* uniqueness expectations
 
 Projection materialization must remain fully compatible with this.
 
