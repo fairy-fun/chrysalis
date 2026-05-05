@@ -28,8 +28,11 @@ function build_calendar_tree(array $rows): array
 
     $parseChronology = function (string $addr): array {
         if (!preg_match('/^[1-9][0-9]*(?:\.[1-9][0-9]*)*$/', $addr)) {
-            throw new Exception("Invalid chronology_address format: {$addr}");
-        }
+            throw new ChronologyViolationException(
+                "Invalid chronology format",
+                ['chronology_address' => $addr]
+            );
+                    }
 
         return array_map('intval', explode('.', $addr));
     };
@@ -76,7 +79,10 @@ function build_calendar_tree(array $rows): array
         }
 
         if (isset($chronologyIndex[$addr])) {
-            throw new Exception("Duplicate chronology_address: {$addr}");
+            throw new ChronologyViolationException(
+                "Duplicate chronology address",
+                ['chronology_address' => $addr]
+            );
         }
 
         $segments = $parseChronology($addr);
@@ -99,7 +105,13 @@ function build_calendar_tree(array $rows): array
 
         if ($parentId !== null) {
             if (!isset($nodes[$parentId])) {
-                throw new Exception("Missing parent {$parentId} for node {$id}");
+                throw new MissingParentException(
+                    "Missing parent for node",
+                    [
+                        'node_id' => $id,
+                        'missing_parent_id' => $parentId
+                    ]
+                );
             }
 
             $parent = $nodes[$parentId];
