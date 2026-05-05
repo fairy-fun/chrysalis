@@ -196,14 +196,23 @@ Compute derived_date in a subquery, then compare stored_date and derived_date in
 ```sql
 SELECT
     e.id,
-    e.chronology_address
+    e.chronology_address,
+    e.week_index,
+    e.day_index
 FROM calendar_events e
          JOIN calendar_projections p
               ON p.entity_id = e.projection_entity_id
 WHERE p.projection_code = 'book_projection_BOOK-001'
-  AND e.chronology_address REGEXP '^[0-9]+\\.[0-9]+(\\.|$)'
+  AND e.week_index IS NOT NULL
+  AND e.day_index IS NOT NULL
   AND e.real_date_start_id IS NULL;
 ```
+
+A Book 1 calendar event is eligible for date derivation when it belongs to
+book_projection_BOOK-001 and has both week_index and day_index populated.
+
+String-form chronology_address is descriptive. Enforcement should prefer
+the normalized week_index/day_index fields.
 
 ---
 
