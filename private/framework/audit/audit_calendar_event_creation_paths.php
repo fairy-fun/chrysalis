@@ -14,6 +14,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_node_ensurer.php'
     );
 
+    $allowedProjectionMaterializerFile = realpath(
+        $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
+    );
+
     $rii = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($repoRoot)
     );
@@ -50,19 +54,30 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Any PHP file that references calendar_events in write-like framework logic
-        // must be part of the ensurer boundary. Read-only resolvers may still SELECT
-        // from calendar_events, but calendar framework writes must not invent side paths.
+        // ❌ calendar_events writes must stay inside the node ensurer boundary.
+        // This deliberately protects calendar_events only, not derived tables such as
+        // calendar_event_projections.
         if (
-            str_contains($contents, 'calendar_events') &&
-            preg_match('/\b(?:INSERT|UPDATE|DELETE|REPLACE)\b/i', $contents)
+            preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_events\b/i', $contents)
         ) {
             if (
                 $path !== $allowedInsertFile &&
                 !str_contains($contents, 'ensure_calendar_node')
             ) {
                 throw new RuntimeException(
-                    "Calendar table mutation must go through ensure_calendar_node in {$path}"
+                    "Calendar source table mutation must go through ensure_calendar_node in {$path}"
+                );
+            }
+        }
+
+        // ❌ Projection/build rows are derived read-model state.
+        // They must be written only by the projection materializer.
+        if (
+            preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?(?:calendar_event_projections|calendar_projection_builds)\b/i', $contents)
+        ) {
+            if ($path !== $allowedProjectionMaterializerFile) {
+                throw new RuntimeException(
+                    "Calendar projection mutation must go through calendar_projection_materializer in {$path}"
                 );
             }
         }
