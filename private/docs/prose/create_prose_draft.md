@@ -1,208 +1,148 @@
-=========================================
-private/docs/prose/create_prose_draft.md
-=========================================
-Prose Draft → Calendar Subevent Workflow (Canonical)
-Overview
+# Prose Draft → Calendar Subevent Workflow
 
-This system is strictly two-step:
+## Current Contract
 
-1. createProseDraft
-2. executeCalendarBatchFromProse
+`createProseDraft` is now the primary prose write entrypoint.
 
-No calendar writes occur in step 1.
+When `projection.target_entity_id` starts with `calendar_event:`, the endpoint:
 
-Step 1 — Create Prose Draft
+1. stores the prose draft
+2. stores the prose projection
+3. stores prose annotations
+4. executes deterministic prose → calendar subevent generation
 
-POST /pecherie/chill-api/index.php
+So calendar subevents may be created during `createProseDraft`.
 
+This supersedes the older two-step wording where `createProseDraft` stored prose only and `executeCalendarBatchFromProse` had to be called separately.
+
+## Endpoint
+
+POST `/pecherie/chill-api/index.php`
+
+```json
 {
-"operation": "createProseDraft",
-"entity_id": "prose_draft:example-1",
-"title": "Example",
-"prose_body": "Arrive\nSetup\nBegin session",
-"draft_status_id": "prose_status_draft",
-"author_entity_id": null,
-"projection": {
-"projection_type_id": "projection_type_book",
-"target_entity_id": "calendar_event:322",
-"role_id": "primary",
-"projection_order": 1,
-"is_export_target": 1
-},
-"annotations": []
+  "operation": "createProseDraft",
+  "entity_id": "prose_draft:example-1",
+  "title": "Example",
+  "prose_body": "Arrive\nSetup\nBegin session",
+  "draft_status_id": "prose_status_draft",
+  "author_entity_id": null,
+  "projection": {
+    "projection_type_id": "projection_type_book",
+    "target_entity_id": "calendar_event:322",
+    "role_id": "primary",
+    "projection_order": 1,
+    "is_export_target": 1
+  },
+  "annotations": []
 }
-Result
-Prose is stored
-No calendar structure is modified
-Step 2 — Execute Batch (PRIMARY ENTRYPOINT)
+```
 
-POST /pecherie/chill-api/index.php
+Calendar Execution Rule
 
-{
-"operation": "executeCalendarBatchFromProse",
-"parent_event_entity_id": "calendar_event:322",
-"prose": "Arrive\nSetup\nBegin session"
-}
-## Parent Event Rules (CRITICAL)
+If:
 
-parent_event_entity_id MUST:
-- refer to a calendar_layer_event node
-- match projection.target_entity_id from the prose draft
+"target_entity_id": "calendar_event:<id>"
+
+then createProseDraft calls:
+
+execute_calendar_batch_from_prose(parent_event_entity_id, prose_body)
+
+after the prose draft, projection, and annotations are persisted.
+
+Parent Event Rules
+
+projection.target_entity_id must:
+
+refer to an existing calendar_events.entity_id
+use the calendar_event:<id> format
+refer to a calendar_layer_event node
 
 Subevents are never attached to:
-
-week
-day
-time
-
-Only:
-
-calendar_layer_event → calendar_layer_subevent
-Deterministic Mapping
-Each non-empty line in prose produces exactly one subevent,
-in order, with stable indexing.
-Execution Uses Provided Prose
-Batch execution uses the prose string in the request.
-It does NOT load or depend on stored prose_draft records.
-
-### 🔎 Verify Parent Event (Database)
-
-Before executing batch, confirm the parent is a valid event node.
-
-SQL
-SELECT
-id,
-entity_id,
-layer_id,
-parent_event_id,
-sequence_index,
-summary
-FROM calendar_events
-WHERE entity_id = 'calendar_event:322';
-✅ Expected Result
-layer_id = calendar_layer_event
-❌ Invalid Cases
-
-If layer_id is:
 
 calendar_layer_week
 calendar_layer_day
 calendar_layer_time
 calendar_layer_subevent
 
-Then:
-
-DO NOT USE THIS AS parent_event_entity_id
-Rule
-Subevents can ONLY be attached to:
+Only this transition is valid:
 
 calendar_layer_event → calendar_layer_subevent
-🔁 Optional: Verify After Execution
+Verify Parent Event
+SELECT
+id,
+entity_id,
+projection_id,
+layer_id,
+parent_event_id,
+sequence_index,
+summary
+FROM calendar_events
+WHERE entity_id = 'calendar_event:322';
 
-After running:
+Expected:
 
-{
-"operation": "executeCalendarBatchFromProse",
-...
-}
-
-You can confirm subevents were created correctly:
-
+layer_id = calendar_layer_event
+projection_id IS NOT NULL
+Verify After Write
 SELECT
 entity_id,
 layer_id,
 parent_event_id,
 client_id,
+beat_hash,
 sequence_index,
 summary
 FROM calendar_events
 WHERE parent_event_id = (
-SELECT id FROM calendar_events WHERE entity_id = 'calendar_event:322'
+SELECT id
+FROM calendar_events
+WHERE entity_id = 'calendar_event:322'
 )
 AND layer_id = 'calendar_layer_subevent'
 ORDER BY sequence_index;
-✅ Expected
+
+Expected:
+
+rows exist for generated prose beats
 layer_id = calendar_layer_subevent
-client_id populated (plan_id:index)
-rows match number of prose lines
+client_id is populated
 sequence_index is continuous
-🧠 Why this is better than an API check
-Uses actual source of truth
-Verifies layer correctness directly
-Lets you inspect:
-parent linkage (parent_event_id)
-execution identity (client_id)
-ordering (sequence_index)
+repeated execution is idempotent
+Internal Flow
+createProseDraft
+→ create_prose_draft()
+→ insert prose_drafts row
+→ insert prose_projections row
+→ insert prose_annotation_spans rows
+→ if target_entity_id starts with calendar_event:
+→ execute_calendar_batch_from_prose()
+→ generate_calendar_batch_from_prose()
+→ create_calendar_subevent_core()
+→ ensure_calendar_subevent()
+→ ensure_calendar_node()
+Rules
 
-No abstraction, no ambiguity.
+Do not write directly to calendar_events.
 
-## Internal Architecture
-### Prose
-→ Planner (deterministic)
-→ operations[]
-→ plan_id
+Do not attach subevents to non-event nodes.
 
-→ Orchestrator
-→ assigns client_id = <plan_id>:<index>
-→ executes in order
+Do not pass week/day/time hierarchy fields into createProseDraft.
 
-→ Subevent Service (SSOT)
-→ early idempotency lookup
-→ validation
-→ inheritance
-→ payload shaping
-→ duplicate-key recovery
+Do not use projection_entity_id as runtime identity.
 
-→ Ensurer
-→ structural write only
+Do use calendar_event:<id> as compatibility ingress only.
 
-→ DB
-→ UNIQUE(client_id)
-Identity Model
-Structural Identity (Node Uniqueness)
-projection_entity_id
-+ layer_id
-+ parent_event_id
-+ sequence_index
-  Execution Identity (Write Idempotency)
-  client_id (UNIQUE)
-  Plan Identity (Determinism)
-  plan_id = hash(parent_event_entity_id + operations)
-  Replay Behavior
-  First Run
-  executed_count = N
-  idempotent_count = 0
-  Second Identical Run
-  executed_count = 0
-  idempotent_count = N
-  Same entity_ids returned
-  No duplicates created
-  Response Shape
-  {
-  "success": true,
-  "data": {
-  "executed_count": 3,
-  "idempotent_count": 0,
-  "entity_ids": [
-  "calendar_event:901",
-  "calendar_event:902",
-  "calendar_event:903"
-  ]
-  }
-  }
-  Rules
-  ❌ Do NOT write directly to calendar_events
-  ❌ Do NOT attach subevents to non-event nodes
-  ❌ Do NOT generate client_id manually for batch use
-  ❌ Do NOT assume drafts are used during execution
-  ❌ Do NOT persist inference
-  ✅ Always use executeCalendarBatchFromProse for prose-driven subevents
-  Low-Level Endpoint (Restricted Use)
-  {
-  "operation": "createCalendarSubevent",
-  "parent_event_entity_id": "calendar_event:322",
-  "event_label": "Beat",
-  "client_id": "plan_id:0"
-  }
-  This endpoint MUST NOT be used for batch creation.
-  It exists only for controlled or orchestrated single writes.
+Runtime calendar writes should resolve and propagate projection_id.
+
+Low-Level Endpoint
+
+executeCalendarBatchFromProse still exists and may be used for controlled replay/testing:
+
+{
+"operation": "executeCalendarBatchFromProse",
+"parent_event_entity_id": "calendar_event:322",
+"prose": "Arrive\nSetup\nBegin session"
+}
+
+This endpoint executes from the provided prose string. It does not load prose from stored draft records.

@@ -55,44 +55,63 @@ Violating this will break non-calendar projection types (e.g. dream journal).
 ```text
 Calendar owns structure.
 Prose owns meaning.
-
-System Responsibilities
-Calendar Layer
+```
+### System Responsibilities
+#### Calendar Layer
 
 Owns:
 
-entity creation (calendar_event:*)
-hierarchy:
-Week
-Day
-Time
-Event
-indexing:
-week_index
-day_index
-time_index
-event_index
-chronology_address
-time labels
+* entity creation (calendar_event:*)
+* hierarchy:
+* Week
+* Day
+* Time
+* Event
+* indexing:
+* week_index
+* day_index
+* time_index
+* event_index
+* chronology_address
+* time labels
 
-Calendar guarantees:
+##### Calendar guarantees:
 
 A valid, addressable temporal container exists.
-Prose Layer
+#### Prose Layer
 
 Owns:
 
-prose_drafts
-prose_projections
-prose_annotation_spans
+* prose_drafts
+* prose_projections
+* prose_annotation_spans
 
-Prose guarantees:
+##### Prose guarantees:
 
 Narrative content + structured annotation attached to an existing entity.
-Critical Boundary Rule
+## Critical Boundary Rule
 Prose MUST NOT create or manage calendar hierarchy.
 Prose MUST attach only to an existing calendar_event entity.
-Problem Statement
+
+
+
+3. Add this under “Critical Boundary Rule”:
+
+
+### Runtime Identity Rule
+
+`projection_id` is the canonical runtime identity.
+
+`projection_entity_id` and `calendar_event:<id>` remain compatibility ingress identities only.
+
+Runtime orchestration must:
+
+- resolve projection identity immediately
+- propagate projection_id internally
+- avoid runtime joins keyed by projection_entity_id
+
+
+### Problem Statement
 
 The current workflow risks:
 
@@ -205,18 +224,30 @@ Anti-Patterns (Disallowed)
 ❌ Skipping calendar layer and attaching prose to arbitrary entities
 ```
 
-### Implementation Plan
+### Runtime Reality
 
-#### Phase 1 (Now)
+Current runtime behavior:
 
-* Use existing `createProseDraft`
-* Ensure valid calendar_event manually or via DB queries
-* Validate storage + retrieval
+```text
+createProseDraft
+```
 
-#### Phase 1.5 (Immediate Upgrade)
+already acts as the orchestration boundary for calendar-backed prose.
 
-* Add `ensureCalendarEventForProse` helper
-* Or build wrapper endpoint
+When a projection target is:
+```text
+calendar_event:<id>
+```
+
+the system automatically:
+
+* validates the projection target
+* persists prose
+* persists projections
+* persists annotations
+* generates deterministic prose operations
+* materializes calendar subevents
+* createProseDraft
 
 #### Phase 2 (Future)
 
@@ -235,16 +266,32 @@ Anti-Patterns (Disallowed)
 
 ## Derived Calendar Structures (Beats)
 
-Beats are NOT part of prose projection.
+Calendar beats are derived from `prose_body`.
 
-They are:
+For calendar-backed prose projections:
 
-- derived from prose_body
-- materialized as calendar subevents
-- constrained by calendar domain rules
+```text
+projection.target_entity_id = calendar_event:<id>
+```
 
-Generation must occur AFTER prose draft creation.
+the prose write pipeline automatically performs:
+```text
+createProseDraft
+→ prose persistence
+→ projection persistence
+→ annotation persistence
+→ deterministic prose → calendar execution
+```
 
-Persistence is handled exclusively by calendar APIs.
+
+Generated beats are materialized as:
+
+`calendar_layer_subevent`
+
+nodes beneath the parent:
+
+`calendar_layer_event`
+
+Persistence is handled exclusively by calendar APIs and ensurers.
 
 Inference metadata MUST NOT be stored in prose tables.
