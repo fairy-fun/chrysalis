@@ -39,7 +39,7 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         $projectionType = fetch_calendar_projection_type($pdo, $projectionId);
 
         // 4. Fetch source events
-        $events = fetch_projection_source_events($pdo, $projectionId);
+        $events = fetch_projection_source_events($pdo, $projectionId, $projectionType);
 
         // 5. Insert projection rows
         $insert = $pdo->prepare("
@@ -211,8 +211,13 @@ function fetch_calendar_projection_type(PDO $pdo, int $projectionId): string
     return $type;
 }
 
-function fetch_projection_source_events(PDO $pdo, int $projectionId): array
-{
+function fetch_projection_source_events(
+    PDO $pdo,
+    int $projectionId,
+    string $projectionType
+): array {
+    $orderBy = calendar_projection_source_order_by($projectionType);
+
     $stmt = $pdo->prepare("
         SELECT
             e.id,
@@ -223,16 +228,18 @@ function fetch_projection_source_events(PDO $pdo, int $projectionId): array
             e.chronology_address,
             e.real_date_start_id,
             e.real_date_end_id,
-            e.projection_entity_id
+            e.projection_entity_id,
+            e.projection_id
         FROM calendar_events e
         LEFT JOIN calendar_projections p
-          ON p.projection_code = e.projection_entity_id
+            ON p.projection_code = e.projection_entity_id
         WHERE
             e.projection_id = :projection_id
             OR (
                 e.projection_id IS NULL
                 AND p.id = :projection_id
             )
+        {$orderBy}
     ");
 
     $stmt->execute([
@@ -242,6 +249,39 @@ function fetch_projection_source_events(PDO $pdo, int $projectionId): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+function calendar_projection_source_order_by(string $projectionType): string
+{
+    if ($projectionType === 'book1') {
+        return "
+            ORDER BY
+                e.chronology_address ASC,
+                COALESCE(e.parent_event_id, 0) ASC,
+                e.sequence_index ASC,
+                e.id ASC
+        ";
+    }
+
+    if ($projectionType === 'time') {
+        return "
+            ORDER BY
+                e.real_date_start_id IS NULL ASC,
+                e.real_date_start_id ASC,
+                e.real_date_end_id ASC,
+                e.id ASC
+        ";
+    }
+
+    if ($projectionType === 'structure') {
+        return "
+            ORDER BY
+                COALESCE(e.parent_event_id, 0) ASC,
+                e.sequence_index ASC,
+                e.id ASC
+        ";
+    }
+
+    throw new RuntimeException("Unknown projection type: {$projectionType}");
+}
 
 function assert_projection_build_integrity(
     PDO $pdo,
@@ -325,8 +365,6 @@ function assert_projection_build_integrity(
         }
     }
 }
-
-
 
 function assert_calendar_projection_row_integrity(array $row, string $projectionType): void
 {
