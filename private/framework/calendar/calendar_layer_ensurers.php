@@ -120,54 +120,126 @@ function ensure_calendar_subevent(
 /** @internal */
 function resolve_calendar_node_for_layer_wrapper(
     PDO $pdo,
-    string $entityId
+    string|int $identity
 ): array {
-    $entityId = trim($entityId);
 
-    if ($entityId === '') {
-        throw new InvalidArgumentException('parent entity id must be non-empty');
+    /*
+    |--------------------------------------------------------------------------
+    | Canonical runtime identity
+    |--------------------------------------------------------------------------
+    |
+    | projection_id is now canonical runtime identity.
+    | entity_id remains compatibility ingress only.
+    |
+    */
+
+    $row = null;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Projection-first resolution
+    |--------------------------------------------------------------------------
+    */
+
+    if (is_int($identity) || ctype_digit((string)$identity)) {
+
+        $projectionId = (int)$identity;
+
+        if ($projectionId > 0) {
+
+            $stmt = $pdo->prepare("
+                SELECT
+                    ce.*,
+                    e.entity_type_id
+                FROM sxnzlfun_chrysalis.calendar_events ce
+                INNER JOIN sxnzlfun_chrysalis.entities e
+                    ON e.id = ce.entity_id
+                WHERE ce.projection_id = :projection_id
+                LIMIT 1
+            ");
+
+            $stmt->execute([
+                ':projection_id' => $projectionId,
+            ]);
+
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
     }
 
-    $stmt = $pdo->prepare("
-        SELECT
-            ce.*,
-            e.entity_type_id
-        FROM sxnzlfun_chrysalis.calendar_events ce
-        INNER JOIN sxnzlfun_chrysalis.entities e
-            ON e.id = ce.entity_id
-        WHERE ce.entity_id = :entity_id
-        LIMIT 1
-    ");
+    /*
+    |--------------------------------------------------------------------------
+    | Compatibility entity fallback
+    |--------------------------------------------------------------------------
+    */
 
-    $stmt->execute([
-        ':entity_id' => $entityId,
-    ]);
+    if (!$row) {
 
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $entityId = trim((string)$identity);
+
+        if ($entityId === '') {
+            throw new InvalidArgumentException(
+                'parent identity must be non-empty'
+            );
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT
+                ce.*,
+                e.entity_type_id
+            FROM sxnzlfun_chrysalis.calendar_events ce
+            INNER JOIN sxnzlfun_chrysalis.entities e
+                ON e.id = ce.entity_id
+            WHERE ce.entity_id = :entity_id
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            ':entity_id' => $entityId,
+        ]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 
     if (!is_array($row)) {
+
         throw new RuntimeException(
-            'Parent entity not found or not a calendar node: ' . $entityId
+            'Parent calendar node not found'
         );
     }
 
     assert_calendar_node_entity_type_matches_layer($pdo, $row);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Structural invariants
+    |--------------------------------------------------------------------------
+    */
 
     if (
         !isset($row['id']) ||
         (int)$row['id'] < 1
     ) {
         throw new RuntimeException(
-            'Invalid parent calendar node: missing valid internal id for entity ' . $entityId
+            'Invalid calendar node: missing valid internal id'
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Transitional compatibility invariant
+    |--------------------------------------------------------------------------
+    |
+    | projection_entity_id still exists for downstream compatibility,
+    | but is no longer treated as canonical runtime identity.
+    |
+    */
+
     if (
-        !isset($row['projection_entity_id']) ||
-        trim((string)$row['projection_entity_id']) === ''
+        !isset($row['projection_id']) ||
+        (int)$row['projection_id'] < 1
     ) {
         throw new RuntimeException(
-            'Invalid parent calendar node: missing projection_entity_id for entity ' . $entityId
+            'Invalid calendar node: missing projection_id'
         );
     }
 
