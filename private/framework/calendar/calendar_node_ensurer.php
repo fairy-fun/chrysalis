@@ -12,18 +12,13 @@ require_once __DIR__ . '/calendar_projection_resolver.php';
 
 function ensure_calendar_node(
     PDO $pdo,
-    string $projectionEntityId,
+    int|string $projectionIdentity,
     string $layerId,
     ?int $parentEventId,
     ?int $sequenceIndex,
     array $payload = []
 ): array {
-    $projectionEntityId = trim($projectionEntityId);
     $layerId = trim($layerId);
-
-    if ($projectionEntityId === '') {
-        throw new InvalidArgumentException('projection_entity_id must be non-empty');
-    }
 
     if ($layerId === '') {
         throw new InvalidArgumentException('layer_id must be non-empty');
@@ -37,7 +32,24 @@ function ensure_calendar_node(
         throw new InvalidArgumentException('summary is required');
     }
 
-    $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+    $projectionEntityId = null;
+
+    if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
+        $projectionId = (int)$projectionIdentity;
+
+        if ($projectionId < 1) {
+            throw new InvalidArgumentException('projection_id must be positive');
+        }
+    } else {
+        $projectionEntityId = trim((string)$projectionIdentity);
+
+        if ($projectionEntityId === '') {
+            throw new InvalidArgumentException('projection identity must be non-empty');
+        }
+
+        $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+    }
+
     $payload = filter_calendar_node_payload($layerId, $payload);
 
     while (true) {
@@ -87,12 +99,26 @@ function ensure_calendar_node(
 
 function require_calendar_node(
     PDO $pdo,
-    string $projectionEntityId,
+    int|string $projectionIdentity,
     string $layerId,
     ?int $parentEventId,
     int $sequenceIndex
 ): array {
-    $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+    if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
+        $projectionId = (int)$projectionIdentity;
+
+        if ($projectionId < 1) {
+            throw new InvalidArgumentException('projection_id must be positive');
+        }
+    } else {
+        $projectionEntityId = trim((string)$projectionIdentity);
+
+        if ($projectionEntityId === '') {
+            throw new InvalidArgumentException('projection identity must be non-empty');
+        }
+
+        $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+    }
 
     $node = find_calendar_node(
         $pdo,
@@ -157,7 +183,7 @@ function find_calendar_node(
 function insert_calendar_node(
     PDO $pdo,
     int $projectionId,
-    string $projectionEntityId,
+    ?string $projectionEntityId,
     string $layerId,
     ?int $parentEventId,
     int $sequenceIndex,
@@ -175,6 +201,11 @@ function insert_calendar_node(
 
         $temporaryEntityId = calendar_pending_event_entity_id();
         ensure_entity_row($pdo, $temporaryEntityId, $entityTypeId);
+
+        $projectionFields = build_calendar_projection_compatibility_fields(
+            $projectionId,
+            $projectionEntityId
+        );
 
         $stmt = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
@@ -217,11 +248,6 @@ function insert_calendar_node(
                 :client_id
             )
         ");
-
-        $projectionFields = build_calendar_projection_compatibility_fields(
-            $projectionId,
-            $projectionEntityId
-        );
 
         $stmt->execute([
             ':entity_id' => $temporaryEntityId,
@@ -284,31 +310,22 @@ function insert_calendar_node(
 
 function build_calendar_projection_compatibility_fields(
     int $projectionId,
-    string $projectionEntityId
+    ?string $projectionEntityId
 ): array {
-    $projectionEntityId = trim($projectionEntityId);
-
     if ($projectionId < 1) {
-        throw new InvalidArgumentException(
-            'projection_id must be positive'
-        );
+        throw new InvalidArgumentException('projection_id must be positive');
     }
 
+    $projectionEntityId = $projectionEntityId !== null
+        ? trim($projectionEntityId)
+        : '';
+
     if ($projectionEntityId === '') {
-        throw new InvalidArgumentException(
-            'projection_entity_id must be non-empty'
-        );
+        $projectionEntityId = 'projection:' . $projectionId;
     }
 
     return [
         'projection_id' => $projectionId,
-
-        /**
-         * Transitional compatibility field.
-         *
-         * Runtime identity is projection_id.
-         * projection_entity_id exists only for compatibility.
-         */
         'projection_entity_id' => $projectionEntityId,
     ];
 }
