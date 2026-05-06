@@ -739,7 +739,12 @@ private/docs/calendar/calendar_projection_identity_contract.md
 
 ```php
 projection_id
+```
 
+Expression runtime projection identity boundaries are CI-enforced by:
+
+```text
+private/framework/audit/audit_projection_identity_contract.php
 
 ### Important Failure Mode
 

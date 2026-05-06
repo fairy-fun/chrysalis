@@ -270,3 +270,18 @@ At that point:
 projection_id
 
 will be the only remaining projection identity in the system.
+
+### CI Enforcement
+
+The projection identity contract is enforced by:
+
+```text
+private/framework/audit/audit_projection_identity_contract.php
+```
+
+This audit is executed through:
+
+private/framework/ci/run_all_audits.php
+
+Deployment will fail if runtime usage of projection_entity_id
+is reintroduced into framework internals.

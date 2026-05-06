@@ -131,6 +131,15 @@ private/docs/calendar/calendar_projection_identity_contract.md
 ```
 CI/static analysis must enforce that no new runtime usage of projection_entity_id is introduced.
 
+#### CI enforcement:
+
+```text
+private/framework/audit/audit_projection_identity_contract.php
+```
+executed via:
+
+private/framework/ci/run_all_audits.php
+
 ## Expression outputs must encode exactly one transformation per POV run
 
 - Element: Expression constraint outputs

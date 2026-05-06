@@ -52,6 +52,7 @@ $audits = [
     'calendar event hierarchy' => fn () => assert_calendar_event_hierarchy($pdo, $schemaName),
     'calendar event creation paths' => fn () => assert_calendar_event_creation_paths(),
     'calendar beat classset integrity' => fn () => assert_calendar_beat_classset_integrity($pdo, $schemaName),
+    // Enforces projection_id as canonical runtime projection identity.
     'projection identity contract' => fn () => assert_projection_identity_contract(),
     'deprecated calendar beat-domain usage' => function (): void {
     $auditFn = 'assert_deprecated_calendar_beat_' . 'domain_map_usage';
