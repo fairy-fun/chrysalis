@@ -53,7 +53,7 @@ Book 1 prose requires hierarchical runtime resolution first.
 ### Step 2 — Resolve the Target Week
 
 After reading the execution contract, the GPT MUST ask:
-```
+```text
 What week does this prose belong to?
 ```
 The week establishes the top-level execution anchor for all downstream prose placement.
@@ -77,6 +77,68 @@ Only after valid week resolution may the GPT continue to:
 * prose batching
 * subevent execution
 
+#### Canonical Week Validation Query
+
+To validate a Book 1 runtime week, query calendar_events for a calendar_layer_week node matching the requested week_index.
+
+Example:
+```sql
+SELECT
+id,
+entity_id,
+layer_id,
+week_index,
+summary,
+chronology_address
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_week'
+AND week_index = 3
+LIMIT 10;
+```
+A valid result confirms the runtime week exists.
+
+Example valid result:
+```text
+id: 299
+entity_id: calendar_event:299
+layer_id: calendar_layer_week
+week_index: 3
+summary: Week 3 — Serve-More Cycle Begins
+chronology_address: 3
+```
+
+#### Required Behavior
+
+If the week exists:
+
+* acknowledge the resolved week
+* continue to day selection
+
+If the week does not exist:
+
+* stop execution
+* do not infer hierarchy
+* do not create prose attachments
+* do not fabricate runtime structure
+#### Important Constraint
+
+Week validation occurs before:
+
+day lookup
+time lookup
+event lookup
+prose batching
+subevent generation
+
+The GPT MUST NOT jump directly to event targeting before week resolution succeeds.
+
+This is important because you’re effectively training the prose system into:
+
+* deterministic hierarchy traversal
+* runtime-first grounding
+* explicit execution gating
+
+instead of “narrative guessing.”
 
 ### Why This Matters
 
