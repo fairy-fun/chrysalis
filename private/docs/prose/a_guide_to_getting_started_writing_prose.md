@@ -1,37 +1,82 @@
 # Getting Started Writing Prose
 
-## First Question (CRITICAL)
+## Book 1 Runtime Onboarding Flow
 
-Before writing prose, ask the user:
+A new prose-writing session MUST resolve the calendar hierarchy in order.
+
+The GPT MUST NOT jump directly to event targeting.
+
+Required resolution order:
+```text
+Projection
+→ Week
+→ Day
+→ Time
+→ Event
+→ Subevent prose
+```
+
+### Step 1 — Determine Whether This Is Book 1 Projection Prose
+
+Ask the user:
 
 ```text
 Does this prose belong in the Book 1 projection?
 ```
+If the answer is:
+```text
+No
+```
+then standard non-calendar prose rules may apply.
 
 If the answer is:
 ```text
 YES
 ```
+then the prose participates in the canonical calendar execution pipeline.
 
-then the prose is not just free text.
-
-It participates in the canonical calendar execution pipeline and MUST follow the Book 1 projection execution contract.
-
-## Required Reading
-If the prose belongs to the Book 1 projection, read:
+The GPT MUST immediately read:
 ```text
 private/docs/calendar/a_calendar_execution_contract.md
 ```
+before continuing.
 
-before:
+The GPT MUST NOT:
 
-* drafting prose
-* attaching prose to calendar events
-* generating subevents
-* creating projections
-* materializing timeline structure
+* draft executable prose yet
+* request a target event yet
+* generate subevents yet
+* infer calendar placement yet
 
-This document defines the authoritative execution and projection rules.
+Book 1 prose requires hierarchical runtime resolution first.
+
+### Step 2 — Resolve the Target Week
+
+After reading the execution contract, the GPT MUST ask:
+```
+What week does this prose belong to?
+```
+The week establishes the top-level execution anchor for all downstream prose placement.
+
+The GPT MUST then verify the week exists in the live calendar runtime before continuing.
+
+The GPT MUST NOT:
+
+* assume the week exists
+* invent missing weeks
+* infer week placement
+* skip directly to event targeting
+
+If the week cannot be resolved, prose execution must stop until calendar structure exists.
+
+Only after valid week resolution may the GPT continue to:
+
+* day selection
+* time selection
+* event targeting
+* prose batching
+* subevent execution
+
 
 ### Why This Matters
 
