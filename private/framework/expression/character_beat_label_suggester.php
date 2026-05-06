@@ -2,11 +2,22 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/calendar_projection_resolver.php';
+
 function suggestCharacterBeatLabels(
     PDO $pdo,
     string $characterEntityId,
     ?string $projectionEntityId = null
 ): array {
+    $projectionId = null;
+
+    if ($projectionEntityId !== null && trim($projectionEntityId) !== '') {
+        $projectionEntityId = trim($projectionEntityId);
+        $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+    } else {
+        $projectionEntityId = null;
+    }
+
     $sql = "
         SELECT
             ce.id AS calendar_event_id,
@@ -25,10 +36,8 @@ function suggestCharacterBeatLabels(
            AND elf.fact_type_id = 'fact_type_event_theme'
         LEFT JOIN theme_author_labels tal
             ON tal.theme_entity_id = elf.object_entity_id
-        " . ($projectionEntityId ? "
-        JOIN calendar_event_projection_membership cepm
-            ON cepm.calendar_event_id = ce.id
-           AND cepm.projection_entity_id = :projection_entity_id
+        " . ($projectionId !== null ? "
+        WHERE ce.projection_id = :projection_id
         " : "") . "
         ORDER BY ce.chronology_address
     ";
@@ -36,8 +45,8 @@ function suggestCharacterBeatLabels(
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':character_entity_id', $characterEntityId);
 
-    if ($projectionEntityId) {
-        $stmt->bindValue(':projection_entity_id', $projectionEntityId);
+    if ($projectionId !== null) {
+        $stmt->bindValue(':projection_id', $projectionId, PDO::PARAM_INT);
     }
 
     $stmt->execute();
@@ -63,6 +72,7 @@ function suggestCharacterBeatLabels(
         'status' => 'ok',
         'character_entity_id' => $characterEntityId,
         'projection_entity_id' => $projectionEntityId,
+        'projection_id' => $projectionId,
         'proposal_count' => count($proposals),
         'proposals' => $proposals,
     ];
