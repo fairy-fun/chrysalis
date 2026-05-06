@@ -218,10 +218,15 @@ function insert_calendar_node(
             )
         ");
 
+        $projectionFields = build_calendar_projection_compatibility_fields(
+            $projectionId,
+            $projectionEntityId
+        );
+
         $stmt->execute([
             ':entity_id' => $temporaryEntityId,
-            ':projection_id' => $projectionId,
-            ':projection_entity_id' => trim($projectionEntityId),
+            ':projection_id' => $projectionFields['projection_id'],
+            ':projection_entity_id' => $projectionFields['projection_entity_id'],
             ':parent' => $parentEventId,
             ':layer' => trim($layerId),
             ':seq' => $sequenceIndex,
@@ -277,7 +282,36 @@ function insert_calendar_node(
  * ============================
  */
 
+function build_calendar_projection_compatibility_fields(
+    int $projectionId,
+    string $projectionEntityId
+): array {
+    $projectionEntityId = trim($projectionEntityId);
 
+    if ($projectionId < 1) {
+        throw new InvalidArgumentException(
+            'projection_id must be positive'
+        );
+    }
+
+    if ($projectionEntityId === '') {
+        throw new InvalidArgumentException(
+            'projection_entity_id must be non-empty'
+        );
+    }
+
+    return [
+        'projection_id' => $projectionId,
+
+        /**
+         * Transitional compatibility field.
+         *
+         * Runtime identity is projection_id.
+         * projection_entity_id exists only for compatibility.
+         */
+        'projection_entity_id' => $projectionEntityId,
+    ];
+}
 
 function calendar_entity_type_for_layer(string $layerId): string
 {
