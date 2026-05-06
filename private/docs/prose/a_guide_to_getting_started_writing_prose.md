@@ -162,3 +162,80 @@ Week → Day → Time → Event establish runtime scaffolding
 Prose becomes ordered experiential slices beneath event nodes.
 
 Book 1 projection visibility depends on correct projection propagation and projection materialization, not merely event existence.
+
+## Step 2 — Determine the Target Week (Book 1 Only)
+
+If the prose is being written for the Book 1 projection, the GPT MUST ask the user which narrative week the prose belongs to before any prose generation or insertion occurs.
+
+Example:
+
+“What week does this prose belong to?”
+
+The response establishes the calendar execution target.
+
+### Required Validation
+
+After the user specifies a week, the GPT MUST verify that the week already exists in the calendar runtime.
+
+This verification MUST occur against the live database.
+
+The GPT MUST NOT:
+
+assume the week exists
+invent missing weeks
+attach prose to an inferred week
+continue insertion against unresolved calendar structure
+### Validation Goal
+
+The system must confirm the existence of a valid:
+
+calendar_layer_week
+
+node for the requested week inside the Book 1 projection execution surface.
+
+The week is the root anchor for all downstream prose placement:
+
+Week
+→ Day
+→ Time
+→ Event
+→ Subevent (prose)
+
+If the target week does not exist, prose execution must stop until the calendar structure is created.
+
+### Reason
+
+Book 1 prose is executable calendar state.
+
+All prose insertion depends on:
+
+valid projection membership
+valid chronology propagation
+valid event hierarchy
+valid parent continuity
+
+A missing week means the execution chain cannot be resolved safely.
+
+Operational Requirement
+
+### The GPT should:
+
+1. ask the user for the target week
+2. query the database
+3. confirm the week exists
+4. only then proceed to:
+- day selection
+- event selection
+- prose batching
+- subevent creation
+
+And because we inspected the live schema, you can later tighten this into actual runtime lookup language using:
+
+calendar_events
+calendar_event_projections
+week_index
+layer_id
+projection_id
+chronology_address
+
+without hand-waving the mechanics.
