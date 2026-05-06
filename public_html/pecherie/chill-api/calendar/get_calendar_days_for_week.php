@@ -12,16 +12,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
 
 requireAuth();
 
-$parentDayEntityId = $_GET['parent_day_entity_id'] ?? null;
+$parentWeekEntityId = $_GET['parent_week_entity_id'] ?? null;
 
-if (!is_string($parentDayEntityId) || trim($parentDayEntityId) === '') {
+if (!is_string($parentWeekEntityId) || trim($parentWeekEntityId) === '') {
     respond(400, [
         'status' => 'error',
-        'error' => 'parent_day_entity_id must be a non-empty string',
+        'error' => 'parent_week_entity_id must be a non-empty string',
     ]);
 }
 
-$parentDayEntityId = trim($parentDayEntityId);
+$parentWeekEntityId = trim($parentWeekEntityId);
 
 $pdo = makePdo('read');
 $expectedDatabase = verifyExpectedDatabase($pdo);
@@ -34,29 +34,28 @@ try {
             cp.entity_id AS projection_entity_id,
             ce.layer_id,
             ce.week_index,
-            ce.day_index,
             ce.chronology_address
         FROM sxnzlfun_chrysalis.calendar_events ce
         LEFT JOIN sxnzlfun_chrysalis.calendar_projections cp
             ON cp.id = ce.projection_id
         WHERE ce.entity_id = :entity_id
-          AND ce.layer_id = 'calendar_layer_day'
+          AND ce.layer_id = 'calendar_layer_week'
         LIMIT 1
     ");
 
-    $parent->execute([':entity_id' => $parentDayEntityId]);
+    $parent->execute([':entity_id' => $parentWeekEntityId]);
 
-    $day = $parent->fetch(PDO::FETCH_ASSOC);
+    $week = $parent->fetch(PDO::FETCH_ASSOC);
 
-    if (!is_array($day)) {
+    if (!is_array($week)) {
         respond(404, [
             'status' => 'error',
-            'error' => 'Parent day not found',
+            'error' => 'Parent week not found',
             'database' => $expectedDatabase,
         ]);
     }
 
-    $stmt = $pdo->prepare("
+    $daysStmt = $pdo->prepare("
         SELECT
             ce.entity_id,
             ce.event_id,
@@ -71,26 +70,26 @@ try {
         LEFT JOIN sxnzlfun_chrysalis.calendar_projections cp
             ON cp.id = ce.projection_id
         WHERE ce.parent_event_id = :parent_event_id
-          AND ce.layer_id = 'calendar_layer_time'
+          AND ce.layer_id = 'calendar_layer_day'
         ORDER BY ce.sequence_index ASC, ce.event_id ASC
     ");
 
-    $stmt->execute([':parent_event_id' => (int)$day['_internal_id']]);
+    $daysStmt->execute([':parent_event_id' => (int)$week['_internal_id']]);
 
-    $times = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $days = $daysStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    unset($day['_internal_id']);
+    unset($week['_internal_id']);
 
     respond(200, [
         'status' => 'ok',
         'database' => $expectedDatabase,
-        'day' => $day,
-        'times' => $times,
+        'week' => $week,
+        'days' => $days,
     ]);
 
 } catch (Throwable $e) {
     debugRespond(500, [
-        'error' => 'Failed to fetch calendar times for day',
+        'error' => 'Failed to fetch calendar days for week',
         'database' => $expectedDatabase,
     ], $e);
 }
