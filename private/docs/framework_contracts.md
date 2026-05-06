@@ -74,7 +74,8 @@
   - `private/scripts/ci/check_expression_output_validity.php`
 - Invariant:
   - `calendar_events` remain structural timeline truth
-  - `calendar_event_projection_membership` owns event-to-book projection membership
+  - calendar_events.projection_id is the canonical event-to-projection relationship.
+    calendar_event_projection_membership is legacy compatibility state pending removal.
   - `expression_constraint_outputs` describe one character POV only
   - emotion shifts may be tracked at sub-event chronology level
   - no group-level emotion output is valid without a character POV
