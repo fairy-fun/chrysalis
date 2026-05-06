@@ -1,6 +1,5 @@
 <?php
 
-
 declare(strict_types=1);
 
 /**
@@ -9,17 +8,17 @@ declare(strict_types=1);
  * Canonical model:
  *
  * id
- *   Internal database row id.
+ *   Internal structural row identity.
  *
  * event_id
- *   Stable business/event identity.
+ *   Stable business/story identity.
  *
  * entity_id
- *   Externalized namespaced form of event_id.
+ *   Externalized namespaced form of the structural row identity.
  *
  * Invariant:
  *
- * entity_id = "calendar_event:{event_id}"
+ * entity_id = "calendar_event:{id}"
  */
 function validate_calendar_event_identity(PDO $pdo): void
 {
@@ -29,7 +28,7 @@ function validate_calendar_event_identity(PDO $pdo): void
             entity_id,
             event_id
         FROM calendar_events
-        WHERE entity_id <> CONCAT('calendar_event:', event_id)
+        WHERE entity_id <> CONCAT('calendar_event:', id)
         LIMIT 20
     ");
 
@@ -37,7 +36,7 @@ function validate_calendar_event_identity(PDO $pdo): void
 
     if ($badRows !== []) {
         throw new RuntimeException(
-            'Calendar event identity separation failed: ' .
+            'Calendar event external identity invariant failed: ' .
             json_encode($badRows, JSON_UNESCAPED_SLASHES)
         );
     }
