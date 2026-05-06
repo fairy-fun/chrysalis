@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/calendar_projection_resolver.php';
+
 function buildCharacterThemeProgression(
     PDO $pdo,
     string $characterEntityId,
@@ -22,43 +24,38 @@ function buildCharacterThemeProgression(
         'character_entity_id' => $characterEntityId,
     ];
 
-    $projectionJoin = '';
     $projectionWhere = '';
 
     if ($projectionEntityId !== null) {
-        $projectionJoin = <<<SQL
-JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
-    ON cepm.calendar_event_id = ce.id
-SQL;
+        $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
 
-        $projectionWhere = 'AND cepm.projection_entity_id = :projection_entity_id';
-        $params['projection_entity_id'] = $projectionEntityId;
+        $projectionWhere = 'AND ce.projection_id = :projection_id';
+        $params['projection_id'] = $projectionId;
     }
 
     $stmt = $pdo->prepare(<<<SQL
-SELECT
-    ce.id AS calendar_event_id,
-    ce.entity_id AS event_entity_id,
-    ce.chronology_address,
-    ce.summary,
-    elf.object_entity_id AS theme_entity_id
-FROM sxnzlfun_chrysalis.calendar_events ce
-$projectionJoin
-JOIN sxnzlfun_chrysalis.calendar_event_participants cep
-    ON cep.event_id = ce.id
-   AND cep.entity_id = :character_entity_id
-JOIN sxnzlfun_chrysalis.entity_linked_facts_event elf
-    ON elf.subject_entity_id = ce.entity_id
-   AND elf.context_entity_id = ce.entity_id
-   AND elf.fact_type_id = 'fact_type_event_theme'
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM sxnzlfun_chrysalis.calendar_events child
-    WHERE child.parent_event_id = ce.id
-)
-$projectionWhere
-ORDER BY ce.chronology_address ASC, ce.id ASC, elf.object_entity_id ASC
-SQL);
+    SELECT
+        ce.id AS calendar_event_id,
+        ce.entity_id AS event_entity_id,
+        ce.chronology_address,
+        ce.summary,
+        elf.object_entity_id AS theme_entity_id
+    FROM sxnzlfun_chrysalis.calendar_events ce
+    JOIN sxnzlfun_chrysalis.calendar_event_participants cep
+        ON cep.event_id = ce.id
+       AND cep.entity_id = :character_entity_id
+    JOIN sxnzlfun_chrysalis.entity_linked_facts_event elf
+        ON elf.subject_entity_id = ce.entity_id
+       AND elf.context_entity_id = ce.entity_id
+       AND elf.fact_type_id = 'fact_type_event_theme'
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM sxnzlfun_chrysalis.calendar_events child
+        WHERE child.parent_event_id = ce.id
+    )
+    $projectionWhere
+    ORDER BY ce.chronology_address ASC, ce.id ASC, elf.object_entity_id ASC
+    SQL);
 
     $stmt->execute($params);
 
