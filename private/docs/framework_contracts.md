@@ -93,6 +93,44 @@
   - add missing classvals rather than distorting meaning
   - keep structural event/book links in `calendar_event_projection_membership`
 
+## Calendar Projection Runtime Identity
+
+`projection_id` is the sole canonical runtime identity for calendar projection systems.
+
+Framework runtime code MUST:
+
+- query by `projection_id`
+- propagate `projection_id`
+- key runtime collections/maps by `projection_id`
+- normalize external projection identities immediately at ingress
+
+Framework runtime code MUST NOT:
+
+- query or join by `projection_entity_id`
+- bind `:projection_entity_id`
+- read `$row['projection_entity_id']` or `$parent['projection_entity_id']`
+- propagate `projection_entity_id` through internal runtime payloads
+- key runtime collections/maps by `projection_entity_id`
+
+`projection_entity_id` is compatibility-only and is permitted only for:
+
+- ingress compatibility
+- persistence compatibility
+- outbound API/view compatibility
+
+Approved compatibility boundaries are:
+
+- `private/framework/calendar/calendar_projection_resolver.php`
+- `private/framework/calendar/calendar_node_ensurer.php`
+- outbound compatibility shaping in expression view/suggestion builders
+
+Full contract:
+
+```text
+private/docs/calendar/calendar_projection_identity_contract.md
+```
+CI/static analysis must enforce that no new runtime usage of projection_entity_id is introduced.
+
 ## Expression outputs must encode exactly one transformation per POV run
 
 - Element: Expression constraint outputs

@@ -689,6 +689,57 @@ VALUES (
     '<sequence_sort_key>'
 );
 ```
+## Projection Identity Rules
+
+Expression runtime systems operate exclusively on:
+
+Expression systems MUST:
+
+* accept projection_id as canonical runtime input
+* query by projection_id
+* propagate projection_id
+* normalize external projection identities at ingress boundaries
+
+Expression systems MUST NOT:
+
+* query by projection_entity_id
+* join on projection_entity_id
+* bind :projection_entity_id
+* key runtime collections/maps by projection_entity_id
+* propagate projection_entity_id internally
+
+The expression runtime migration to projection_id is considered complete.
+
+Remaining projection_entity_id usage is compatibility-only.
+
+Approved compatibility usage currently exists in:
+
+private/framework/expression/character_theme_progression_builder.php
+private/framework/expression/author_beat_view_builder.php
+private/framework/expression/character_beat_label_suggester.php
+private/framework/expression/character_next_beat_suggester.php
+
+In particular, the following outbound compatibility conversion remains
+explicitly allowed:
+
+$projectionEntityId = calendar_projection_entity_id(
+$pdo,
+$projectionId,
+);
+
+This is permitted only for outbound compatibility shaping.
+
+Expression runtime internals must never recover or reintroduce
+projection_entity_id as a canonical runtime identity.
+
+See:
+
+private/docs/calendar/calendar_projection_identity_contract.md
+
+
+```php
+projection_id
+
 
 ### Important Failure Mode
 
