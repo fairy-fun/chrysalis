@@ -25,6 +25,7 @@ require __DIR__ . '/../audit/audit_calendar_event_hierarchy_integrity.php';
 require __DIR__ . '/../audit/audit_calendar_event_creation_paths.php';
 require __DIR__ . '/../audit/audit_deprecated_calendar_beat_' . 'domain_map_usage.php';
 require __DIR__ . '/../audit/audit_calendar_beat_classset_integrity.php';
+require __DIR__ . '/../audit/audit_projection_identity_contract.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -51,6 +52,7 @@ $audits = [
     'calendar event hierarchy' => fn () => assert_calendar_event_hierarchy($pdo, $schemaName),
     'calendar event creation paths' => fn () => assert_calendar_event_creation_paths(),
     'calendar beat classset integrity' => fn () => assert_calendar_beat_classset_integrity($pdo, $schemaName),
+    'projection identity contract' => fn () => assert_projection_identity_contract(),
     'deprecated calendar beat-domain usage' => function (): void {
     $auditFn = 'assert_deprecated_calendar_beat_' . 'domain_map_usage';
     $auditFn();
