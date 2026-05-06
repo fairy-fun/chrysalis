@@ -93,11 +93,11 @@ function ensure_calendar_event(
 
 function ensure_calendar_subevent(
     PDO $pdo,
-    string $parentEventEntityId,
+    string|int $parentEventIdentity,
     ?int $sequenceIndex,
     array $payload
 ): array {
-    $parent = resolve_calendar_node_for_layer_wrapper($pdo, $parentEventEntityId);
+    $parent = resolve_calendar_node_for_layer_wrapper($pdo, $parentEventIdentity);
 
     assert_calendar_parent_transition($parent, 'calendar_layer_subevent');
 
