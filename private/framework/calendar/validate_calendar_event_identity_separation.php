@@ -4,17 +4,24 @@
 declare(strict_types=1);
 
 /**
- * Calendar event identity separation invariant.
+ * Calendar event external identity invariant.
  *
- * Final mental model:
+ * Canonical model:
  *
- * id        -> this row exists
- * entity_id -> this row's external identity
- * event_id  -> where this sits in the story structure
+ * id
+ *   Internal database row id.
  *
- * These axes must remain distinct.
+ * event_id
+ *   Stable business/event identity.
+ *
+ * entity_id
+ *   Externalized namespaced form of event_id.
+ *
+ * Invariant:
+ *
+ * entity_id = "calendar_event:{event_id}"
  */
-function validate_calendar_event_identity_separation(PDO $pdo): void
+function validate_calendar_event_identity(PDO $pdo): void
 {
     $stmt = $pdo->query("
         SELECT

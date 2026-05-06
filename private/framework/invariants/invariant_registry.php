@@ -49,7 +49,7 @@ return [
     'calendar_event_identity_separation' => [
         'label' => 'calendar event identity separation',
         'runner' => static function (PDO $pdo): void {
-            validate_calendar_event_identity_separation($pdo);
+            validate_calendar_event_identity($pdo);
         },
     ],
 ];
