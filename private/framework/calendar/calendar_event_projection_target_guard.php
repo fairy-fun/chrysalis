@@ -5,16 +5,13 @@ declare(strict_types=1);
 /**
  * Calendar Event Projection Target Guard
  *
- * Validates that projection targets attach only to real calendar event
- * entities.
+ * Validates that prose projections attach only to real calendar event entities.
  *
- * Semantic authority: entities.entity_type_id.
- * Structural consistency: calendar_events.layer_id must agree with the
- * expected event-layer mapping.
- */
-
-/**
- * @return array<string, mixed>
+ * Canonical identity:
+ * - calendar_events.id is the structural node id.
+ * - calendar_events.entity_id is "calendar_event:{calendar_events.id}".
+ * - calendar_events.event_id is business identity and must not be used to parse
+ *   or validate entity_id.
  */
 function require_calendar_event_projection_target_node(
     PDO $pdo,
@@ -25,23 +22,23 @@ function require_calendar_event_projection_target_node(
 
     if (!str_starts_with($targetEntityId, $prefix)) {
         throw new InvalidArgumentException(
-            'Invalid projection target: target_entity_id must use calendar_event:{event_id}.'
+            'Invalid projection target: target_entity_id must use calendar_event:{calendar_events.id}.'
         );
     }
 
-    $rawEventId = substr($targetEntityId, strlen($prefix));
+    $rawCalendarEventId = substr($targetEntityId, strlen($prefix));
 
-    if ($rawEventId === '' || !ctype_digit($rawEventId)) {
+    if ($rawCalendarEventId === '' || !ctype_digit($rawCalendarEventId)) {
         throw new InvalidArgumentException(
-            'Invalid projection target: calendar_event entity id must contain a positive numeric event_id.'
+            'Invalid projection target: calendar_event entity id must contain a positive numeric calendar_events.id.'
         );
     }
 
-    $eventId = (int)$rawEventId;
+    $calendarEventId = (int)$rawCalendarEventId;
 
-    if ($eventId <= 0) {
+    if ($calendarEventId <= 0) {
         throw new InvalidArgumentException(
-            'Invalid projection target: event_id must be greater than zero.'
+            'Invalid projection target: calendar_events.id must be greater than zero.'
         );
     }
 
@@ -75,9 +72,9 @@ function require_calendar_event_projection_target_node(
         );
     }
 
-    if ((int)$row['event_id'] !== $eventId) {
+    if ((int)$row['id'] !== $calendarEventId) {
         throw new RuntimeException(
-            'Invalid projection target: calendar event entity_id does not match event_id.'
+            'Invalid projection target: calendar event entity_id does not match calendar_events.id.'
         );
     }
 
@@ -87,16 +84,9 @@ function require_calendar_event_projection_target_node(
         );
     }
 
-    /*
-     * Transitional structural invariant only.
-     *
-     * entity_type_id is authoritative for semantic validity.
-     * layer_id is retained here only as a defensive consistency check and must
-     * not be treated as the semantic source of truth.
-     */
     if (($row['layer_id'] ?? null) !== 'calendar_layer_event') {
         throw new RuntimeException(
-            'Invariant violation: entity_type_calendar_event mapped to unexpected calendar layer.'
+            'Invariant violation: prose projections may only target calendar_layer_event nodes.'
         );
     }
 
