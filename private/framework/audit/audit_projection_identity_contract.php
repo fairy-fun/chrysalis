@@ -14,7 +14,8 @@ function assert_projection_identity_contract(): void
 
     $runtimeViolationCommand = <<<BASH
 grep -RInE "\['projection_entity_id'\]|->projection_entity_id|nto[0-9]*\.projection_entity_id|:projection_entity_id" {$frameworkPath} \
-| grep -v "calendar_node_ensurer.php" || true
+| grep -v "calendar_node_ensurer.php" \
+| grep -v "audit_projection_identity_contract.php" || true
 BASH;
 
     $runtimeViolations = trim(
@@ -32,6 +33,7 @@ BASH;
 grep -RIn "projection_entity_id" {$frameworkPath} \
 | grep -v "calendar_projection_resolver.php" \
 | grep -v "calendar_node_ensurer.php" \
+| grep -v "audit_projection_identity_contract.php" \
 | grep -v "'projection_entity_id' =>" \
 | grep -v "projection_entity_id still exists" || true
 BASH;
