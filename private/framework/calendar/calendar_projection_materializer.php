@@ -39,7 +39,11 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         $projectionType = fetch_calendar_projection_type($pdo, $projectionId);
 
         // 4. Fetch source events
-        $events = fetch_projection_source_events($pdo, $projectionId, $projectionType);
+        $events = fetch_projection_source_events(
+            $pdo,
+            $projectionId,
+            $projectionType
+        );
 
         // 5. Insert projection rows
         $insert = $pdo->prepare("
@@ -95,13 +99,21 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
                 $sequence
             );
 
-            assert_calendar_projection_row_integrity($row, $projectionType);
+            assert_calendar_projection_row_integrity(
+                $row,
+                $projectionType
+            );
 
             $insert->execute($row);
         }
 
         // 6. Validate complete build before marking valid
-        assert_projection_build_integrity($pdo, $buildId, $projectionId, $projectionType);
+        assert_projection_build_integrity(
+            $pdo,
+            $buildId,
+            $projectionId,
+            $projectionType
+        );
 
         // 7. Mark valid
         $pdo->prepare("
@@ -158,7 +170,10 @@ function build_calendar_projection_row(
         'parent_projection_row_id' => null,
         'projection_sequence' => $sequence,
 
-        'render_label' => $event['render_label'] ?? $event['summary'] ?? null,
+        'render_label' => $event['render_label']
+            ?? $event['summary']
+                ?? null,
+
         'notes' => $event['notes'] ?? null,
     ];
 
@@ -172,19 +187,33 @@ function build_calendar_projection_row(
             $pdo,
             $event['real_date_end_id'] ?? null
         );
+
     } elseif ($projectionType === 'structure') {
-        $row['projection_address'] = $event['projection_address'] ?? $event['address'] ?? null;
+
+        $row['projection_address'] =
+            $event['projection_address']
+            ?? $event['address']
+            ?? null;
+
     } elseif ($projectionType === 'book1') {
-        $row['chronology_address'] = $event['chronology_address'] ?? null;
+
+        $row['chronology_address'] =
+            $event['chronology_address']
+            ?? null;
+
     } else {
-        throw new RuntimeException("Unknown projection type: {$projectionType}");
+        throw new RuntimeException(
+            "Unknown projection type: {$projectionType}"
+        );
     }
 
     return $row;
 }
 
-function fetch_calendar_projection_type(PDO $pdo, int $projectionId): string
-{
+function fetch_calendar_projection_type(
+    PDO $pdo,
+    int $projectionId
+): string {
     $stmt = $pdo->prepare("
         SELECT projection_type_id
         FROM calendar_projections
@@ -199,13 +228,21 @@ function fetch_calendar_projection_type(PDO $pdo, int $projectionId): string
     $type = $stmt->fetchColumn();
 
     if ($type === false) {
-        throw new RuntimeException("Projection not found: {$projectionId}");
+        throw new RuntimeException(
+            "Projection not found: {$projectionId}"
+        );
     }
 
-    $validTypes = ['time', 'structure', 'book1'];
+    $validTypes = [
+        'time',
+        'structure',
+        'book1',
+    ];
 
     if (!in_array($type, $validTypes, true)) {
-        throw new RuntimeException("Invalid projection type: {$type}");
+        throw new RuntimeException(
+            "Invalid projection type: {$type}"
+        );
     }
 
     return $type;
@@ -216,7 +253,9 @@ function fetch_projection_source_events(
     int $projectionId,
     string $projectionType
 ): array {
-    $orderBy = calendar_projection_source_order_by($projectionType);
+    $orderBy = calendar_projection_source_order_by(
+        $projectionType
+    );
 
     $stmt = $pdo->prepare("
         SELECT
@@ -231,14 +270,7 @@ function fetch_projection_source_events(
             e.projection_entity_id,
             e.projection_id
         FROM calendar_events e
-        LEFT JOIN calendar_projections p
-            ON p.projection_code = e.projection_entity_id
-        WHERE
-            e.projection_id = :projection_id
-            OR (
-                e.projection_id IS NULL
-                AND p.id = :projection_id
-            )
+        WHERE e.projection_id = :projection_id
         {$orderBy}
     ");
 
@@ -249,8 +281,9 @@ function fetch_projection_source_events(
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function calendar_projection_source_order_by(string $projectionType): string
-{
+function calendar_projection_source_order_by(
+    string $projectionType
+): string {
     if ($projectionType === 'book1') {
         return "
             ORDER BY
@@ -264,7 +297,6 @@ function calendar_projection_source_order_by(string $projectionType): string
     if ($projectionType === 'time') {
         return "
             ORDER BY
-                e.real_date_start_id IS NULL ASC,
                 e.real_date_start_id ASC,
                 e.real_date_end_id ASC,
                 e.id ASC
@@ -280,7 +312,9 @@ function calendar_projection_source_order_by(string $projectionType): string
         ";
     }
 
-    throw new RuntimeException("Unknown projection type: {$projectionType}");
+    throw new RuntimeException(
+        "Unknown projection type: {$projectionType}"
+    );
 }
 
 function assert_projection_build_integrity(
@@ -304,7 +338,9 @@ function assert_projection_build_integrity(
     $rowCount = (int)$stmt->fetchColumn();
 
     if ($rowCount === 0) {
-        throw new RuntimeException("Projection build {$buildId} produced no rows.");
+        throw new RuntimeException(
+            "Projection build {$buildId} produced no rows."
+        );
     }
 
     if ($projectionType === 'time') {
@@ -322,10 +358,11 @@ function assert_projection_build_integrity(
         ]);
 
         if ((int)$stmt->fetchColumn() > 0) {
-            throw new RuntimeException("Time projection build {$buildId} has rows missing projection_starts_at.");
+            throw new RuntimeException(
+                "Time projection build {$buildId} has rows missing projection_starts_at."
+            );
         }
     }
-
 
     if ($projectionType === 'structure') {
         $stmt = $pdo->prepare("
@@ -342,7 +379,9 @@ function assert_projection_build_integrity(
         ]);
 
         if ((int)$stmt->fetchColumn() > 0) {
-            throw new RuntimeException("Structure projection build {$buildId} has rows missing projection_address.");
+            throw new RuntimeException(
+                "Structure projection build {$buildId} has rows missing projection_address."
+            );
         }
     }
 
@@ -361,65 +400,101 @@ function assert_projection_build_integrity(
         ]);
 
         if ((int)$stmt->fetchColumn() > 0) {
-            throw new RuntimeException("Book 1 projection build {$buildId} has rows missing chronology_address.");
+            throw new RuntimeException(
+                "Book 1 projection build {$buildId} has rows missing chronology_address."
+            );
         }
     }
 }
 
-function assert_calendar_projection_row_integrity(array $row, string $projectionType): void
-{
+function assert_calendar_projection_row_integrity(
+    array $row,
+    string $projectionType
+): void {
     if (empty($row['build_id'])) {
-        throw new RuntimeException('Projection row missing build_id.');
+        throw new RuntimeException(
+            'Projection row missing build_id.'
+        );
     }
 
     if (empty($row['calendar_event_id'])) {
-        throw new RuntimeException('Projection row missing calendar_event_id.');
+        throw new RuntimeException(
+            'Projection row missing calendar_event_id.'
+        );
     }
 
     if (empty($row['calendar_projection_id'])) {
-        throw new RuntimeException('Projection row missing calendar_projection_id.');
+        throw new RuntimeException(
+            'Projection row missing calendar_projection_id.'
+        );
     }
 
     if ($projectionType === 'time') {
+
         if ($row['projection_starts_at'] === null) {
-            throw new RuntimeException('Time projection row missing projection_starts_at.');
+            throw new RuntimeException(
+                'Time projection row missing projection_starts_at.'
+            );
         }
 
         if ($row['projection_address'] !== null) {
-            throw new RuntimeException('Time projection row must not use projection_address.');
+            throw new RuntimeException(
+                'Time projection row must not use projection_address.'
+            );
         }
 
         if ($row['chronology_address'] !== null) {
-            throw new RuntimeException('Time projection row must not use chronology_address.');
+            throw new RuntimeException(
+                'Time projection row must not use chronology_address.'
+            );
         }
     }
 
     if ($projectionType === 'structure') {
+
         if ($row['projection_address'] === null) {
-            throw new RuntimeException('Structure projection row missing projection_address.');
+            throw new RuntimeException(
+                'Structure projection row missing projection_address.'
+            );
         }
 
-        if ($row['projection_starts_at'] !== null || $row['projection_ends_at'] !== null) {
-            throw new RuntimeException('Structure projection row must not use temporal fields.');
+        if (
+            $row['projection_starts_at'] !== null ||
+            $row['projection_ends_at'] !== null
+        ) {
+            throw new RuntimeException(
+                'Structure projection row must not use temporal fields.'
+            );
         }
 
         if ($row['chronology_address'] !== null) {
-            throw new RuntimeException('Structure projection row must not use chronology_address.');
+            throw new RuntimeException(
+                'Structure projection row must not use chronology_address.'
+            );
         }
     }
 
     if ($projectionType === 'book1') {
+
         if ($row['chronology_address'] === null) {
-            throw new RuntimeException('Book 1 projection row missing chronology_address.');
+            throw new RuntimeException(
+                'Book 1 projection row missing chronology_address.'
+            );
         }
 
         if ($row['projection_address'] !== null) {
-            throw new RuntimeException('Book 1 projection row must not use projection_address.');
+            throw new RuntimeException(
+                'Book 1 projection row must not use projection_address.'
+            );
         }
 
-        if ($row['projection_starts_at'] !== null || $row['projection_ends_at'] !== null) {
-            throw new RuntimeException('Book 1 projection row must not use temporal fields.');
+        if (
+            $row['projection_starts_at'] !== null ||
+            $row['projection_ends_at'] !== null
+        ) {
+            throw new RuntimeException(
+                'Book 1 projection row must not use temporal fields.'
+            );
         }
     }
 }
-
