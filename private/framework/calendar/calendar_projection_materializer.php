@@ -225,10 +225,14 @@ function fetch_projection_source_events(PDO $pdo, int $projectionId): array
             e.real_date_end_id,
             e.projection_entity_id
         FROM calendar_events e
-        JOIN calendar_projections p
-            ON p.projection_code = e.projection_entity_id
-        WHERE p.id = :projection_id
-        ORDER BY e.sequence_index ASC, e.id ASC
+        LEFT JOIN calendar_projections p
+          ON p.projection_code = e.projection_entity_id
+        WHERE
+            e.projection_id = :projection_id
+            OR (
+                e.projection_id IS NULL
+                AND p.id = :projection_id
+            )
     ");
 
     $stmt->execute([
