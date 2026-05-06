@@ -32,23 +32,10 @@ function ensure_calendar_node(
         throw new InvalidArgumentException('summary is required');
     }
 
-    $projectionEntityId = null;
-
-    if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
-        $projectionId = (int)$projectionIdentity;
-
-        if ($projectionId < 1) {
-            throw new InvalidArgumentException('projection_id must be positive');
-        }
-    } else {
-        $projectionEntityId = trim((string)$projectionIdentity);
-
-        if ($projectionEntityId === '') {
-            throw new InvalidArgumentException('projection identity must be non-empty');
-        }
-
-        $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
-    }
+    $projectionId = resolve_calendar_projection_id(
+        $pdo,
+        $projectionIdentity
+    );
 
     $payload = filter_calendar_node_payload($layerId, $payload);
 
@@ -79,7 +66,6 @@ function ensure_calendar_node(
             $inserted = insert_calendar_node(
                 $pdo,
                 $projectionId,
-                $projectionEntityId,
                 $layerId,
                 $parentEventId,
                 $candidateIndex,
@@ -104,21 +90,11 @@ function require_calendar_node(
     ?int $parentEventId,
     int $sequenceIndex
 ): array {
-    if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
-        $projectionId = (int)$projectionIdentity;
 
-        if ($projectionId < 1) {
-            throw new InvalidArgumentException('projection_id must be positive');
-        }
-    } else {
-        $projectionEntityId = trim((string)$projectionIdentity);
-
-        if ($projectionEntityId === '') {
-            throw new InvalidArgumentException('projection identity must be non-empty');
-        }
-
-        $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
-    }
+    $projectionId = resolve_calendar_projection_id(
+        $pdo,
+        $projectionIdentity
+    );
 
     $node = find_calendar_node(
         $pdo,
@@ -183,7 +159,6 @@ function find_calendar_node(
 function insert_calendar_node(
     PDO $pdo,
     int $projectionId,
-    ?string $projectionEntityId,
     string $layerId,
     ?int $parentEventId,
     int $sequenceIndex,
@@ -203,8 +178,8 @@ function insert_calendar_node(
         ensure_entity_row($pdo, $temporaryEntityId, $entityTypeId);
 
         $projectionFields = build_calendar_projection_compatibility_fields(
-            $projectionId,
-            $projectionEntityId
+            $pdo,
+            $projectionId
         );
 
         $stmt = $pdo->prepare("
@@ -308,27 +283,54 @@ function insert_calendar_node(
  * ============================
  */
 
+function resolve_calendar_projection_id(
+    PDO $pdo,
+    int|string $projectionIdentity
+): int {
+    if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
+        $projectionId = (int)$projectionIdentity;
+
+        if ($projectionId < 1) {
+            throw new InvalidArgumentException('projection_id must be positive');
+        }
+
+        assert_calendar_projection_exists($pdo, $projectionId);
+
+        return $projectionId;
+    }
+
+    $projectionEntityId = trim((string)$projectionIdentity);
+
+    if ($projectionEntityId === '') {
+        throw new InvalidArgumentException('projection identity must be non-empty');
+    }
+
+    return require_calendar_projection_id($pdo, $projectionEntityId);
+}
+
+/**
+ * Transitional compatibility persistence only.
+ *
+ * Runtime structural semantics MUST use projection_id.
+ * projection_entity_id exists only for legacy readers/writers.
+ */
 function build_calendar_projection_compatibility_fields(
-    int $projectionId,
-    ?string $projectionEntityId
+    PDO $pdo,
+    int $projectionId
 ): array {
     if ($projectionId < 1) {
         throw new InvalidArgumentException('projection_id must be positive');
     }
 
-    $projectionEntityId = $projectionEntityId !== null
-        ? trim($projectionEntityId)
-        : '';
-
-    if ($projectionEntityId === '') {
-        $projectionEntityId = 'projection:' . $projectionId;
-    }
-
     return [
         'projection_id' => $projectionId,
-        'projection_entity_id' => $projectionEntityId,
+        'projection_entity_id' => calendar_projection_entity_id(
+            $pdo,
+            $projectionId
+        ),
     ];
 }
+
 
 function calendar_entity_type_for_layer(string $layerId): string
 {
