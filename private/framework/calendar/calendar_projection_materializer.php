@@ -267,7 +267,6 @@ function fetch_projection_source_events(
             e.chronology_address,
             e.real_date_start_id,
             e.real_date_end_id,
-            e.projection_entity_id,
             e.projection_id
         FROM calendar_events e
         WHERE e.projection_id = :projection_id
