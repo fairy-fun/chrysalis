@@ -31,14 +31,14 @@ try {
         SELECT
             ce.`id` AS _internal_id,
             ce.entity_id,
-            COALESCE(ce.projection_entity_id, cepm.projection_entity_id) AS projection_entity_id,
+            cp.entity_id AS projection_entity_id,
             ce.layer_id,
             ce.week_index,
             ce.day_index,
             ce.chronology_address
         FROM sxnzlfun_chrysalis.calendar_events ce
-        LEFT JOIN sxnzlfun_chrysalis.calendar_event_projection_membership cepm
-            ON cepm.calendar_event_id = ce.`id`
+        LEFT JOIN sxnzlfun_chrysalis.calendar_projections cp
+            ON cp.id = ce.projection_id
         WHERE ce.entity_id = :entity_id
           AND ce.layer_id = 'calendar_layer_day'
         LIMIT 1
@@ -60,7 +60,7 @@ try {
         SELECT
             ce.entity_id,
             ce.event_id,
-            ce.projection_entity_id,
+            cp.entity_id AS projection_entity_id,
             ce.layer_id,
             ce.sequence_index,
             ce.summary,
@@ -68,6 +68,8 @@ try {
             ce.updated_at,
             ce.chronology_address
         FROM sxnzlfun_chrysalis.calendar_events ce
+        LEFT JOIN sxnzlfun_chrysalis.calendar_projections cp
+            ON cp.id = ce.projection_id
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_time'
         ORDER BY ce.sequence_index ASC, ce.event_id ASC
