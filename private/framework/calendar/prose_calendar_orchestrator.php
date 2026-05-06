@@ -156,12 +156,13 @@ function execute_calendar_batch_from_prose(
 function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
 
     $stmt = $pdo->prepare("
-        SELECT event_id
+        SELECT id
         FROM sxnzlfun_chrysalis.calendar_events
         WHERE entity_id = :entity_id
-        AND layer_id = 'calendar_layer_event'
+          AND layer_id = 'calendar_layer_event'
         LIMIT 1
     ");
+
     $stmt->execute([':entity_id' => $parentEntityId]);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -170,17 +171,27 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
         throw new RuntimeException('Invalid parent_event_entity_id');
     }
 
-    $parentEventId = $row['event_id'];
-    $positionColumn = 'subevent' . '_index';
+    $parentCalendarEventId = (int)$row['id'];
+
+    if ($parentCalendarEventId < 1) {
+        throw new RuntimeException('Invalid parent calendar event structural id');
+    }
 
     $stmt = $pdo->prepare("
-        SELECT entity_id, event_id, beat_hash, {$positionColumn} AS position
+        SELECT
+            entity_id,
+            id,
+            event_id,
+            beat_hash,
+            sequence_index AS position
         FROM sxnzlfun_chrysalis.calendar_events
         WHERE parent_event_id = :parent_event_id
-        AND layer_id = 'calendar_layer_subevent'
+          AND layer_id = 'calendar_layer_subevent'
     ");
 
-    $stmt->execute([':parent_event_id' => $parentEventId]);
+    $stmt->execute([
+        ':parent_event_id' => $parentCalendarEventId,
+    ]);
 
     $map = [];
 
@@ -190,6 +201,7 @@ function load_existing_subevents(PDO $pdo, string $parentEntityId): array {
         if (is_string($hash) && $hash !== '') {
             $map[$hash] = [
                 'entity_id' => $row['entity_id'],
+                'id' => (int)$row['id'],
                 'event_id' => (int)$row['event_id'],
                 'position' => (int)$row['position'],
             ];
