@@ -13,12 +13,6 @@ declare(strict_types=1);
  * expected event-layer mapping.
  */
 
-if (($row['layer_id'] ?? null) !== 'calendar_layer_event') {
-    throw new RuntimeException(
-        'Invalid projection target: calendar event entity is not mapped to calendar_layer_event.'
-    );
-}
-
 /**
  * @return array<string, mixed>
  */
@@ -57,7 +51,6 @@ function require_calendar_event_projection_target_node(
             ce.id,
             ce.entity_id,
             ce.event_id,
-            ce.projection_entity_id,
             ce.layer_id,
             ce.parent_event_id,
             ce.sequence_index,
@@ -101,19 +94,9 @@ function require_calendar_event_projection_target_node(
      * layer_id is retained here only as a defensive consistency check and must
      * not be treated as the semantic source of truth.
      */
-    if (array_key_exists('layer_id', $row) && $row['layer_id'] !== 'calendar_layer_event') {
+    if (($row['layer_id'] ?? null) !== 'calendar_layer_event') {
         throw new RuntimeException(
             'Invariant violation: entity_type_calendar_event mapped to unexpected calendar layer.'
-        );
-    }
-
-    if (
-        !isset($row['projection_entity_id']) ||
-        !is_string($row['projection_entity_id']) ||
-        trim($row['projection_entity_id']) === ''
-    ) {
-        throw new RuntimeException(
-            'Invalid projection target: calendar event projection_entity_id is malformed.'
         );
     }
 
