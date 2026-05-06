@@ -2,11 +2,20 @@
 
 declare(strict_types=1);
 
-function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
-{
+function resolve_calendar_chronology_path(
+    PDO $pdo,
+    int $projectionId,
+    string $address
+): ?string {
+    if ($projectionId <= 0) {
+        throw new InvalidArgumentException(
+            'projection_id must be positive'
+        );
+    }
+
     $address = trim($address);
 
-    if (!preg_match('/^[1-9][0-9]*(?:\.[1-9][0-9]*)*$/', $address)) {
+    if (!preg_match('/^[1-9][0-9]*(?:\\.[1-9][0-9]*)*$/', $address)) {
         throw new InvalidArgumentException(
             'chronology_address must be dot-separated positive integers'
         );
@@ -15,7 +24,10 @@ function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
     $parts = array_map('intval', explode('.', $address));
 
     $selects = [];
-    $params = [':path_depth' => count($parts)];
+    $params = [
+        ':path_depth' => count($parts),
+        ':projection_id' => $projectionId,
+    ];
 
     foreach ($parts as $i => $part) {
         $depth = $i + 1;
@@ -31,22 +43,30 @@ function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
             {$pathPartsSql}
         ),
         walk AS (
-            SELECT ce.`id` AS _internal_id, ce.entity_id, 1 AS depth
+            SELECT
+                ce.id AS _internal_id,
+                ce.entity_id,
+                1 AS depth
             FROM sxnzlfun_chrysalis.calendar_events ce
             JOIN path_parts p
               ON p.depth = 1
              AND ce.sequence_index = p.sequence_index
             WHERE ce.parent_event_id IS NULL
+              AND ce.projection_id = :projection_id
 
             UNION ALL
 
-            SELECT child.`id` AS _internal_id, child.entity_id, walk.depth + 1
+            SELECT
+                child.id AS _internal_id,
+                child.entity_id,
+                walk.depth + 1
             FROM walk
             JOIN path_parts p
               ON p.depth = walk.depth + 1
             JOIN sxnzlfun_chrysalis.calendar_events child
               ON child.parent_event_id = walk._internal_id
              AND child.sequence_index = p.sequence_index
+             AND child.projection_id = :projection_id
         )
         SELECT entity_id
         FROM walk
@@ -54,6 +74,7 @@ function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
     ");
 
     $stmt->execute($params);
+
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if ($rows === []) {
@@ -61,7 +82,9 @@ function resolve_calendar_chronology_path(PDO $pdo, string $address): ?string
     }
 
     if (count($rows) > 1) {
-        throw new RuntimeException('Chronology path resolved ambiguously');
+        throw new RuntimeException(
+            'Chronology path resolved ambiguously within projection'
+        );
     }
 
     return (string)$rows[0]['entity_id'];
