@@ -5,14 +5,65 @@ declare(strict_types=1);
 /**
  * Canonical projection resolution boundary.
  *
- * Runtime code should prefer projection_id internally.
- * projection_entity_id exists only as an external compatibility identifier.
+ * Runtime code should use projection_id internally.
+ * projection_entity_id / entity_id resolution exists only as external
+ * compatibility ingress.
  */
 
 /**
- * Resolve a projection row by external entity id.
+ * Resolve a projection row by canonical projection id.
  */
-function find_calendar_projection(
+function find_calendar_projection_by_id(
+    PDO $pdo,
+    int $projectionId
+): ?array {
+    if ($projectionId < 1) {
+        throw new InvalidArgumentException(
+            'projection_id must be positive'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM sxnzlfun_chrysalis.calendar_projections
+        WHERE id = :id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':id' => $projectionId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
+/**
+ * Require a projection row by canonical projection id.
+ */
+function require_calendar_projection_by_id(
+    PDO $pdo,
+    int $projectionId
+): array {
+    $projection = find_calendar_projection_by_id(
+        $pdo,
+        $projectionId
+    );
+
+    if ($projection === null) {
+        throw new RuntimeException(
+            "Projection not found for projection_id: {$projectionId}"
+        );
+    }
+
+    return $projection;
+}
+
+/**
+ * Resolve a projection row by external compatibility entity id.
+ */
+function find_calendar_projection_by_entity_id(
     PDO $pdo,
     string $projectionEntityId
 ): ?array {
@@ -41,13 +92,13 @@ function find_calendar_projection(
 }
 
 /**
- * Require a projection row by external entity id.
+ * Require a projection row by external compatibility entity id.
  */
-function require_calendar_projection(
+function require_calendar_projection_by_entity_id(
     PDO $pdo,
     string $projectionEntityId
 ): array {
-    $projection = find_calendar_projection(
+    $projection = find_calendar_projection_by_entity_id(
         $pdo,
         $projectionEntityId
     );
@@ -64,14 +115,46 @@ function require_calendar_projection(
 /**
  * Backward-compatible helper.
  *
- * Existing runtime code depends on this signature.
- * Keep this until all internals standardize on projection_id.
+ * Prefer find_calendar_projection_by_entity_id() for compatibility ingress
+ * and find_calendar_projection_by_id() for runtime canonical resolution.
+ */
+function find_calendar_projection(
+    PDO $pdo,
+    string $projectionEntityId
+): ?array {
+    return find_calendar_projection_by_entity_id(
+        $pdo,
+        $projectionEntityId
+    );
+}
+
+/**
+ * Backward-compatible helper.
+ *
+ * Prefer require_calendar_projection_by_entity_id() for compatibility ingress
+ * and require_calendar_projection_by_id() for runtime canonical resolution.
+ */
+function require_calendar_projection(
+    PDO $pdo,
+    string $projectionEntityId
+): array {
+    return require_calendar_projection_by_entity_id(
+        $pdo,
+        $projectionEntityId
+    );
+}
+
+/**
+ * Backward-compatible helper.
+ *
+ * Existing runtime code may depend on this signature.
+ * Keep until all internals standardize on projection_id.
  */
 function require_calendar_projection_id(
     PDO $pdo,
     string $projectionEntityId
 ): int {
-    $projection = require_calendar_projection(
+    $projection = require_calendar_projection_by_entity_id(
         $pdo,
         $projectionEntityId
     );
@@ -92,24 +175,12 @@ function calendar_projection_entity_id(
     PDO $pdo,
     int $projectionId
 ): string {
-    if ($projectionId < 1) {
-        throw new InvalidArgumentException(
-            'projection_id must be positive'
-        );
-    }
+    $projection = require_calendar_projection_by_id(
+        $pdo,
+        $projectionId
+    );
 
-    $stmt = $pdo->prepare("
-        SELECT entity_id
-        FROM sxnzlfun_chrysalis.calendar_projections
-        WHERE id = :id
-        LIMIT 1
-    ");
-
-    $stmt->execute([
-        ':id' => $projectionId,
-    ]);
-
-    $entityId = $stmt->fetchColumn();
+    $entityId = $projection['entity_id'] ?? null;
 
     if (!is_string($entityId) || trim($entityId) === '') {
         throw new RuntimeException(
@@ -127,28 +198,8 @@ function assert_calendar_projection_exists(
     PDO $pdo,
     int $projectionId
 ): void {
-    if ($projectionId < 1) {
-        throw new InvalidArgumentException(
-            'projection_id must be positive'
-        );
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT id
-        FROM sxnzlfun_chrysalis.calendar_projections
-        WHERE id = :id
-        LIMIT 1
-    ");
-
-    $stmt->execute([
-        ':id' => $projectionId,
-    ]);
-
-    $exists = $stmt->fetchColumn();
-
-    if ($exists === false || $exists === null) {
-        throw new RuntimeException(
-            "Projection not found for projection_id: {$projectionId}"
-        );
-    }
+    require_calendar_projection_by_id(
+        $pdo,
+        $projectionId
+    );
 }
