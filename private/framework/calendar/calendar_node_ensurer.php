@@ -35,19 +35,20 @@ function ensure_calendar_node(
         throw new InvalidArgumentException('summary is required');
     }
 
+    $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
     $payload = filter_calendar_node_payload($layerId, $payload);
 
     while (true) {
         $candidateIndex = $sequenceIndex ?? get_next_sequence_index(
             $pdo,
-            $projectionEntityId,
+            $projectionId,
             $layerId,
             $parentEventId
         );
 
         $existing = find_calendar_node(
             $pdo,
-            $projectionEntityId,
+            $projectionId,
             $layerId,
             $parentEventId,
             $candidateIndex
@@ -63,6 +64,7 @@ function ensure_calendar_node(
         try {
             $inserted = insert_calendar_node(
                 $pdo,
+                $projectionId,
                 $projectionEntityId,
                 $layerId,
                 $parentEventId,
@@ -88,9 +90,11 @@ function require_calendar_node(
     ?int $parentEventId,
     int $sequenceIndex
 ): array {
+    $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+
     $node = find_calendar_node(
         $pdo,
-        $projectionEntityId,
+        $projectionId,
         $layerId,
         $parentEventId,
         $sequenceIndex
@@ -115,7 +119,7 @@ function require_calendar_node(
 
 function find_calendar_node(
     PDO $pdo,
-    string $projectionEntityId,
+    int $projectionId,
     string $layerId,
     ?int $parentEventId,
     int $sequenceIndex
@@ -123,7 +127,7 @@ function find_calendar_node(
     $stmt = $pdo->prepare("
         SELECT *
         FROM sxnzlfun_chrysalis.calendar_events
-        WHERE projection_entity_id = :projection
+        WHERE projection_id = :projection_id
           AND layer_id = :layer
           AND sequence_index = :seq
           AND parent_event_id_norm = IFNULL(:parent, 0)
@@ -131,7 +135,7 @@ function find_calendar_node(
     ");
 
     $stmt->execute([
-        ':projection' => trim($projectionEntityId),
+        ':projection_id' => $projectionId,
         ':layer' => trim($layerId),
         ':seq' => $sequenceIndex,
         ':parent' => $parentEventId,
@@ -150,6 +154,7 @@ function find_calendar_node(
 
 function insert_calendar_node(
     PDO $pdo,
+    int $projectionId,
     string $projectionEntityId,
     string $layerId,
     ?int $parentEventId,
@@ -172,6 +177,7 @@ function insert_calendar_node(
         $stmt = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
                 entity_id,
+                projection_id,
                 projection_entity_id,
                 parent_event_id,
                 layer_id,
@@ -190,7 +196,8 @@ function insert_calendar_node(
                 client_id
             ) VALUES (
                 :entity_id,
-                :projection,
+                :projection_id,
+                :projection_entity_id,
                 :parent,
                 :layer,
                 :seq,
@@ -211,7 +218,8 @@ function insert_calendar_node(
 
         $stmt->execute([
             ':entity_id' => $temporaryEntityId,
-            ':projection' => trim($projectionEntityId),
+            ':projection_id' => $projectionId,
+            ':projection_entity_id' => trim($projectionEntityId),
             ':parent' => $parentEventId,
             ':layer' => trim($layerId),
             ':seq' => $sequenceIndex,
@@ -266,6 +274,34 @@ function insert_calendar_node(
  * SUPPORT
  * ============================
  */
+
+function require_calendar_projection_id(PDO $pdo, string $projectionEntityId): int
+{
+    $projectionEntityId = trim($projectionEntityId);
+
+    if ($projectionEntityId === '') {
+        throw new InvalidArgumentException('projection_entity_id must be non-empty');
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM sxnzlfun_chrysalis.calendar_projections
+        WHERE entity_id = :entity_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':entity_id' => $projectionEntityId,
+    ]);
+
+    $id = $stmt->fetchColumn();
+
+    if ($id === false || $id === null) {
+        throw new RuntimeException("Projection not found for entity_id: {$projectionEntityId}");
+    }
+
+    return (int)$id;
+}
 
 function calendar_entity_type_for_layer(string $layerId): string
 {
@@ -392,20 +428,20 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
 
 function get_next_sequence_index(
     PDO $pdo,
-    string $projectionEntityId,
+    int $projectionId,
     string $layerId,
     ?int $parentEventId
 ): int {
     $stmt = $pdo->prepare("
         SELECT MAX(sequence_index)
         FROM sxnzlfun_chrysalis.calendar_events
-        WHERE projection_entity_id = :projection
+        WHERE projection_id = :projection_id
           AND layer_id = :layer
           AND parent_event_id_norm = IFNULL(:parent, 0)
     ");
 
     $stmt->execute([
-        ':projection' => trim($projectionEntityId),
+        ':projection_id' => $projectionId,
         ':layer' => trim($layerId),
         ':parent' => $parentEventId,
     ]);
