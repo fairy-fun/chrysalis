@@ -1,11 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
+require_once __DIR__ . '/../calendar/calendar_projection_resolver.php';
+
 function suggestNextCharacterBeat(
     PDO $pdo,
     string $characterEntityId,
-    ?string $projectionEntityId,
+    int|string|null $projectionIdentity,
     string $currentThemeEntityId
 ): array {
+    $projectionId = null;
+    $projectionEntityId = null;
+
+    if ($projectionIdentity !== null) {
+        if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
+            $projectionId = (int)$projectionIdentity;
+            assert_calendar_projection_exists($pdo, $projectionId);
+            $projectionEntityId = calendar_projection_entity_id($pdo, $projectionId);
+        } else {
+            $projectionEntityId = trim((string)$projectionIdentity);
+
+            if ($projectionEntityId === '') {
+                throw new InvalidArgumentException('projection identity must be non-empty');
+            }
+
+            $projectionId = require_calendar_projection_id($pdo, $projectionEntityId);
+        }
+    }
+
     $sql = "
         SELECT
             candidate.theme_entity_id,
@@ -24,14 +47,14 @@ function suggestNextCharacterBeat(
             FROM sxnzlfun_chrysalis.narrative_theme_observations nto1
             JOIN sxnzlfun_chrysalis.narrative_theme_observations nto2
                 ON nto2.subject_entity_id = nto1.subject_entity_id
-               AND nto2.projection_entity_id <=> nto1.projection_entity_id
+               AND nto2.projection_id <=> nto1.projection_id
                AND nto2.sequence_index > nto1.sequence_index
                AND nto2.sequence_index <= nto1.sequence_index + 3
             WHERE nto1.subject_entity_id = :subject_entity_id_subject
               AND nto1.theme_entity_id = :current_theme_entity_id_subject
               AND (
-                    :projection_entity_id_subject IS NULL
-                    OR nto1.projection_entity_id = :projection_entity_id_subject_value
+                    :projection_id_subject IS NULL
+                    OR nto1.projection_id = :projection_id_subject_value
                   )
             GROUP BY nto2.theme_entity_id
 
@@ -46,11 +69,12 @@ function suggestNextCharacterBeat(
             JOIN sxnzlfun_chrysalis.narrative_theme_observations nto2
                 ON nto2.sequence_index > nto1.sequence_index
                AND nto2.sequence_index <= nto1.sequence_index + 3
+               AND nto2.projection_id <=> nto1.projection_id
             WHERE nto1.theme_entity_id = :current_theme_entity_id_global
               AND nto1.subject_entity_id <> :subject_entity_id_global
               AND (
-                    :projection_entity_id_global IS NULL
-                    OR nto1.projection_entity_id = :projection_entity_id_global_value
+                    :projection_id_global IS NULL
+                    OR nto1.projection_id = :projection_id_global_value
                   )
             GROUP BY nto2.theme_entity_id
         ) candidate
@@ -82,16 +106,16 @@ function suggestNextCharacterBeat(
     $stmt->bindValue(':current_theme_entity_id_subject', $currentThemeEntityId);
     $stmt->bindValue(':current_theme_entity_id_global', $currentThemeEntityId);
 
-    if ($projectionEntityId === null) {
-        $stmt->bindValue(':projection_entity_id_subject', null, PDO::PARAM_NULL);
-        $stmt->bindValue(':projection_entity_id_subject_value', null, PDO::PARAM_NULL);
-        $stmt->bindValue(':projection_entity_id_global', null, PDO::PARAM_NULL);
-        $stmt->bindValue(':projection_entity_id_global_value', null, PDO::PARAM_NULL);
+    if ($projectionId === null) {
+        $stmt->bindValue(':projection_id_subject', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_id_subject_value', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_id_global', null, PDO::PARAM_NULL);
+        $stmt->bindValue(':projection_id_global_value', null, PDO::PARAM_NULL);
     } else {
-        $stmt->bindValue(':projection_entity_id_subject', $projectionEntityId);
-        $stmt->bindValue(':projection_entity_id_subject_value', $projectionEntityId);
-        $stmt->bindValue(':projection_entity_id_global', $projectionEntityId);
-        $stmt->bindValue(':projection_entity_id_global_value', $projectionEntityId);
+        $stmt->bindValue(':projection_id_subject', $projectionId, PDO::PARAM_INT);
+        $stmt->bindValue(':projection_id_subject_value', $projectionId, PDO::PARAM_INT);
+        $stmt->bindValue(':projection_id_global', $projectionId, PDO::PARAM_INT);
+        $stmt->bindValue(':projection_id_global_value', $projectionId, PDO::PARAM_INT);
     }
 
     $stmt->execute();
@@ -101,6 +125,7 @@ function suggestNextCharacterBeat(
     return [
         'status' => 'ok',
         'subject_entity_id' => $characterEntityId,
+        'projection_id' => $projectionId,
         'projection_entity_id' => $projectionEntityId,
         'current_theme_entity_id' => $currentThemeEntityId,
         'suggestion_count' => count($rows),
