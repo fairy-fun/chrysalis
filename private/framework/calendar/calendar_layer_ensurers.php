@@ -7,7 +7,7 @@ require_once __DIR__ . '/calendar_hierarchy_validator.php';
 
 function ensure_calendar_week(
     PDO $pdo,
-    string $projectionEntityId,
+    int|string $projectionIdentity,
     ?int $sequenceIndex,
     array $payload
 ): array {
@@ -15,7 +15,7 @@ function ensure_calendar_week(
 
     return ensure_calendar_node(
         $pdo,
-        $projectionEntityId,
+        $projectionIdentity,
         'calendar_layer_week',
         null,
         $sequenceIndex,
@@ -35,7 +35,7 @@ function ensure_calendar_day(
 
     return ensure_calendar_node(
         $pdo,
-        (string)$parent['projection_entity_id'],
+        (int)$parent['projection_id'],
         'calendar_layer_day',
         (int)$parent['id'],
         $sequenceIndex,
@@ -55,7 +55,7 @@ function ensure_calendar_time(
 
     return ensure_calendar_node(
         $pdo,
-        (string)$parent['projection_entity_id'],
+        (int)$parent['projection_id'],
         'calendar_layer_time',
         (int)$parent['id'],
         $sequenceIndex,
@@ -83,7 +83,7 @@ function ensure_calendar_event(
     // 3. Delegate to primitive
     return ensure_calendar_node(
         $pdo,
-        (string)$parent['projection_entity_id'],
+        (int)$parent['projection_id'],
         'calendar_layer_event',
         (int)$parent['id'], // ← structural key (correct)
         $sequenceIndex,
@@ -108,7 +108,7 @@ function ensure_calendar_subevent(
 
     return ensure_calendar_node(
         $pdo,
-        (string)$parent['projection_entity_id'],
+        (int)$parent['projection_id'],
         'calendar_layer_subevent',
         (int)$parent['id'],
         $sequenceIndex,
