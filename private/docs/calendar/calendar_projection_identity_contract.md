@@ -1,30 +1,25 @@
 # Calendar Projection Identity Contract
-
 ## Purpose
 
 Defines the canonical identity model for calendar projections and the
 runtime boundary rules governing:
 
-- `projection_id`
-- `projection_entity_id`
+* `projection_id
+* projection_entity_id`
 
 This contract exists to prevent identity drift, duplicate runtime
 identity systems, and compatibility leakage into framework internals.
 
----
-
-# Canonical Runtime Identity
-
-## Rule
+### Canonical Runtime Identity
+#### Rule
 
 `projection_id` is the sole canonical runtime identity for calendar
 projections.
 
 All runtime systems MUST operate exclusively on:
 
-```php
 projection_id
-```
+
 This includes:
 
 * framework orchestration
@@ -37,8 +32,7 @@ This includes:
 * internal APIs
 * runtime joins
 * query bindings
-## Runtime Requirements
-Runtime systems MUST
+* Runtime Requirements
 1. Query by projection_id
 
 Allowed:
@@ -53,19 +47,19 @@ WHERE projection_entity_id = :projection_entity_id
 Allowed:
 
 ensure_calendar_day(
-    $pdo,
-    [
-        'projection_id' => $projectionId,
-    ]
+$pdo,
+[
+'projection_id' => $projectionId,
+]
 );
 
 Forbidden:
 
 ensure_calendar_day(
-    $pdo,
-    [
-        'projection_entity_id' => $projectionEntityId,
-    ]
+$pdo,
+[
+'projection_entity_id' => $projectionEntityId,
+]
 );
 3. Normalize external identities immediately at ingress
 
@@ -82,8 +76,8 @@ before entering runtime orchestration.
 Allowed ingress pattern:
 
 $projectionId = require_calendar_projection_id(
-    $pdo,
-    $projectionEntityId,
+$pdo,
+$projectionEntityId,
 );
 
 After normalization, runtime systems MUST NOT continue using
@@ -103,9 +97,8 @@ Forbidden Runtime Usage
 The following are prohibited within runtime internals.
 
 Forbidden query patterns
-projection_entity_id
 
-inside:
+projection_entity_id inside:
 
 joins
 WHERE clauses
@@ -125,7 +118,7 @@ inside runtime orchestration payloads.
 
 Allowed Compatibility Boundaries
 
-projection_entity_id is now compatibility-only.
+projection_entity_id is compatibility-only.
 
 It is allowed exclusively for:
 
@@ -135,9 +128,6 @@ outbound API shaping
 outbound view shaping
 legacy interoperability
 Approved Compatibility Infrastructure
-
-The following files are approved compatibility boundaries.
-
 Resolver compatibility
 private/framework/calendar/calendar_projection_resolver.php
 
@@ -158,11 +148,41 @@ private/framework/expression/character_next_beat_suggester.php
 Approved compatibility conversion:
 
 $projectionEntityId = calendar_projection_entity_id(
-    $pdo,
-    $projectionId,
+$pdo,
+$projectionId,
 );
 
 This is permitted because it is outbound compatibility shaping only.
+
+Current Migration State
+
+The runtime migration to canonical projection_id semantics is complete.
+
+Verified completed migrations include:
+
+runtime traversal
+expression query semantics
+runtime joins
+runtime query bindings
+runtime propagation
+runtime orchestration payloads
+runtime collection keying
+layer traversal propagation
+
+The following runtime usages were removed:
+
+$parent['projection_entity_id']
+runtime SQL joins/filtering on projection_entity_id
+runtime bindings such as:
+:projection_entity_id_subject
+:projection_entity_id_global
+
+character_next_beat_suggester.php now operates internally on
+projection_id.
+
+calendar_layer_ensurers.php now propagates canonical projection_id.
+
+Remaining projection_entity_id references are compatibility-only.
 
 Remaining Compatibility-Only References
 
@@ -182,7 +202,7 @@ projection_entity_id.
 CI Enforcement
 Runtime violation grep
 grep -RInE "\['projection_entity_id'\]|->projection_entity_id|nto[0-9]*\.projection_entity_id|:projection_entity_id" private/framework \
-  | grep -v "calendar_node_ensurer.php"
+| grep -v "calendar_node_ensurer.php"
 
 Expected result:
 
@@ -193,10 +213,10 @@ projection_entity_id.
 
 Compatibility boundary grep
 grep -RIn "projection_entity_id" private/framework \
-  | grep -v "calendar_projection_resolver.php" \
-  | grep -v "calendar_node_ensurer.php" \
-  | grep -v "'projection_entity_id' =>" \
-  | grep -v "projection_entity_id still exists"
+| grep -v "calendar_projection_resolver.php" \
+| grep -v "calendar_node_ensurer.php" \
+| grep -v "'projection_entity_id' =>" \
+| grep -v "projection_entity_id still exists"
 
 Expected remaining result:
 
@@ -205,12 +225,27 @@ private/framework/expression/character_next_beat_suggester.php
 Specifically:
 
 $projectionEntityId = calendar_projection_entity_id(
-    $pdo,
-    $projectionId,
+$pdo,
+$projectionId,
 );
 
 No additional runtime references are permitted.
 
+Guidance for Future Contributors and NL Systems
+Never introduce new runtime usage of projection_entity_id
+Normalize immediately at ingress
+Use projection_id exclusively inside runtime orchestration
+Treat compatibility conversion as an edge-only adapter pattern
+Prefer canonical IDs even if external APIs still require entity IDs
+Do not key runtime collections/maps by entity ID
+Do not query/filter internally by entity ID
+CI grep guards are authoritative enforcement mechanisms
+
+If a new feature receives projection_entity_id externally, it MUST:
+
+normalize immediately to projection_id
+operate internally only on projection_id
+convert back only at approved compatibility boundaries if necessary
 Migration Completion Criteria
 
 The migration is considered complete when:
