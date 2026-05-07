@@ -98,6 +98,8 @@ Projection
 → Subevent prose
 ```
 
+Time selection UIs should use resolved time_label fields from `get_calendar_times_for_day`.
+
 The GPT MUST NOT:
 
 - skip hierarchy layers

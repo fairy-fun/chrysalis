@@ -45,7 +45,7 @@ public_html/pecherie/chill-api/calendar/create_calendar_event.php
 ```
 
 ### Request
-
+```
 {
 "operation": "createCalendarEvent",
 "parent_time_entity_id": "calendar_event:TIME_ID",
@@ -59,7 +59,8 @@ public_html/pecherie/chill-api/calendar/create_calendar_event.php
 "notes": "...",
 "source_document": "..."
 }
-Rules
+```
+#### Rules
 parent_time_entity_id → required
 event_label → maps to summary
 
@@ -68,18 +69,19 @@ domain_id → classval (validated)
 class_type_id → classval (validated)
 
 location_id → reference (NOT classval)
-Structural Behaviour
+### Structural Behaviour
 sequence_index is NOT provided
 
 → API passes null
 → ensure_calendar_node assigns next index
 → append-only behaviour
-Subevent Creation
-Operation
+### Subevent Creation
+#### Operation
 createCalendarSubevent
-Handler
+#### Handler
 public_html/pecherie/chill-api/calendar/create_calendar_subevent.php
-Request
+#### Request
+```
 {
 "operation": "createCalendarSubevent",
 "parent_event_entity_id": "calendar_event:EVENT_ID",
@@ -90,29 +92,14 @@ Request
 "class_type_id": "CLASS_TYPE_CLASS",
 "location_id": "PLACE_ID"
 }
-Rules
+```
+#### Rules
 parent_event_entity_id → must resolve to event node
 
 same semantic rules as event creation
 same append behaviour
-Time Creation
-Operation
-createCalendarTime
-Transitional Input
-{
-"time_index": 1
-}
 
-Rule:
-
-time_index is API-only
-maps to sequence_index
-NOT persisted
-Canonical Model
-sequence_index = real structure
-time_label_id  = semantic meaning
-summary        = display
-Day Creation
+### Day Creation
 
 Same pattern as time:
 
@@ -124,7 +111,7 @@ time_index
 event_index
 subevent_index
 
-Status:
+### Status:
 
 deprecated / transitional
 NOT structural truth
@@ -132,12 +119,88 @@ NOT guaranteed persisted
 Sequence Index
 sequence_index = ONLY structural ordering field
 
-Rules:
+#### Rules:
 
 owned by primitive
 never manually assigned by API (default case)
 optional only for strict ensure behaviour
-Classval Validation
+
+### Time Creation
+
+#### Operation
+
+`createCalendarTime`
+
+#### Input
+
+```json
+{
+  "time_index": 1,
+  "time_label_id": "CLASSVAL-TIME-001"
+}
+```
+#### Rule
+
+`time_index` is structural chronology ordering within the parent day.
+
+`time_label_id` is required semantic meaning and MUST reference calendar_time_label_classvals.
+
+For `calendar_layer_time` rows, summary is NOT the canonical human-readable label.
+
+Clients MUST render the resolved label:
+
+`calendar_events.time_label_id → calendar_time_label_classvals.label
+`
+#### Canonical Model
+```
+time_index     = structural order within the day
+time_label_id  = semantic time label
+time_label     = resolved display label
+summary        = optional description only; not the label contract
+```
+
+## get_calendar_times_for_day
+
+### Response Contract
+
+Each returned `calendar_layer_time` node MUST include:
+
+```json
+{
+  "entity_id": "calendar_event:303",
+  "event_id": 303,
+  "projection_entity_id": "...",
+  "layer_id": "calendar_layer_time",
+  "sequence_index": 1,
+
+  "time_index": 1,
+  "time_label_id": "CLASSVAL-TIME-001",
+  "time_label_code": "early_morning",
+  "time_label": "Early Morning",
+  "time_sort_order": 2,
+
+  "summary": "",
+  "chronology_address": "3.1.1"
+}
+```
+#### Time Label Rendering Rule
+
+For calendar_layer_time rows, summary is NOT the canonical human-readable label.
+
+Clients MUST render:
+
+`calendar_events.time_label_id`
+→ `calendar_time_label_classvals`
+
+using the resolved fields:
+
+* `time_label`
+* `time_label_code`
+* `time_sort_order`
+
+[time_index]() is structural chronology ordering only and MUST NOT be treated as semantic display meaning.
+
+### Classval Validation
 
 Validated before calling ensurer:
 
@@ -146,24 +209,24 @@ event_type_id
 domain_id
 class_type_id
 
-Helper:
+#### Helper:
 
 assert_valid_classval(...)
 Reference Fields
 location_id
 
-Rules:
+#### Rules:
 
-NOT classval
-NOT validated via classval system
-passed through unchanged
-Forbidden Surface
-POST /calendar/event/ensure         ❌ (not real)
-direct INSERT INTO calendar_events ❌
-manual sequence_index              ❌
-chronology_address writes          ❌
-event_id as parent                 ❌
-Final Rule
+* NOT classval
+* NOT validated via classval system
+* passed through unchanged
+* Forbidden Surface
+* POST /calendar/event/ensure         ❌ (not real)
+* direct INSERT INTO calendar_events ❌
+* manual sequence_index              ❌
+* chronology_address writes          ❌
+* event_id as parent                 ❌
+#### Final Rule
 The API does not define structure.
 
 The primitive defines structure.
