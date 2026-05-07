@@ -35,18 +35,28 @@ function prose_projection_guard_target_if_needed(PDO $pdo, string $targetEntityI
 function insert_prose_projection(
     PDO $pdo,
     int $proseDraftId,
+    string $projectionClassvalId,
     string $projectionTypeId,
     string $targetEntityId,
     string $roleId,
     ?int $projectionOrder,
     int $isExportTarget
 ): int {
-    $projectionTypeId = trim($projectionTypeId);
+    $projectionClassvalId = trim($projectionClassvalId);
+    $projectionTypeId     = trim($projectionTypeId);
     $targetEntityId   = trim($targetEntityId);
     $roleId           = trim($roleId);
 
+    if ($projectionClassvalId === '') {
+        throw new InvalidArgumentException(
+            'projection_classval_id must be non-empty'
+        );
+    }
+
     if ($projectionTypeId === '') {
-        throw new InvalidArgumentException('projection_type_id must be non-empty');
+        throw new InvalidArgumentException(
+            'projection_type_id must be non-empty'
+        );
     }
 
     if ($roleId === '') {
@@ -71,6 +81,7 @@ function insert_prose_projection(
     $stmt = $pdo->prepare("
         INSERT INTO sxnzlfun_chrysalis.prose_projections (
             prose_draft_id,
+            projection_classval_id,
             projection_type_id,
             target_entity_id,
             role_id,
@@ -79,6 +90,7 @@ function insert_prose_projection(
             created_at
         ) VALUES (
             :prose_draft_id,
+            :projection_classval_id,
             :projection_type_id,
             :target_entity_id,
             :role_id,
@@ -94,6 +106,7 @@ function insert_prose_projection(
     try {
         $stmt->execute([
             ':prose_draft_id'     => $proseDraftId,
+            ':projection_classval_id'  => $projectionClassvalId,
             ':projection_type_id' => $projectionTypeId,
             ':target_entity_id'   => $targetEntityId,
             ':role_id'            => $roleId,
@@ -120,6 +133,7 @@ function insert_prose_projection(
         SELECT id
         FROM sxnzlfun_chrysalis.prose_projections
         WHERE prose_draft_id = :prose_draft_id
+          AND projection_classval_id = :projection_classval_id
           AND projection_type_id = :projection_type_id
           AND target_entity_id = :target_entity_id
           AND role_id = :role_id
@@ -128,6 +142,7 @@ function insert_prose_projection(
 
     $stmt->execute([
         ':prose_draft_id'     => $proseDraftId,
+        ':projection_classval_id' => $projectionClassvalId,
         ':projection_type_id' => $projectionTypeId,
         ':target_entity_id'   => $targetEntityId,
         ':role_id'            => $roleId,

@@ -396,6 +396,23 @@ function add_prose_annotations(PDO $pdo, array $body): array
     }
 }
 
+function prose_calendar_projection_type_exists(
+    PDO $pdo,
+    string $projectionTypeId
+): bool {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.calendar_projections
+        WHERE projection_type_id = :projection_type_id
+    ");
+
+    $stmt->execute([
+        ':projection_type_id' => $projectionTypeId,
+    ]);
+
+    return (int) $stmt->fetchColumn() > 0;
+}
+
 function create_prose_draft(PDO $pdo, array $body): array
 {
     $entityId = prose_required_string($body, 'entity_id');
@@ -411,7 +428,15 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('projection must be present');
     }
 
-    $projectionTypeId = prose_required_string($projection, 'projection_type_id');
+    $projectionClassvalId = prose_required_string(
+    $projection,
+    'projection_classval_id'
+);
+
+    $projectionTypeId = prose_required_string(
+        $projection,
+        'projection_type_id'
+    );
     $targetEntityId = prose_required_string($projection, 'target_entity_id');
     $roleId = prose_required_string($projection, 'role_id');
     $projectionOrder = prose_required_positive_int($projection, 'projection_order');
@@ -427,8 +452,16 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid draft_status_id: ' . $draftStatusId);
     }
 
-    if (!prose_classval_exists($pdo, $projectionTypeId)) {
-        throw new InvalidArgumentException('Invalid projection_type_id: ' . $projectionTypeId);
+    if (!prose_classval_exists($pdo, $projectionClassvalId)) {
+        throw new InvalidArgumentException(
+            'Invalid projection_classval_id: ' . $projectionClassvalId
+        );
+    }
+
+    if (!prose_calendar_projection_type_exists($pdo, $projectionTypeId)) {
+        throw new InvalidArgumentException(
+            'Invalid projection_type_id: ' . $projectionTypeId
+        );
     }
 
     if ($authorEntityId !== null && !prose_entity_exists($pdo, $authorEntityId)) {
@@ -484,6 +517,7 @@ function create_prose_draft(PDO $pdo, array $body): array
             $pdo,
             $proseDraftId,
             $projectionTypeId,
+            $projectionClassvalId,
             $targetEntityId,
             $roleId,
             $projectionOrder,
