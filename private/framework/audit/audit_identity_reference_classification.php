@@ -84,6 +84,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['nl_intent_traversals', 'intent_classval_id', 'CLASSVAL'],
         ['nl_phrase_patterns', 'intent_classval_id', 'CLASSVAL'],
         ['performance_routines', 'status_classval_id', 'CLASSVAL'],
+        ['prose_projections', 'projection_classval_id', 'CLASSVAL'],
         ['relationships', 'status_classval_id', 'CLASSVAL'],
         ['segment_groups', 'group_classval_id', 'CLASSVAL'],
         ['segment_pairings', 'status_classval_id', 'CLASSVAL'],
