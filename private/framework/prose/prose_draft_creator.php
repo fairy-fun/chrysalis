@@ -400,6 +400,7 @@ function create_prose_draft(PDO $pdo, array $body): array
 {
     $entityId = prose_required_string($body, 'entity_id');
     $title = prose_required_string($body, 'title');
+    $summary = prose_optional_string_or_null($body, 'summary');
     $proseBody = prose_required_string($body, 'prose_body');
     $draftStatusId = prose_required_string($body, 'draft_status_id');
     $authorEntityId = prose_optional_string_or_null($body, 'author_entity_id');
@@ -450,12 +451,14 @@ function create_prose_draft(PDO $pdo, array $body): array
             INSERT INTO sxnzlfun_chrysalis.prose_drafts (
                 entity_id,
                 title,
+                summary,
                 prose_body,
                 draft_status_id,
                 author_entity_id
             ) VALUES (
                 :entity_id,
                 :title,
+                :summary,
                 :prose_body,
                 :draft_status_id,
                 :author_entity_id
@@ -465,6 +468,7 @@ function create_prose_draft(PDO $pdo, array $body): array
         $insertDraft->execute([
             ':entity_id' => $entityId,
             ':title' => $title,
+            ':summary' => $summary,
             ':prose_body' => $proseBody,
             ':draft_status_id' => $draftStatusId,
             ':author_entity_id' => $authorEntityId,
