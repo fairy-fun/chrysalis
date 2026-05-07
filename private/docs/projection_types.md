@@ -116,3 +116,55 @@ A projection must declare:
 * its **required positioning fields**
 
 The materializer is responsible for enforcing correctness for that type.
+
+## Querying Projection Membership
+
+Projection membership is resolved through `prose_projections`.
+
+`projection_type_id` represents the projection topology surface
+(e.g. `book1`, `book2`, chronology exports, alternate cuts).
+
+Example: resolve all prose assigned to Book 1.
+
+```sql
+SELECT
+    pd.entity_id      AS prose_entity_id,
+    pd.title,
+    pp.projection_type_id,
+    pp.target_entity_id,
+    pp.projection_order,
+    pp.is_export_target
+FROM prose_projections pp
+JOIN prose_drafts pd
+    ON pd.id = pp.prose_draft_id
+WHERE pp.projection_type_id = 'book1'
+ORDER BY
+    pp.target_entity_id,
+    pp.projection_order,
+    pp.id;
+```
+
+Export-only view:
+
+```sql
+SELECT
+    pd.entity_id,
+    pd.title,
+    pp.target_entity_id
+FROM prose_projections pp
+JOIN prose_drafts pd
+    ON pd.id = pp.prose_draft_id
+WHERE pp.projection_type_id = 'book1'
+  AND pp.is_export_target = 1
+ORDER BY
+    pp.target_entity_id,
+    pp.projection_order;
+```
+
+Architecture:
+
+- `projection_classval_id`
+  → semantic category
+
+- `projection_type_id`
+  → projection topology/query surface
