@@ -7,7 +7,6 @@ function resolve_prose_target_calendar_node(
     string $proseEntityId,
     ?string $projectionTypeId = null,
     ?string $roleId = null,
-    bool $requireExportTarget = true
 ): ?array {
     // --- Validate input ---
     if (strpos($proseEntityId, 'prose_draft:') !== 0) {
@@ -23,7 +22,6 @@ function resolve_prose_target_calendar_node(
             pp.id AS projection_id,
             pp.projection_type_id,
             pp.role_id,
-            pp.is_export_target,
             pp.target_entity_id,
 
             ce.id AS calendar_event_row_id,
@@ -65,10 +63,6 @@ function resolve_prose_target_calendar_node(
     if ($roleId !== null) {
         $sql .= " AND pp.role_id = :role_id";
         $params[':role_id'] = $roleId;
-    }
-
-    if ($requireExportTarget) {
-        $sql .= " AND pp.is_export_target = 1";
     }
 
     $sql .= " ORDER BY pp.projection_order ASC LIMIT 2";
