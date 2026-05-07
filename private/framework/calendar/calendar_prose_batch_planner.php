@@ -71,12 +71,16 @@ function generate_calendar_batch_from_prose(
             continue;
         }
 
-        $beatHash = hash('sha256', mb_strtolower($summary));
+        $beatHash = hash(
+            'sha256',
+            mb_strtolower($summary . "\n\n" . (string)($beat['prose_body'] ?? ''))
+        );
 
         $operations[] = [
             'operation' => 'createCalendarSubevent',
             'parent_event_entity_id' => $parentEventEntityId,
             'event_label' => $summary,
+            'prose_body' => $beat['prose_body'] ?? null,
             'beat_type_id' => resolve_beat_type_id(
                 $pdo,
                 $classsetId,
@@ -275,7 +279,7 @@ function extract_calendar_beats(
 
         $classification = classify_calendar_beat_type(
             $pdo,
-            $summary,
+            $segment,
             $classsetId,
             $classsetCode,
             $allowedCodes
@@ -283,7 +287,8 @@ function extract_calendar_beats(
 
         $beats[] = [
             'type' => $classification['code'],
-            'summary' => $summary,
+            'summary' => extract_beat_line($segment),
+            'prose_body' => $segment,
             'inference' => $classification,
         ];
     }
@@ -511,90 +516,47 @@ function split_prose_into_candidate_segments(string $prose): array
 {
     $text = str_replace(["\r\n", "\r"], "\n", $prose);
     $text = trim($text);
-    $text = preg_replace("/\n{3,}/", "\n\n", $text);
 
-    $parts = preg_split("/\n\n|(?:^|\n)(---|\*\*\*)(?:\n|$)/", $text);
-
-    $fragments = [];
-
-    foreach ($parts as $part) {
-        $part = trim((string)$part);
-
-        if ($part === '') {
-            continue;
-        }
-
-        $lines = explode("\n", $part);
-        $buffer = '';
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-
-            if ($line === '') {
-                continue;
-            }
-
-            if (starts_with_dialogue($line)) {
-                if ($buffer !== '') {
-                    $fragments[] = trim($buffer);
-                    $buffer = '';
-                }
-
-                $fragments[] = $line;
-            } else {
-                $buffer = $buffer === ''
-                    ? $line
-                    : $buffer . ' ' . $line;
-            }
-        }
-
-        if ($buffer !== '') {
-            $fragments[] = trim($buffer);
-        }
+    if ($text === '') {
+        return [];
     }
+
+    /*
+     * Canonical prose execution boundary:
+     *
+     * double newline
+     *
+     * NOT sentence boundaries.
+     *
+     * Each block becomes one candidate subevent body.
+     */
+
+    $blocks = preg_split("/\n\s*\n/", $text);
 
     $segments = [];
 
-    foreach ($fragments as $frag) {
-        $parts = preg_split('/
-            (?<=[.!?])\s+(?=(He|She|They|I|We)\s)
-            |
-            \s+(?=(Then|Suddenly|But|After that|When)\s)
-        /x', $frag);
+    foreach ($blocks as $block) {
+        $block = trim((string)$block);
 
-        foreach ($parts as $p) {
-            $p = trim((string)$p);
-
-            if ($p !== '') {
-                $segments[] = $p;
-            }
+        if ($block === '') {
+            continue;
         }
+
+        /*
+         * Preserve prose integrity.
+         * Collapse internal whitespace only.
+         */
+
+        $block = preg_replace('/\s+/', ' ', $block);
+
+        $segments[] = trim((string)$block);
     }
 
-    $beats = [];
-
-    foreach ($segments as $seg) {
-        if (strlen($seg) < 80 && !empty($beats)) {
-            $beats[count($beats) - 1] .= ' ' . $seg;
-        } else {
-            $beats[] = $seg;
-        }
-    }
-
-    return array_values(array_map(function ($b) {
-        return trim((string)preg_replace('/\s+/', ' ', $b));
-    }, $beats));
+    return $segments;
 }
 
-function starts_with_dialogue(string $line): bool
-{
-    $first = mb_substr($line, 0, 1);
 
-    return $first === '"' ||
-        $first === "'" ||
-        $first === '—';
-}
-
+/*legacy*/
 function normalise_calendar_beat_summary(string $segment): string
 {
     $segment = trim($segment);
@@ -609,6 +571,30 @@ function normalise_calendar_beat_summary(string $segment): string
     }
 
     return ucfirst($segment);
+}
+
+function extract_beat_line(string $prose): string
+{
+    $prose = trim($prose);
+
+    if ($prose === '') {
+        return '';
+    }
+
+    /*
+     * Temporary heuristic:
+     * first sentence becomes execution label.
+     */
+
+    $parts = preg_split('/(?<=[.!?])\s+/', $prose, 2);
+
+    $line = trim((string)($parts[0] ?? $prose));
+
+    if (mb_strlen($line) > 140) {
+        $line = mb_substr($line, 0, 137) . '...';
+    }
+
+    return $line;
 }
 
 function dedupe_calendar_beats(array $beats): array
