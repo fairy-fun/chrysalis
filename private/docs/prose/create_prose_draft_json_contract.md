@@ -422,6 +422,58 @@ POST /pecherie/chill-api/index.php
   "prose": "Line 1\nLine 2\nLine 3"
 }
 ```
+
+## Export Resolution Contract
+
+Exports resolve by explicit export topology.
+
+The export resolver MUST receive:
+
+```json
+{
+  "export_target_key": "book1|calendar_event:326"
+}
+```
+The export resolver MUST NOT receive or resolve by:
+```json
+{
+"projection_type_id": "book1"
+}
+```
+
+### Doctrine
+
+Export resolution is projection-contextual.
+
+A projection selects a published prose draft locally. Exports resolve through explicit export topology, not through projection type or chronology.
+
+export_target_key identifies the export target.
+
+projection_type_id does not define export identity.
+
+#### Forbidden assumptions
+
+Do not assume:
+
+* latest draft wins
+* newest prose is canonical
+* projection_type_id defines export identity
+* Book 1 has one globally canonical prose row
+* draft chronology determines publication state
+### Runtime implication
+
+Export resolution MUST use:
+
+prose_projections.export_target_key
+
+and the projection-local published draft:
+
+prose_projections.published_prose_draft_id
+
+not draft chronology and not projection type.
+
+
+
 ## Execution Input Rule
 executeCalendarBatchFromProse uses the provided "prose" string.
 It does NOT read from stored prose_draft records.

@@ -366,6 +366,42 @@ ORDER BY ce.time_index ASC, ce.id ASC;
 
 ---
 
+## Export Resolution Doctrine
+
+Do not treat Book 1 prose as a single canonical prose row.
+
+Prose drafts are revisions. A projection selects which draft is published for a specific projection context.
+
+Exports resolve by explicit export topology:
+
+```json
+{
+  "export_target_key": "book1|calendar_event:326"
+}
+```
+
+Exports do not resolve by:
+```json
+{
+"projection_type_id": "book1"
+}
+```
+### Required model
+
+Export resolution is projection-contextual.
+
+A projection selects a published prose draft locally. Exports resolve through explicit export topology, not through projection type, newest draft, or chronology.
+
+#### Forbidden assumptions
+
+Never assume:
+
+* latest draft wins
+* newest prose is canonical
+* projection_type_id defines export identity
+* Book 1 prose has one global canonical draft
+* draft chronology determines publication state
+
 ### Runtime Query Safety Rules
 
 Traversal queries MUST:
