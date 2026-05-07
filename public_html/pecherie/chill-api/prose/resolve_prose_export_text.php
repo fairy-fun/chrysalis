@@ -1,6 +1,5 @@
 <?php
 
-
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -18,20 +17,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 requireAuth();
 
 try {
+
     $body = getJsonBody();
 
-    $projectionTypeId = $body['projection_type_id'] ?? null;
+    $exportTargetKey = $body['export_target_key'] ?? null;
 
     if (
-        !is_string($projectionTypeId)
-        || trim($projectionTypeId) === ''
+        !is_string($exportTargetKey)
+        || trim($exportTargetKey) === ''
     ) {
         throw new InvalidArgumentException(
-            'projection_type_id is required'
+            'export_target_key is required'
         );
     }
 
-    $projectionTypeId = trim($projectionTypeId);
+    $exportTargetKey = trim($exportTargetKey);
 
     $pdo = makePdo('read');
 
@@ -39,13 +39,13 @@ try {
 
     $rows = resolve_prose_export_text(
         $pdo,
-        $projectionTypeId
+        $exportTargetKey
     );
 
     respond(200, [
         'status' => 'ok',
         'database' => $expectedDatabase,
-        'projection_type_id' => $projectionTypeId,
+        'export_target_key' => $exportTargetKey,
         'export_count' => count($rows),
         'exports' => $rows,
     ]);
