@@ -565,3 +565,4 @@ function create_prose_draft(PDO $pdo, array $body): array
         'calendar' => $calendarResult,
     ];
 }
+
