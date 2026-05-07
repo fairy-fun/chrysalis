@@ -119,7 +119,6 @@ function attach_projection_to_export_context(
     PDO $pdo,
     int $proseExportContextId,
     int $proseProjectionId,
-    ?int $exportOrder = null,
 ): void {
 
     if ($proseExportContextId < 1) {
@@ -134,11 +133,6 @@ function attach_projection_to_export_context(
         );
     }
 
-    if ($exportOrder !== null && $exportOrder < 1) {
-        throw new InvalidArgumentException(
-            'exportOrder must be null or positive'
-        );
-    }
 
     $stmt = $pdo->prepare("
         INSERT INTO sxnzlfun_chrysalis.prose_export_context_projections (
@@ -159,7 +153,6 @@ function attach_projection_to_export_context(
         $stmt->execute([
             ':export_context_id' => $proseExportContextId,
             ':prose_projection_id' => $proseProjectionId,
-            ':export_order' => $exportOrder,
         ]);
 
     } catch (PDOException $e) {
