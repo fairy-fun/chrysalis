@@ -59,6 +59,7 @@ It is NOT the prose attachment target.
 
 The GPT MUST NOT use `calendar_projections` as the source of `projection.target_entity_id`.
 
+
 The final `projection.target_entity_id` MUST come from `calendar_events.entity_id`.
 
 That row MUST satisfy:
@@ -79,7 +80,21 @@ Also invalid:
 "target_entity_id": "calendar_event:311"
 }
 ```
+
 if calendar_event:311 resolves to calendar_layer_week, calendar_layer_day, or calendar_layer_time.
+
+Projection rows are NOT executable prose attachment targets.
+
+Projection resolution establishes traversal context only.
+
+Executable prose attachment targets MUST resolve from:
+```text
+calendar_events
+```
+where:
+```text
+layer_id = calendar_layer_event
+```
 
 ## Canonical Projection Identity
 
