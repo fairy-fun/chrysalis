@@ -20,18 +20,18 @@ try {
 
     $body = getJsonBody();
 
-    $exportTargetKey = $body['export_target_key'] ?? null;
+    $exportContextKey = $body['export_context_key'] ?? null;
 
     if (
-        !is_string($exportTargetKey)
-        || trim($exportTargetKey) === ''
+        !is_string($exportContextKey)
+        || trim($exportContextKey) === ''
     ) {
         throw new InvalidArgumentException(
-            'export_target_key is required'
+            'export_context_key is required'
         );
     }
 
-    $exportTargetKey = trim($exportTargetKey);
+    $exportContextKey = trim($exportContextKey);
 
     $pdo = makePdo('read');
 
@@ -39,13 +39,13 @@ try {
 
     $rows = resolve_prose_export_text(
         $pdo,
-        $exportTargetKey
+        $exportContextKey
     );
 
     respond(200, [
         'status' => 'ok',
         'database' => $expectedDatabase,
-        'export_target_key' => $exportTargetKey,
+        'export_context_key' => $exportContextKey,
         'export_count' => count($rows),
         'exports' => $rows,
     ]);
