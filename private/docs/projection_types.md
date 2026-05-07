@@ -2,6 +2,15 @@
 
 ## Overview
 
+
+### Projection layer
+Projection = publication topology placement
+
+vs
+
+### Export layer
+Export context = curated assembly of projections
+
 This document defines the core projection types supported by the system, independent of domain (calendar, character, narrative, etc).
 
 A projection is a **derived, build-scoped representation** of source entities.
