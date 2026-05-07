@@ -25,6 +25,174 @@ Week (calendar_layer_week)
 * Select intended Event
 * Use that **event-layer entity_id** as the batch parent
 
+## Canonical Runtime Event Resolution Query
+
+Runtime hierarchy traversal MUST resolve executable event instances directly from:
+
+```text
+calendar_events
+```
+
+using deterministic hierarchy predicates.
+
+The canonical executable hierarchy fields are:
+
+- `week_index`
+- `day_index`
+- `time_index`
+- `event_index`
+- `layer_id`
+
+The authoritative executable runtime table is:
+
+```text
+calendar_events
+```
+
+Runtime traversal MUST NOT depend on:
+
+- `calendar_event_projections.projection_sequence`
+- `calendar_event_projections.render_label`
+- nullable projection ordering metadata
+- inferred chronology reconstruction
+- optional joins for execution ordering
+
+Projection tables are projection/materialization surfaces, NOT the authoritative traversal root for executable event lookup.
+
+---
+
+## Canonical Event Lookup Query
+
+Executable event resolution MUST use:
+
+```sql
+SELECT
+    id,
+    entity_id,
+    layer_id,
+    week_index,
+    day_index,
+    time_index,
+    event_index,
+    chronology_address,
+    summary
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_event'
+  AND week_index = <week_index>
+  AND day_index = <day_index>
+  AND time_index = <time_index>
+ORDER BY chronology_address ASC, id ASC;
+```
+
+Canonical example:
+
+```sql
+SELECT
+    id,
+    entity_id,
+    layer_id,
+    week_index,
+    day_index,
+    time_index,
+    event_index,
+    chronology_address,
+    summary
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_event'
+  AND week_index = 3
+  AND day_index = 1
+  AND time_index = 1
+ORDER BY chronology_address ASC, id ASC;
+```
+
+---
+
+## Canonical Time Layer Lookup Query
+
+Time traversal MUST resolve from:
+
+```text
+calendar_events
+```
+
+with canonical label resolution through:
+
+```text
+calendar_time_label_classvals
+```
+
+Canonical query:
+
+```sql
+SELECT
+    ce.id,
+    ce.entity_id,
+    ce.layer_id,
+    ce.week_index,
+    ce.day_index,
+    ce.time_index,
+    ce.chronology_address,
+    ce.time_label_id,
+    tl.code AS time_label_code,
+    tl.label AS time_label,
+    tl.sort_order AS time_sort_order
+FROM calendar_events ce
+LEFT JOIN calendar_time_label_classvals tl
+    ON tl.id = ce.time_label_id
+WHERE ce.layer_id = 'calendar_layer_time'
+  AND ce.week_index = <week_index>
+  AND ce.day_index = <day_index>
+ORDER BY ce.time_index ASC, ce.id ASC;
+```
+
+---
+
+## Runtime Ordering Contract
+
+Executable traversal ordering MUST prefer:
+
+```sql
+ORDER BY chronology_address ASC, id ASC
+```
+
+If chronology ordering is unavailable, fallback ordering MUST be:
+
+```sql
+ORDER BY id ASC
+```
+
+The runtime MUST NOT depend on:
+
+- nullable projection ordering fields
+- projection_sequence
+- render_label
+- inferred chronology reconstruction
+- implicit insertion order
+
+---
+
+## Runtime Query Safety Rules
+
+Traversal queries MUST:
+
+- query `calendar_events` directly
+- constrain by concrete hierarchy indices
+- constrain by explicit `layer_id`
+- use deterministic ordering
+
+Traversal queries MUST NOT:
+
+- dynamically infer hierarchy depth
+- join unnecessary projection metadata
+- sort by nullable projection fields
+- assume projection completeness for runtime lookup
+- reconstruct chronology outside canonical fields
+
+The executable runtime hierarchy is authoritative in:
+
+```text
+calendar_events
+```
 ---
 
 ## Batch Invariants

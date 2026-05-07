@@ -267,6 +267,109 @@ This prevents:
 - detached subevent execution
 - inferred narrative placement
 
+## Canonical Runtime Traversal Queries
+
+Book 1 prose traversal MUST resolve executable runtime hierarchy directly from:
+
+```text
+calendar_events
+```
+
+using explicit hierarchy predicates.
+
+The GPT/runtime MUST prefer deterministic hierarchy resolution using:
+
+- `week_index`
+- `day_index`
+- `time_index`
+- `event_index`
+- `layer_id`
+
+The GPT/runtime MUST NOT depend on:
+
+- nullable projection ordering metadata
+- inferred chronology reconstruction
+- projection_sequence ordering
+- render_label ordering
+- optional materialization joins
+
+---
+
+### Canonical Event Resolution Query
+
+```sql
+SELECT
+    id,
+    entity_id,
+    layer_id,
+    chronology_address,
+    summary
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_event'
+  AND week_index = <week_index>
+  AND day_index = <day_index>
+  AND time_index = <time_index>
+ORDER BY chronology_address ASC, id ASC;
+```
+
+Example:
+
+```sql
+SELECT
+    id,
+    entity_id,
+    layer_id,
+    chronology_address,
+    summary
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_event'
+  AND week_index = 3
+  AND day_index = 1
+  AND time_index = 1
+ORDER BY chronology_address ASC, id ASC;
+```
+
+---
+
+### Canonical Time Resolution Query
+
+```sql
+SELECT
+    ce.id,
+    ce.entity_id,
+    ce.chronology_address,
+    ce.time_index,
+    tl.label AS time_label,
+    tl.code AS time_label_code,
+    tl.sort_order AS time_sort_order
+FROM calendar_events ce
+LEFT JOIN calendar_time_label_classvals tl
+    ON tl.id = ce.time_label_id
+WHERE ce.layer_id = 'calendar_layer_time'
+  AND ce.week_index = <week_index>
+  AND ce.day_index = <day_index>
+ORDER BY ce.time_index ASC, ce.id ASC;
+```
+
+---
+
+### Runtime Query Safety Rules
+
+Traversal queries MUST:
+
+- constrain by explicit hierarchy indices
+- constrain by explicit layer_id
+- order deterministically
+- resolve concrete runtime event instances
+
+Traversal queries MUST NOT:
+
+- attach prose using layer categories
+- query projection tables for executable traversal ordering
+- sort using nullable projection metadata
+- infer missing hierarchy structure
+
+
 # Runtime Traversal Contract
 
 Book 1 prose is NOT free text.

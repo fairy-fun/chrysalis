@@ -235,7 +235,98 @@ If any hierarchy layer fails validation:
 - prose generation stops
 - insertion stops
 - traversal stops
-- hierarchy inference is forbidden
+- hierarchy inference is 
+
+## Canonical Runtime Event Validation Query
+
+Before `createProseDraft` execution, the runtime MUST resolve the concrete executable event instance from:
+
+```text
+calendar_events
+```
+
+using deterministic hierarchy predicates.
+
+Canonical event validation query:
+
+```sql
+SELECT
+    id,
+    entity_id,
+    layer_id,
+    chronology_address,
+    summary
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_event'
+  AND week_index = <week_index>
+  AND day_index = <day_index>
+  AND time_index = <time_index>
+ORDER BY chronology_address ASC, id ASC;
+```
+
+Example:
+
+```sql
+SELECT
+    id,
+    entity_id,
+    layer_id,
+    chronology_address,
+    summary
+FROM calendar_events
+WHERE layer_id = 'calendar_layer_event'
+  AND week_index = 3
+  AND day_index = 1
+  AND time_index = 1
+ORDER BY chronology_address ASC, id ASC;
+```
+
+The resolved runtime attachment identity MUST be:
+
+```text
+calendar_event:<id>
+```
+
+Example:
+
+```text
+calendar_event:311
+```
+
+This value becomes:
+
+```json
+{
+  "target_entity_id": "calendar_event:311"
+}
+```
+
+---
+
+## Runtime Query Constraints
+
+Runtime traversal queries MUST:
+
+- query `calendar_events` directly
+- constrain by hierarchy indices
+- constrain by explicit `layer_id`
+- use deterministic ordering
+
+Runtime traversal queries MUST NOT:
+
+- depend on nullable projection ordering metadata
+- sort using projection_sequence
+- infer chronology reconstruction
+- use layer categories as attachment identities
+- dynamically synthesize runtime hierarchy
+
+Projection tables are materialization/projection surfaces only.
+
+Executable runtime hierarchy resolution is authoritative in:
+
+```text
+calendar_events
+```
 
 ## Forbidden Attachment Fields
 
