@@ -59,6 +59,19 @@ At this stage, the GPT MUST NOT:
 * infer hierarchy placement
 * create subevents
 
+Important:
+
+The GPT MUST NOT treat `calendar_projections` as the prose attachment target.
+
+`calendar_projections` identifies the projection context only.
+
+The executable prose attachment target is resolved later from `calendar_events`, after Week → Day → Time → Event traversal completes.
+
+Final `projection.target_entity_id` MUST be the concrete `calendar_events.entity_id` of a row where:
+
+```text
+layer_id = calendar_layer_event
+```
 
 The only valid next operation is runtime hierarchy resolution beginning at the week layer.
 Book 1 prose requires hierarchical runtime resolution first.

@@ -38,7 +38,7 @@ X-API-Key: <your key>
     "projection_id": 1,
     "projection_type_id": "projection_type_book",
 
-    "target_entity_id": "calendar_event:322",
+    "target_entity_id": "calendar_event:<resolved_event_layer_id>",
 
     "role_id": "primary",
 
@@ -50,6 +50,37 @@ X-API-Key: <your key>
   "annotations": []
 }
 ```
+
+## Projection Is Context, Not Attachment Target
+
+`projection_id` identifies the Book/projection context.
+
+It is NOT the prose attachment target.
+
+The GPT MUST NOT use `calendar_projections` as the source of `projection.target_entity_id`.
+
+The final `projection.target_entity_id` MUST come from `calendar_events.entity_id`.
+
+That row MUST satisfy:
+
+```text
+calendar_events.layer_id = calendar_layer_event
+```
+
+Invalid target:
+```text
+{
+"target_entity_id": "calendar_projection:1"
+}
+```
+Also invalid:
+```text
+{
+"target_entity_id": "calendar_event:311"
+}
+```
+if calendar_event:311 resolves to calendar_layer_week, calendar_layer_day, or calendar_layer_time.
+
 ## Canonical Projection Identity
 
 target_entity_id anchors validated event placement
