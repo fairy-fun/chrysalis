@@ -40,7 +40,8 @@ function resolve_prose_target_calendar_node(
 
         FROM prose_drafts pd
         JOIN prose_projections pp
-            ON pp.prose_draft_id = pd.id
+            ON pp.prose_family_id = pd.prose_family_id
+               AND pp.published_prose_draft_id = pd.id
 
         JOIN calendar_events ce
             ON ce.entity_id = pp.target_entity_id

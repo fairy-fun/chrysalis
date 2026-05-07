@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/**
+ * Export selection is projection-authoritative.
+ *
+ * Canonicality is projection-contextual:
+ * prose drafts are revisions,
+ * projections select published drafts locally.
+ *
+ * Never infer publication state from draft chronology.
+ */
+
 function resolve_prose_export_text(
     PDO $pdo,
     string $projectionTypeId
