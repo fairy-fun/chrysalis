@@ -12,7 +12,25 @@ Week (calendar_layer_week)
 
 ## Attachment Rule (critical)
 
-* All batch-created subevents MUST use an **event-layer node** as `parent_event_entity_id`
+* All batch-created subevents MUST use a concrete runtime row whose:
+
+```text
+layer_id = calendar_layer_event
+```
+
+* The following are INVALID parent targets:
+
+```text
+calendar_layer_week
+calendar_layer_day
+calendar_layer_time
+```
+
+even if their entity_id format is:
+
+```text
+calendar_event:<id>
+```
 * Never attach subevents directly to week, day, or time layers
 
 ---

@@ -389,6 +389,24 @@ Projection
 → Subevent prose
 ```
 
+Important:
+
+The resolved `event_id` MUST reference a runtime row whose:
+
+```text
+layer_id = calendar_layer_event
+```
+
+The GPT MUST NOT assume that:
+
+```text
+calendar_event:<id>
+```
+
+automatically implies an event-layer node.
+
+Week/day/time nodes also use `calendar_event:<id>` entity identity format.
+
 The GPT/runtime MUST resolve each hierarchy layer sequentially.
 
 The GPT/runtime MUST NOT:

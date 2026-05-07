@@ -26,6 +26,8 @@ X-API-Key: <your key>
 
   "title": "Book 1 — Week 3 Sunday Early Morning",
 
+  "summary": "Shay decides to return to the Gilded Lily",
+  
   "prose_body": "Line 1\nLine 2\nLine 3",
 
   "draft_status_id": "prose_status_draft",
@@ -129,6 +131,29 @@ Use raw JSON
 Do not use multipart unless uploading files
 2. prose_body
 Use \n for line breaks
+
+
+### summary
+
+Concise narrative execution label.
+
+This is NOT the full prose payload.
+
+Purpose:
+
+- runtime labeling
+- traversal visibility
+- execution coherence
+- export summaries
+- subevent planning
+
+Example:
+
+```text
+Shay decides to return to the Gilded Lily
+```
+
+`summary` and `prose_body` are distinct runtime surfaces and MUST NOT be collapsed together.
 
 ## Subevent Structure Contract
 
@@ -268,7 +293,22 @@ calendar_event:<id>
 
 Rules:
 
-- MUST resolve to an existing calendar_layer_event
+Rules:
+
+- MUST resolve to an existing row in `calendar_events`
+- the resolved row MUST have:
+
+```text
+layer_id = calendar_layer_event
+```
+
+- week/day/time rows are INVALID targets even if their entity_id format is:
+  
+```text
+calendar_event:<id>
+```
+
+- prose-generated subevents attach beneath this event only
 - MUST belong to the resolved projection_id
 - MUST represent the validated event-layer parent
 - prose-generated subevents attach beneath this event only
@@ -286,6 +326,39 @@ Valid runtime transition only:
 calendar_layer_event
 → calendar_layer_subevent
 ```
+
+INVALID:
+
+```json
+{
+  "target_entity_id": "calendar_event:311"
+}
+```
+
+when the resolved row has:
+
+```text
+layer_id = calendar_layer_week
+```
+
+or:
+
+```text
+calendar_layer_day
+```
+
+or:
+
+```text
+calendar_layer_time
+```
+
+`target_entity_id` MUST resolve specifically to:
+
+```text
+calendar_layer_event
+```
+
 5. annotations
 
 Must always be an array:
