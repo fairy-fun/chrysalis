@@ -181,7 +181,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         $result = ensure_calendar_subevent(
             $pdo,
-            (int)$parent['projection_id'],
+            (string)$parent['entity_id'],
             null,
             $payload
         );
