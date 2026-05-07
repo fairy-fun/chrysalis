@@ -145,8 +145,7 @@ SELECT
     pd.title,
     pp.projection_type_id,
     pp.target_entity_id,
-    pp.projection_order,
-    pp.is_export_target
+    pp.projection_order
 FROM prose_projections pp
 JOIN prose_drafts pd
     ON pd.id = pp.published_prose_draft_id
