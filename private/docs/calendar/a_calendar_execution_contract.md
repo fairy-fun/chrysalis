@@ -198,6 +198,147 @@ calendar_events
 ## Batch Invariants
 
 * One non-empty prose segment → exactly one subevent
+
+## Subevent Text Structure Contract
+
+A `calendar_layer_subevent` contains distinct textual surfaces that MUST NOT be collapsed into a single field.
+
+Each subevent execution unit may contain:
+
+```text
+- beat line
+- prose body
+```
+
+These are different concepts.
+
+---
+
+### Beat Line
+
+The beat line is:
+
+- concise
+- deterministic
+- execution-oriented
+- summary-like
+
+The beat line exists to support:
+
+- traversal
+- ordering
+- execution visibility
+- runtime identification
+- planning coherence
+
+A beat line is NOT the full prose payload.
+
+Example beat line:
+
+```text
+Shay decides to return to the Gilded Lily
+```
+
+---
+
+### Prose Body
+
+The prose body is the rendered narrative content associated with the subevent.
+
+A prose body may contain:
+
+- multiple sentences
+- dialogue
+- interiority
+- sensory detail
+- action
+- transitions
+- descriptive narration
+
+Example prose body:
+
+```text
+Shay paces the apartment while the remnants of the dream continue to vibrate through her nervous system. 
+By the time the sun starts to rise she has already decided she needs to get back to the Gilded Lily before the feeling disappears.
+```
+
+This entire prose body still belongs to:
+
+```text
+one calendar_layer_subevent
+```
+
+---
+
+## Runtime Mapping Rules
+
+The runtime MUST distinguish between:
+
+```text
+subevent summary surface
+```
+
+and:
+
+```text
+subevent prose surface
+```
+
+The runtime MUST NOT assume:
+
+```text
+one sentence = one subevent
+```
+
+The runtime MUST NOT assume:
+
+```text
+one prose block = one subevent
+```
+
+A prose draft may materialize into:
+
+```text
+multiple ordered subevents
+```
+
+Each subevent may contain:
+
+```text
+- one beat line
+- one prose body
+```
+
+---
+
+## Forbidden Semantic Collapses
+
+The runtime/GPT MUST NOT collapse:
+
+```text
+beat line
+```
+
+into:
+
+```text
+prose body
+```
+
+The runtime/GPT MUST NOT collapse:
+
+```text
+summary semantics
+```
+
+into:
+
+```text
+narrative prose semantics
+```
+
+Execution structure and rendered prose are related but distinct runtime surfaces.
+
 * Order is preserved via `order_index`
 * Idempotency enforced via **stable client_id (slot-based identity)**
 * Replays must not create duplicates

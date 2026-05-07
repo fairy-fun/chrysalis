@@ -516,6 +516,111 @@ The GPT MUST wait for valid runtime structure before continuing execution.
 Book 1 prose insertion is runtime execution traversal,
 not narrative attachment.
 
+## Subevent Beat Line vs Prose Body Contract
+
+Book 1 prose execution MUST distinguish between:
+
+```text
+subevent beat line
+```
+
+and:
+
+```text
+subevent prose body
+```
+
+These are related, but they are not the same textual surface.
+
+---
+
+### Subevent Beat Line
+
+A subevent beat line is:
+
+- concise
+- deterministic
+- execution-oriented
+- summary-like
+
+It describes what the subevent does in the runtime.
+
+Example:
+
+```text
+Shay decides to return to the Gilded Lily
+```
+
+---
+
+### Subevent Prose Body
+
+A subevent prose body is the rendered narrative prose associated with that subevent.
+
+It may contain:
+
+- multiple sentences
+- dialogue
+- interiority
+- sensory detail
+- action
+- descriptive narration
+- transition material
+
+Example:
+
+```text
+Shay paces the apartment while the dream continues to vibrate through her nervous system. By the time the morning light begins to thin the room, she has already decided she needs to return to the Gilded Lily before the feeling disappears.
+```
+
+---
+
+## Prose Draft Mapping Rule
+
+A prose draft may materialize into:
+
+```text
+multiple ordered subevents
+```
+
+Each subevent may contain:
+
+```text
+- one beat line
+- one prose body
+- one order position
+```
+
+The GPT/runtime MUST NOT assume:
+
+```text
+one sentence = one subevent
+```
+
+The GPT/runtime MUST NOT assume:
+
+```text
+one prose block = one subevent
+```
+
+The GPT/runtime MUST NOT collapse:
+
+```text
+beat line
+```
+
+into:
+
+```text
+prose body
+```
+
+The beat line is for execution structure.
+
+The prose body is for rendered narrative content.
+
+
+
 ### Why This Matters
 
 Book 1 prose is projection-backed runtime content.

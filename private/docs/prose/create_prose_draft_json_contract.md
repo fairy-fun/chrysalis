@@ -129,7 +129,107 @@ Use raw JSON
 Do not use multipart unless uploading files
 2. prose_body
 Use \n for line breaks
-Each non-empty line represents exactly one subevent (beat)
+
+## Subevent Structure Contract
+
+Book 1 prose execution distinguishes between:
+
+```text
+subevent beat line
+```
+
+and:
+
+```text
+subevent prose body
+```
+
+These are separate runtime surfaces.
+
+---
+
+### Beat Line
+
+The beat line is:
+
+- concise
+- deterministic
+- execution-oriented
+- summary-like
+
+Example:
+
+```text
+Shay decides to return to the Gilded Lily
+```
+
+---
+
+### Prose Body
+
+The prose body is the rendered narrative prose associated with the subevent.
+
+A prose body may contain:
+
+- multiple sentences
+- dialogue
+- interiority
+- sensory detail
+- action
+- descriptive narration
+
+Example:
+
+```text
+Shay paces the apartment while the dream continues to vibrate through her nervous system. By the time the morning light begins to thin the room, she has already decided she needs to return to the Gilded Lily before the feeling disappears.
+```
+
+---
+
+## Runtime Mapping Rules
+
+A prose draft may materialize into:
+
+```text
+multiple ordered subevents
+```
+
+Each subevent may contain:
+
+```text
+- one beat line
+- one prose body
+- one order position
+```
+
+The runtime MUST NOT assume:
+
+```text
+one sentence = one subevent
+```
+
+The runtime MUST NOT assume:
+
+```text
+one prose block = one subevent
+```
+
+The runtime MUST NOT collapse:
+
+```text
+beat line
+```
+
+into:
+
+```text
+prose body
+```
+
+Beat lines define execution structure.
+
+Prose bodies define rendered narrative content.
+
 Line order is preserved and used for deterministic execution
 3. draft_status_id
 
