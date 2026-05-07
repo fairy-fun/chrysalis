@@ -484,7 +484,7 @@ function prose_calendar_projection_type_exists(
 function create_prose_draft(PDO $pdo, array $body): array
 {
     $entityId = prose_required_string($body, 'entity_id');
-    $title = prose_required_string($body, 'title');
+    $title = prose_optional_string_or_null($body, 'title');
     $summary = prose_optional_string_or_null($body, 'summary');
     $proseBody = prose_required_string($body, 'prose_body');
     $draftStatusId = prose_required_string($body, 'draft_status_id');
