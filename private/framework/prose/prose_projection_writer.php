@@ -166,7 +166,6 @@ function insert_prose_projection(
         target_entity_id,
         role_id,
         projection_order,
-        is_export_target,
         created_at
     ) VALUES (
         :prose_family_id,
@@ -176,7 +175,6 @@ function insert_prose_projection(
         :target_entity_id,
         :role_id,
         :projection_order,
-        :is_export_target,
         NOW()
     )
 ");
@@ -191,7 +189,6 @@ function insert_prose_projection(
             ':target_entity_id' => $targetEntityId,
             ':role_id' => $roleId,
             ':projection_order' => $projectionOrder,
-            ':is_export_target' => 0,
         ]);
 
     } catch (PDOException $e) {
