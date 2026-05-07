@@ -490,6 +490,29 @@ Violations of this rule are considered **invalid projection state** and must be 
 Execution engines MAY surface orphaned nodes at root level
 but MUST NOT synthesize missing parents from calendar_events.
 
+
+## Projection-Contextual Prose Resolution
+
+Calendar projections define runtime topology only.
+
+Canonical prose publication is projection-contextual.
+
+A projection may locally select a published prose draft through:
+
+```text
+prose_projections.published_prose_draft_id
+```
+
+Export resolution MUST occur through explicit export topology:
+
+`export_target_key`
+
+and MUST NOT infer canonical prose through:
+
+* chronology
+* newest draft
+* projection_type_id alone
+
 # Runtime Attachment Identity Invariants
 
 ## Layer Type vs Runtime Instance
