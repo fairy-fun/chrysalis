@@ -73,6 +73,7 @@ try {
          */
 
         'projection_type_id' => $projectionTypeId,
+        'export_count' => count($rows),
         'exports' => $rows,
     ]);
 
