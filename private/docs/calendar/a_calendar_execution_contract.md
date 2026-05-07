@@ -610,6 +610,10 @@ calendar_layer_event:<event_id>
     → calendar_layer_subevent
 ```
 
+Exports are resolved by `export_target_key`, not by `projection_type_id`.
+
+See `create_prose_draft_json_contract.md` for the prose export resolution contract.
+
 ---
 
 ## Forbidden Attachment Identity Forms

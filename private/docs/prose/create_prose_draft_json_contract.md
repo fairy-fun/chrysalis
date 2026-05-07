@@ -769,7 +769,42 @@ Only after event resolution succeeds may prose materialize beneath:
 ```text
 calendar_layer_subevent
 ```
+## Prose Export Resolution Contract
 
+Exports resolve by explicit export topology.
+
+The export resolver accepts:
+
+```json
+{
+  "export_target_key": "book1|calendar_event:326"
+}
+```
+
+Exports MUST NOT resolve by:
+```json
+{
+"projection_type_id": "book1"
+}
+```
+
+projection_type_id identifies a projection topology class/context. It does not identify a specific export.
+
+### Doctrine
+
+Export resolution is projection-contextual.
+
+A projection selects a published prose draft locally. Exports resolve through explicit export topology, not through projection type or chronology.
+
+#### Forbidden assumptions
+
+The following assumptions are invalid:
+
+* latest draft wins
+* newest prose is canonical
+* projection_type_id defines export identity
+
+This is an ontology-level migration, not a parameter rename.
 
 ## Runtime Semantics
 
