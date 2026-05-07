@@ -29,7 +29,6 @@ if (!is_string($databaseName) || $databaseName === '') {
 $proseEntityId = $_GET['prose_entity_id'] ?? null;
 $projectionTypeId = $_GET['projection_type_id'] ?? null;
 $roleId = $_GET['role_id'] ?? null;
-$requireExportTarget = ($_GET['require_export_target'] ?? '1') === '1';
 
 // --- Validate ---
 if (!is_string($proseEntityId) || trim($proseEntityId) === '') {
@@ -45,7 +44,6 @@ try {
         trim($proseEntityId),
         is_string($projectionTypeId) && trim($projectionTypeId) !== '' ? trim($projectionTypeId) : null,
         is_string($roleId) && trim($roleId) !== '' ? trim($roleId) : null,
-        $requireExportTarget
     );
 
     if ($target === null) {
