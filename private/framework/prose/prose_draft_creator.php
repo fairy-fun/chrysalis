@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../calendar/prose_calendar_orchestrator.php';
 require_once __DIR__ . '/prose_projection_writer.php';
+require_once __DIR__ . '/prose_metadata_deriver.php';
 
 function prose_required_string(array $source, string $key): string
 {
@@ -487,6 +488,11 @@ function create_prose_draft(PDO $pdo, array $body): array
     $title = prose_optional_string_or_null($body, 'title');
     $summary = prose_optional_string_or_null($body, 'summary');
     $proseBody = prose_required_string($body, 'prose_body');
+
+    $metadata = derive_prose_metadata($proseBody, $body);
+    $title = $title ?? $metadata['title'];
+    $summary = $summary ?? $metadata['summary'];
+
     $draftStatusId = prose_required_string($body, 'draft_status_id');
     $authorEntityId = prose_optional_string_or_null($body, 'author_entity_id');
     $proseFamilyEntityId = prose_optional_string_or_null(
