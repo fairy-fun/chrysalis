@@ -256,5 +256,11 @@ const FW_REPO_CONTRACT = [
             'writes' => true,
             'behaviour_tested' => false,
         ],
+
+        'resolveProseExportText' => [
+            'handler' => 'public_html/pecherie/chill-api/prose/resolve_prose_export_text.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];

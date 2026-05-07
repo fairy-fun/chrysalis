@@ -229,6 +229,11 @@ switch ($operation) {
         require __DIR__ . '/dreams/get_dream_annotations.php';
         break;
 
+    case 'resolveProseExportText':
+        require __DIR__ . '/prose/resolve_prose_export_text.php';
+        break;
+
+
     default:
         api_error(400, 'Unknown operation: ' . $operation);
 }
