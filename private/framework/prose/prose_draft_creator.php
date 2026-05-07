@@ -155,6 +155,74 @@ function prose_draft_entity_exists(PDO $pdo, string $entityId): bool
     return (int) $stmt->fetchColumn() > 0;
 }
 
+function prose_family_entity_exists(PDO $pdo, string $entityId): bool
+{
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sxnzlfun_chrysalis.prose_families
+        WHERE entity_id = :entity_id
+    ");
+
+    $stmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+function prose_family_id_from_entity_id(
+    PDO $pdo,
+    string $entityId
+): ?int {
+
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM sxnzlfun_chrysalis.prose_families
+        WHERE entity_id = :entity_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $id = $stmt->fetchColumn();
+
+    if ($id === false) {
+        return null;
+    }
+
+    return (int) $id;
+}
+
+function create_prose_family(
+    PDO $pdo,
+    string $entityId
+): int {
+
+    $insert = $pdo->prepare("
+        INSERT INTO sxnzlfun_chrysalis.prose_families (
+            entity_id
+        ) VALUES (
+            :entity_id
+        )
+    ");
+
+    $insert->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $id = (int) $pdo->lastInsertId();
+
+    if ($id < 1) {
+        throw new RuntimeException(
+            'Failed to create prose family'
+        );
+    }
+
+    return $id;
+}
+
 function prose_body_for_entity(PDO $pdo, string $entityId): ?string
 {
     $stmt = $pdo->prepare("
@@ -421,6 +489,10 @@ function create_prose_draft(PDO $pdo, array $body): array
     $proseBody = prose_required_string($body, 'prose_body');
     $draftStatusId = prose_required_string($body, 'draft_status_id');
     $authorEntityId = prose_optional_string_or_null($body, 'author_entity_id');
+    $proseFamilyEntityId = prose_optional_string_or_null(
+        $body,
+        'prose_family_entity_id'
+    );
 
     $projection = $body['projection'] ?? null;
 
@@ -429,9 +501,9 @@ function create_prose_draft(PDO $pdo, array $body): array
     }
 
     $projectionClassvalId = prose_required_string(
-    $projection,
-    'projection_classval_id'
-);
+        $projection,
+        'projection_classval_id'
+    );
 
     $projectionTypeId = prose_required_string(
         $projection,
@@ -468,6 +540,15 @@ function create_prose_draft(PDO $pdo, array $body): array
         throw new InvalidArgumentException('Invalid author_entity_id: ' . $authorEntityId);
     }
 
+    if (
+        $proseFamilyEntityId !== null
+        && !prose_family_entity_exists($pdo, $proseFamilyEntityId)
+    ) {
+        throw new InvalidArgumentException(
+            'Invalid prose_family_entity_id: ' . $proseFamilyEntityId
+        );
+    }
+
     $validatedAnnotations = prose_validate_annotations($pdo, $annotations, $proseBody);
 
     $startedTransaction = false;
@@ -480,8 +561,29 @@ function create_prose_draft(PDO $pdo, array $body): array
             $startedTransaction = true;
         }
 
+        if ($proseFamilyEntityId === null) {
+            $proseFamilyEntityId = 'prose_family:' . bin2hex(random_bytes(16));
+
+            $proseFamilyId = create_prose_family(
+                $pdo,
+                $proseFamilyEntityId
+            );
+        } else {
+            $proseFamilyId = prose_family_id_from_entity_id(
+                $pdo,
+                $proseFamilyEntityId
+            );
+
+            if ($proseFamilyId === null) {
+                throw new RuntimeException(
+                    'Failed to resolve prose family'
+                );
+            }
+        }
+
         $insertDraft = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.prose_drafts (
+                prose_family_id,
                 entity_id,
                 title,
                 summary,
@@ -489,6 +591,7 @@ function create_prose_draft(PDO $pdo, array $body): array
                 draft_status_id,
                 author_entity_id
             ) VALUES (
+                :prose_family_id,
                 :entity_id,
                 :title,
                 :summary,
@@ -499,6 +602,7 @@ function create_prose_draft(PDO $pdo, array $body): array
         ");
 
         $insertDraft->execute([
+            ':prose_family_id' => $proseFamilyId,
             ':entity_id' => $entityId,
             ':title' => $title,
             ':summary' => $summary,
@@ -515,9 +619,10 @@ function create_prose_draft(PDO $pdo, array $body): array
 
         $projectionId = insert_prose_projection(
             $pdo,
+            $proseFamilyId,
             $proseDraftId,
-            $projectionTypeId,
             $projectionClassvalId,
+            $projectionTypeId,
             $targetEntityId,
             $roleId,
             $projectionOrder,
@@ -549,6 +654,9 @@ function create_prose_draft(PDO $pdo, array $body): array
     }
 
     return [
+        'prose_family' => [
+            'entity_id' => $proseFamilyEntityId,
+        ],
         'prose' => [
             'entity_id' => $entityId,
             'title' => $title,
