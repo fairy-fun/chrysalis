@@ -271,9 +271,10 @@ function extract_calendar_beats(
     $beats = [];
 
     foreach ($segments as $segment) {
-        $summary = normalise_calendar_beat_summary((string)$segment);
 
-        if ($summary === '') {
+        $segment = trim((string)$segment);
+
+        if ($segment === '') {
             continue;
         }
 
@@ -609,7 +610,9 @@ function dedupe_calendar_beats(array $beats): array
             continue;
         }
 
-        $key = mb_strtolower($summary);
+        $key = mb_strtolower(
+            $summary . "\n\n" . (string)($beat['prose_body'] ?? '')
+        );
 
         if (isset($seen[$key])) {
             continue;
