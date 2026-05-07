@@ -7,6 +7,70 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_creator.php';
 
+function normalise_projection_payload(array $body): array
+{
+    if (!isset($body['projection']) || !is_array($body['projection'])) {
+        return $body;
+    }
+
+    $projection = $body['projection'];
+
+    /*
+     * Legacy payloads:
+     *
+     * projection_type_id = projection_type_book
+     *
+     * New contract:
+     *
+     * projection_classval_id = projection_type_book
+     * projection_type_id      = book1
+     */
+
+    if (
+        !isset($projection['projection_classval_id'])
+        && isset($projection['projection_type_id'])
+        && is_string($projection['projection_type_id'])
+        && str_starts_with($projection['projection_type_id'], 'projection_type_')
+    ) {
+        $projection['projection_classval_id'] = $projection['projection_type_id'];
+
+        /*
+         * Transitional resolver
+         *
+         * Current projection_id already exists in payload.
+         * Resolve concrete topology projection_type_id from DB.
+         */
+
+        if (
+            isset($projection['projection_id'])
+            && is_int($projection['projection_id'])
+        ) {
+            $pdo = makePdo('read');
+
+            $stmt = $pdo->prepare("
+                SELECT projection_type_id
+                FROM sxnzlfun_chrysalis.calendar_projections
+                WHERE id = :id
+                LIMIT 1
+            ");
+
+            $stmt->execute([
+                ':id' => $projection['projection_id'],
+            ]);
+
+            $resolved = $stmt->fetchColumn();
+
+            if (is_string($resolved) && trim($resolved) !== '') {
+                $projection['projection_type_id'] = trim($resolved);
+            }
+        }
+    }
+
+    $body['projection'] = $projection;
+
+    return $body;
+}
+
 function normalise_create_prose_draft_request(): array
 {
     $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
@@ -111,10 +175,10 @@ function normalise_create_prose_draft_request(): array
             $body['author_entity_id'] = null;
         }
 
-        return $body;
+        return normalise_projection_payload($body);
     }
 
-    return getJsonBody();
+    return normalise_projection_payload(getJsonBody());
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
