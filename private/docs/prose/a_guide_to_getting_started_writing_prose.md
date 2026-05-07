@@ -200,6 +200,49 @@ Week
 
 instead of treating week validation as a one-off special case.
 
+## Calendar Traversal Display Rules
+
+When presenting candidate calendar nodes to the user, rendering is layer-aware.
+
+### Time Layer Rendering
+
+For `calendar_layer_time` nodes:
+
+DO NOT use `summary` as the canonical display label.
+
+The canonical semantic label is resolved via:
+
+calendar_events.time_label_id
+→ calendar_time_label_classvals
+
+Traversal/rendering systems MUST resolve and display the canonical time label from:
+
+calendar_events.time_label_id
+→ calendar_time_label_classvals.label
+
+API responses SHOULD expose:
+
+- time_label
+- time_label_code
+- time_sort_order
+
+when available.
+
+Example:
+
+3.1.1 — Early Morning
+3.1.2 — Afternoon
+
+If no resolved time label exists, fallback rendering is:
+
+Time {time_index}
+
+Example:
+
+3.1.1 — Time 1
+
+`summary` for `calendar_layer_time` is optional compatibility text only and MUST NOT be treated as the canonical human-readable label.
+
 ## Deterministic Runtime Traversal
 
 Book 1 prose insertion is hierarchical runtime traversal.
