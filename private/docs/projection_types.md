@@ -161,6 +161,32 @@ ORDER BY
     pp.projection_order;
 ```
 
+### Export prose text
+
+Use `pd.prose_body` when resolving the actual prose content for a projection export surface.
+
+```sql
+SELECT
+    pd.entity_id,
+    pd.title,
+    pp.target_entity_id,
+    pd.prose_body
+FROM prose_projections pp
+JOIN prose_drafts pd
+    ON pd.id = pp.prose_draft_id
+WHERE pp.projection_type_id = 'book1'
+  AND pp.is_export_target = 1
+ORDER BY
+    pp.target_entity_id,
+    pp.projection_order;
+```
+
+Notes:
+
+- membership queries do not require `prose_body`
+- export topology queries do not require `prose_body`
+- prose rendering/export queries should use `pd.prose_body`
+
 Architecture:
 
 - `projection_classval_id`
