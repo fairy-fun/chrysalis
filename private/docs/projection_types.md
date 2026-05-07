@@ -119,7 +119,11 @@ The materializer is responsible for enforcing correctness for that type.
 
 ## Querying Projection Membership
 
-Projection membership is resolved through `prose_projections`.
+Projection topology is resolved through prose_projections.
+
+Export assembly topology is resolved through:
+- prose_export_contexts
+- prose_export_context_projections
 
 `projection_type_id` represents the projection topology surface
 (e.g. `book1`, `book2`, chronology exports, alternate cuts).
@@ -136,7 +140,7 @@ SELECT
     pp.is_export_target
 FROM prose_projections pp
 JOIN prose_drafts pd
-    ON pd.id = pp.prose_draft_id
+    ON pd.id = pp.published_prose_draft_id
 WHERE pp.projection_type_id = 'book1'
 ORDER BY
     pp.target_entity_id,
@@ -148,17 +152,23 @@ Export-only view:
 
 ```sql
 SELECT
-    pd.entity_id,
-    pd.title,
-    pp.target_entity_id
-FROM prose_projections pp
-JOIN prose_drafts pd
-    ON pd.id = pp.prose_draft_id
+  pec.export_context_key,
+  pd.entity_id,
+  pd.title,
+  pp.target_entity_id,
+  pecp.export_order
+FROM prose_export_contexts pec
+       JOIN prose_export_context_projections pecp
+            ON pecp.export_context_id = pec.id
+       JOIN prose_projections pp
+            ON pp.id = pecp.prose_projection_id
+       JOIN prose_drafts pd
+            ON pd.id = pp.published_prose_draft_id
 WHERE pp.projection_type_id = 'book1'
-  AND pp.is_export_target = 1
 ORDER BY
-    pp.target_entity_id,
-    pp.projection_order;
+  pec.export_context_key,
+  pecp.export_order,
+  pp.projection_order;
 ```
 
 ### Export prose text
@@ -167,18 +177,23 @@ Use `pd.prose_body` when resolving the actual prose content for a projection exp
 
 ```sql
 SELECT
-    pd.entity_id,
-    pd.title,
-    pp.target_entity_id,
-    pd.prose_body
-FROM prose_projections pp
-JOIN prose_drafts pd
-    ON pd.id = pp.prose_draft_id
+  pec.export_context_key,
+  pd.entity_id,
+  pd.title,
+  pp.target_entity_id,
+  pd.prose_body
+FROM prose_export_contexts pec
+       JOIN prose_export_context_projections pecp
+            ON pecp.export_context_id = pec.id
+       JOIN prose_projections pp
+            ON pp.id = pecp.prose_projection_id
+       JOIN prose_drafts pd
+            ON pd.id = pp.published_prose_draft_id
 WHERE pp.projection_type_id = 'book1'
-  AND pp.is_export_target = 1
 ORDER BY
-    pp.target_entity_id,
-    pp.projection_order;
+  pec.export_context_key,
+  pecp.export_order,
+  pp.projection_order;
 ```
 
 Notes:

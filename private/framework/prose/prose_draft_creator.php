@@ -512,7 +512,6 @@ function create_prose_draft(PDO $pdo, array $body): array
     $targetEntityId = prose_required_string($projection, 'target_entity_id');
     $roleId = prose_required_string($projection, 'role_id');
     $projectionOrder = prose_required_positive_int($projection, 'projection_order');
-    $isExportTarget = prose_required_boolean_int($projection, 'is_export_target');
 
     $annotations = prose_normalise_annotations($body);
 
@@ -626,7 +625,6 @@ function create_prose_draft(PDO $pdo, array $body): array
             $targetEntityId,
             $roleId,
             $projectionOrder,
-            $isExportTarget
         );
 
         $insertedAnnotations = insert_prose_annotations($pdo, $entityId, $validatedAnnotations);

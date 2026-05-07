@@ -81,14 +81,6 @@ function prose_projection_published_draft_belongs_to_family(
  * published_prose_draft_id
  *     = projection-local publication selection
  *
- * Legacy prose_draft_id remains populated temporarily because the live
- * schema still has a NOT NULL legacy column and existing indexes still
- * depend on it.
- *
- * Duplicate behavior is intentionally strict during migration. A duplicate
- * key error is not treated as idempotent because the current unique indexes
- * are still partially legacy-shaped and cannot yet prove canonical
- * family/topology identity.
  */
 function insert_prose_projection(
     PDO $pdo,
@@ -99,7 +91,6 @@ function insert_prose_projection(
     string $targetEntityId,
     string $roleId,
     ?int $projectionOrder,
-    int $isExportTarget
 ): int {
 
     $projectionClassvalId = trim($projectionClassvalId);
@@ -149,12 +140,6 @@ function insert_prose_projection(
         );
     }
 
-    if ($isExportTarget !== 0 && $isExportTarget !== 1) {
-        throw new InvalidArgumentException(
-            'is_export_target must be 0 or 1'
-        );
-    }
-
     if (
         !prose_projection_published_draft_belongs_to_family(
             $pdo,
@@ -173,35 +158,32 @@ function insert_prose_projection(
     );
 
     $stmt = $pdo->prepare("
-        INSERT INTO sxnzlfun_chrysalis.prose_projections (
-            prose_draft_id,
-            prose_family_id,
-            published_prose_draft_id,
-            projection_classval_id,
-            projection_type_id,
-            target_entity_id,
-            role_id,
-            projection_order,
-            is_export_target,
-            created_at
-        ) VALUES (
-            :legacy_prose_draft_id,
-            :prose_family_id,
-            :published_prose_draft_id,
-            :projection_classval_id,
-            :projection_type_id,
-            :target_entity_id,
-            :role_id,
-            :projection_order,
-            :is_export_target,
-            NOW()
-        )
-    ");
+    INSERT INTO sxnzlfun_chrysalis.prose_projections (
+        prose_family_id,
+        published_prose_draft_id,
+        projection_classval_id,
+        projection_type_id,
+        target_entity_id,
+        role_id,
+        projection_order,
+        is_export_target,
+        created_at
+    ) VALUES (
+        :prose_family_id,
+        :published_prose_draft_id,
+        :projection_classval_id,
+        :projection_type_id,
+        :target_entity_id,
+        :role_id,
+        :projection_order,
+        :is_export_target,
+        NOW()
+    )
+");
 
     try {
 
         $stmt->execute([
-            ':legacy_prose_draft_id' => $publishedProseDraftId,
             ':prose_family_id' => $proseFamilyId,
             ':published_prose_draft_id' => $publishedProseDraftId,
             ':projection_classval_id' => $projectionClassvalId,
@@ -209,7 +191,7 @@ function insert_prose_projection(
             ':target_entity_id' => $targetEntityId,
             ':role_id' => $roleId,
             ':projection_order' => $projectionOrder,
-            ':is_export_target' => $isExportTarget,
+            ':is_export_target' => 0,
         ]);
 
     } catch (PDOException $e) {

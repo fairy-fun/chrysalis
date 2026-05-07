@@ -124,7 +124,7 @@ function normalise_create_prose_draft_request(): array
             }
         }
 
-        foreach (['projection_order', 'is_export_target'] as $intField) {
+        foreach (['projection_order'] as $intField) {
             if (isset($body['projection'][$intField]) && is_string($body['projection'][$intField])) {
                 if (!ctype_digit($body['projection'][$intField])) {
                     throw new InvalidArgumentException('projection.' . $intField . ' must be an integer');
