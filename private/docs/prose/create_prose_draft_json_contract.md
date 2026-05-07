@@ -237,6 +237,178 @@ If any hierarchy layer fails validation:
 - traversal stops
 - hierarchy inference is forbidden
 
+## Forbidden Attachment Fields
+
+The prose draft contract MUST NOT accept layer-class identifiers as runtime attachment targets.
+
+The following fields are forbidden for prose attachment resolution:
+
+```json
+{
+  "layer_id": "calendar_layer_event"
+}
+```
+
+```json
+{
+  "target_layer": "calendar_layer_event"
+}
+```
+
+```json
+{
+  "calendar_layer": "calendar_layer_event"
+}
+```
+
+```json
+{
+  "parent_layer_id": "calendar_layer_event"
+}
+```
+
+These values identify materialization layer classes, NOT concrete runtime parent instances.
+
+The runtime requires a resolved executable calendar event instance.
+
+Correct attachment requires:
+
+```json
+{
+  "projection_id": "...",
+  "week_id": "...",
+  "day_id": "...",
+  "time_id": "...",
+  "event_id": "..."
+}
+```
+
+Subevent prose may only attach beneath a resolved:
+
+```text
+calendar_layer_event:<event_id>
+```
+
+The prose runtime MUST reject any payload attempting to attach prose directly to:
+
+- `calendar_layer_week`
+- `calendar_layer_day`
+- `calendar_layer_time`
+- `calendar_layer_event`
+- `calendar_layer_subevent`
+
+Reason:
+
+Layer identifiers describe runtime structure categories, not executable parent identities.
+
+## Layer Type vs Runtime Instance Identity
+
+Book 1 prose execution depends on concrete runtime hierarchy resolution.
+
+The following distinction is mandatory:
+
+| Concept | Meaning | Valid Attachment Target |
+|---|---|---|
+| `calendar_layer_event` | A materialization layer class | NO |
+| `calendar_layer_event:<event_id>` | A concrete runtime event instance | YES |
+
+Incorrect:
+
+```json
+{
+  "layer_id": "calendar_layer_event"
+}
+```
+
+Why this fails:
+
+- `calendar_layer_event` identifies a runtime layer category
+- it does NOT identify a specific executable calendar event
+- prose cannot attach to an abstract layer type
+
+Correct runtime attachment requires a resolved concrete parent event:
+
+```json
+{
+  "event_id": "evt_123"
+}
+```
+
+The runtime hierarchy is:
+
+```text
+Projection
+→ Week
+→ Day
+→ Time
+→ Event
+→ Subevent prose
+```
+
+Prose attachment is only valid AFTER the runtime resolves a concrete `event_id`.
+## Deterministic Hierarchy Resolution Requirements
+
+Book 1 prose is executable projection-backed calendar state.
+
+Therefore prose placement MUST follow deterministic calendar hierarchy traversal.
+
+Required execution order:
+
+```text
+Projection
+→ Week
+→ Day
+→ Time
+→ Event
+→ Subevent prose
+```
+
+The GPT/runtime MUST NOT:
+
+- jump directly from prose intent to event targeting
+- infer events before week/day/time resolution
+- request event selection prematurely
+- attach prose using layer-class identifiers
+
+The GPT/runtime MUST resolve:
+
+```json
+{
+  "projection_id": "...",
+  "week_id": "...",
+  "day_id": "...",
+  "time_id": "...",
+  "event_id": "..."
+}
+```
+
+before prose draft creation may proceed.
+
+The following payload is INVALID:
+
+```json
+{
+  "layer_id": "calendar_layer_event"
+}
+```
+
+Reason:
+
+The payload specifies a layer category but fails to resolve a concrete runtime event instance.
+
+The runtime must instead resolve:
+
+```text
+calendar_layer_event:<event_id>
+```
+
+Only after event resolution succeeds may prose materialize beneath:
+
+```text
+calendar_layer_subevent
+```
+
+
 ## Runtime Semantics
 
 Book 1 prose is executable projection-backed calendar state.

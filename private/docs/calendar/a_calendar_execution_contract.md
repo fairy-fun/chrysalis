@@ -163,5 +163,134 @@ Violations of this rule are considered **invalid projection state** and must be 
 Execution engines MAY surface orphaned nodes at root level
 but MUST NOT synthesize missing parents from calendar_events.
 
+# Runtime Attachment Identity Invariants
 
+## Layer Type vs Runtime Instance
+
+The calendar runtime distinguishes between:
+
+- materialization layer classes
+- concrete runtime instances
+- executable attachment identities
+
+These concepts MUST NOT be treated as interchangeable.
+
+Example:
+
+```text
+calendar_layer_event
+```
+
+identifies a materialization layer category only.
+
+It does NOT identify:
+
+- a specific projection
+- a specific week
+- a specific day
+- a specific time
+- a specific executable calendar event
+
+Therefore:
+
+```text
+calendar_layer_event
+```
+
+is NOT a valid runtime attachment target.
+
+Correct executable attachment requires a resolved concrete runtime event instance:
+
+```text
+calendar_layer_event:<event_id>
+```
+
+---
+
+## Canonical Runtime Traversal
+
+Executable calendar prose MUST resolve hierarchy deterministically.
+
+Required runtime traversal order:
+
+```text
+Projection
+→ Week
+→ Day
+→ Time
+→ Event
+→ Subevent prose
+```
+
+The runtime MUST NOT:
+
+- skip hierarchy layers
+- infer events before week/day/time resolution
+- attach prose directly to runtime layer categories
+- use layer identifiers as executable parent identity
+
+Prose attachment requires a resolved:
+
+```text
+event_id
+```
+
+before prose materialization may occur.
+
+---
+
+## Runtime Attachment Requirements
+
+Valid prose attachment requires resolved runtime hierarchy state:
+
+```json
+{
+  "projection_id": "...",
+  "week_id": "...",
+  "day_id": "...",
+  "time_id": "...",
+  "event_id": "..."
+}
+```
+
+Only after `event_id` resolves may prose materialize beneath:
+
+```text
+calendar_layer_event:<event_id>
+    → calendar_layer_subevent
+```
+
+---
+
+## Forbidden Attachment Identity Forms
+
+The runtime MUST reject any payload attempting to use layer categories as executable parent identities.
+
+Invalid examples:
+
+```json
+{
+  "layer_id": "calendar_layer_event"
+}
+```
+
+```json
+{
+  "target_layer": "calendar_layer_event"
+}
+```
+
+```json
+{
+  "calendar_layer": "calendar_layer_event"
+}
+```
+
+Reason:
+
+Layer identifiers describe runtime structure categories only.
+
+They do NOT identify executable runtime parent instances.
+
+Layer identifiers MUST NEVER be accepted as executable parent identities.
 
