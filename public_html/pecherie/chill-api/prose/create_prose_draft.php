@@ -5,12 +5,11 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
+require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_hydrator.php';
+require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_creation_payload_preparer.php';
 require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_creator.php';
 
-
 /**
- *
- *
  * Prose-first ingestion contract.
  *
  * Canonical authorial payload:
@@ -51,13 +50,6 @@ function normalise_projection_payload(array $body): array
         && str_starts_with($projection['projection_type_id'], 'projection_type_')
     ) {
         $projection['projection_classval_id'] = $projection['projection_type_id'];
-
-        /*
-         * Transitional resolver
-         *
-         * Current projection_id already exists in payload.
-         * Resolve concrete topology projection_type_id from DB.
-         */
 
         if (
             isset($projection['projection_id'])
@@ -205,6 +197,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 
 requireAuth();
 
+$body = [];
+
 try {
     $body = normalise_create_prose_draft_request();
 } catch (InvalidArgumentException $e) {
@@ -218,7 +212,28 @@ $pdo = makePdo('write');
 $expectedDatabase = verifyExpectedDatabase($pdo);
 
 try {
-    $result = create_prose_draft($pdo, $body);
+    $hydrated = hydrate_prose_draft_payload($body);
+
+    if ($hydrated['needs_interview']) {
+        respond(200, [
+            'status' => 'needs_interview',
+            'database' => $expectedDatabase,
+            'interview' => [
+                'questions' => $hydrated['questions'],
+                'draft_payload' => $hydrated['draft_payload'],
+            ],
+        ]);
+    }
+
+    $draftPayload = prepare_prose_draft_creation_payload(
+        $pdo,
+        $hydrated['draft_payload']
+    );
+
+    $result = create_prose_draft(
+        $pdo,
+        $draftPayload
+    );
 
     respond(200, [
         'status' => 'ok',
