@@ -490,7 +490,7 @@ function create_prose_draft(PDO $pdo, array $body): array
     $proseBody = prose_required_string($body, 'prose_body');
 
     $metadata = derive_prose_metadata($proseBody, $body);
-    $title = $title ?? $metadata['title'];
+    $title = $title ?? $metadata['title'] ?? 'Untitled prose draft';
     $summary = $summary ?? $metadata['summary'];
 
     $draftStatusId = prose_required_string($body, 'draft_status_id');

@@ -7,6 +7,22 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_creator.php';
 
+
+/**
+ * Prose-first ingestion contract.
+ *
+ * Canonical authorial payload:
+ *   - prose_body
+ *
+ * Optional editorial overrides:
+ *   - title
+ *   - summary
+ *
+ * Structural metadata such as beat summaries,
+ * projection recommendations, chronology inference,
+ * and export recommendations are derived by the system.
+ */
+
 function normalise_projection_payload(array $body): array
 {
     if (!isset($body['projection']) || !is_array($body['projection'])) {
