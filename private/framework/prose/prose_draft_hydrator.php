@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/prose_metadata_deriver.php';
 
 /**
- * Prose-first ingestion hydration.
+ * Prose-first intake hydration.
  *
  * Canonical authorial payload:
  *   - prose_body
@@ -13,16 +13,14 @@ require_once __DIR__ . '/prose_metadata_deriver.php';
  *   - title
  *   - summary
  *
- * Projection is not required authorial payload.
- * Projection is placement metadata.
- * Placement metadata may be obtained through interview.
+ * Placement metadata:
+ *   - projection
  *
- * This layer converts prose-first intake into an internal
- * orchestration payload suitable for draft creation.
+ * Infrastructure metadata is intentionally excluded
+ * from this layer.
  */
 
 function hydrate_prose_draft_payload(
-    PDO $pdo,
     array $payload
 ): array {
 
@@ -48,7 +46,8 @@ function hydrate_prose_draft_payload(
     ) {
         $title = trim($payload['title']);
     } else {
-        $title = $metadata['title'] ?? 'Untitled prose draft';
+        $title = $metadata['title']
+            ?? 'Untitled prose draft';
     }
 
     $summary = null;
@@ -60,28 +59,46 @@ function hydrate_prose_draft_payload(
     ) {
         $summary = trim($payload['summary']);
     } else {
-        $summary = $metadata['summary'];
+        $summary = $metadata['summary'] ?? null;
     }
 
+    $normalized = [
+        'prose_body' => $proseBody,
+        'title' => $title,
+        'summary' => $summary,
+        'annotations' => (
+            isset($payload['annotations'])
+            && is_array($payload['annotations'])
+        )
+            ? $payload['annotations']
+            : [],
+    ];
+
     /*
-     * Projection interview boundary.
-     *
-     * Projection is currently still operationally required
-     * by downstream orchestration.
-     *
-     * If projection is absent, return an interview contract
-     * instead of silently inventing placement metadata.
+     * Projection remains operationally meaningful,
+     * but is not canonical authorial content.
      */
 
     if (
-        !isset($payload['projection'])
-        || !is_array($payload['projection'])
+        isset($payload['projection'])
+        && is_array($payload['projection'])
     ) {
+        $normalized['projection'] = $payload['projection'];
+    }
 
-        return [
-            'ready_to_create_draft' => false,
-            'needs_interview' => true,
-            'questions' => [
+    /*
+     * Intake completeness contract.
+     *
+     * We do not invent placement metadata.
+     */
+
+    $needsInterview = !isset($normalized['projection']);
+
+    return [
+        'ready_to_create_draft' => !$needsInterview,
+        'needs_interview' => $needsInterview,
+        'questions' => $needsInterview
+            ? [
                 [
                     'field' => 'projection',
                     'question' => 'Where does this prose belong?',
@@ -92,54 +109,8 @@ function hydrate_prose_draft_payload(
                         'undecided',
                     ],
                 ],
-            ],
-            'draft_payload' => [
-                'prose_body' => $proseBody,
-                'title' => $title,
-                'summary' => $summary,
-            ],
-        ];
-    }
-
-    /*
-     * Internal orchestration hydration.
-     *
-     * These values are system-managed infrastructure metadata,
-     * not authorial payload.
-     */
-
-    return [
-        'ready_to_create_draft' => true,
-        'needs_interview' => false,
-        'draft_payload' => [
-            'entity_id' => $payload['entity_id']
-                ?? ('prose:' . bin2hex(random_bytes(16))),
-
-            'draft_status_id' => $payload['draft_status_id']
-                ?? 'status_draft',
-
-            'prose_family_entity_id'
-            => $payload['prose_family_entity_id']
-                ?? null,
-
-            'author_entity_id'
-            => $payload['author_entity_id']
-                ?? null,
-
-            'title' => $title,
-
-            'summary' => $summary,
-
-            'prose_body' => $proseBody,
-
-            'projection' => $payload['projection'],
-
-            'annotations' => (
-                isset($payload['annotations'])
-                && is_array($payload['annotations'])
-            )
-                ? $payload['annotations']
-                : [],
-        ],
+            ]
+            : [],
+        'draft_payload' => $normalized,
     ];
 }
