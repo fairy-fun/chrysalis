@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/prose_metadata_deriver.php';
+require_once __DIR__ . '/prose_projection_interviewer.php';
 
 /**
  * Prose-first intake hydration.
@@ -85,32 +86,29 @@ function hydrate_prose_draft_payload(
     ) {
         $normalized['projection'] = $payload['projection'];
     }
-
     /*
-     * Intake completeness contract.
-     *
-     * We do not invent placement metadata.
-     */
+ * Intake completeness contract.
+ *
+ * We do not invent placement metadata.
+ */
 
-    $needsInterview = !isset($normalized['projection']);
+    if (!isset($normalized['projection'])) {
+
+        $interview = begin_prose_projection_interview();
+
+        return [
+            'ready_to_create_draft' => false,
+            'needs_interview' => true,
+            'questions' => $interview['questions'],
+            'draft_payload' => $normalized,
+        ];
+    }
 
     return [
-        'ready_to_create_draft' => !$needsInterview,
-        'needs_interview' => $needsInterview,
-        'questions' => $needsInterview
-            ? [
-                [
-                    'field' => 'projection',
-                    'question' => 'Where does this prose belong?',
-                    'options' => [
-                        'book',
-                        'dream_journal',
-                        'standalone_note',
-                        'undecided',
-                    ],
-                ],
-            ]
-            : [],
+        'ready_to_create_draft' => true,
+        'needs_interview' => false,
+        'questions' => [],
         'draft_payload' => $normalized,
     ];
+
 }
