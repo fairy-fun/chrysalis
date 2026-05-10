@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/prose_projection_writer.php';
 require_once __DIR__ . '/prose_export_context_writer.php';
 
 /**
@@ -10,16 +11,31 @@ require_once __DIR__ . '/prose_export_context_writer.php';
  * projection existence
  *     !=
  * export participation
+ *
+ * prose_projections
+ *     = projection topology + publication pointer
+ *
+ * prose_export_contexts
+ *     = export assembly identity
+ *
+ * prose_export_context_projections
+ *     = projection membership + ordering
  */
 
 /**
- * Create export context and attach existing projections.
+ * Create an export context, create projections, and persist membership.
  *
- * $projectionAttachments format:
+ * $projectionDefinitions format:
  *
  * [
  *     [
- *         'prose_projection_id' => 123,
+ *         'prose_family_id' => 123,
+ *         'published_prose_draft_id' => 456,
+ *         'projection_classval_id' => '...',
+ *         'projection_type_id' => '...',
+ *         'target_entity_id' => '...',
+ *         'role_id' => '...',
+ *         'projection_order' => 1,
  *         'export_order' => 1,
  *     ],
  * ]
@@ -29,12 +45,12 @@ function assemble_prose_export_context(
     string $exportContextKey,
     string $exportTypeId,
     ?string $label,
-    array $projectionAttachments,
+    array $projectionDefinitions,
 ): int {
 
-    if ($projectionAttachments === []) {
+    if ($projectionDefinitions === []) {
         throw new InvalidArgumentException(
-            'projectionAttachments must be non-empty'
+            'projectionDefinitions must be non-empty'
         );
     }
 
@@ -42,48 +58,78 @@ function assemble_prose_export_context(
 
     try {
 
-        $exportContextId = insert_prose_export_context(
+        $exportContextId = write_prose_export_context(
             $pdo,
             $exportContextKey,
             $exportTypeId,
             $label,
         );
 
-        foreach ($projectionAttachments as $attachment) {
+        foreach ($projectionDefinitions as $definition) {
 
-            if (!is_array($attachment)) {
+            if (!is_array($definition)) {
                 throw new InvalidArgumentException(
-                    'Each projection attachment must be an array'
+                    'Each projection definition must be an array'
                 );
             }
 
-            if (!array_key_exists('prose_projection_id', $attachment)) {
-                throw new InvalidArgumentException(
-                    'Missing prose_projection_id'
-                );
+            foreach ([
+                         'prose_family_id',
+                         'published_prose_draft_id',
+                         'projection_classval_id',
+                         'projection_type_id',
+                         'target_entity_id',
+                         'role_id',
+                     ] as $requiredKey) {
+                if (!array_key_exists($requiredKey, $definition)) {
+                    throw new InvalidArgumentException(
+                        'Missing ' . $requiredKey
+                    );
+                }
             }
 
-            $proseProjectionId = (int) $attachment['prose_projection_id'];
+            $projectionOrder = null;
+
+            if (array_key_exists('projection_order', $definition)) {
+                $projectionOrder = $definition['projection_order'];
+
+                if ($projectionOrder !== null) {
+                    $projectionOrder = (int) $projectionOrder;
+                }
+            }
 
             $exportOrder = null;
 
-            if (array_key_exists('export_order', $attachment)) {
-                $exportOrder = $attachment['export_order'];
+            if (array_key_exists('export_order', $definition)) {
+                $exportOrder = $definition['export_order'];
 
                 if ($exportOrder !== null) {
                     $exportOrder = (int) $exportOrder;
                 }
             }
 
-            attach_projection_to_export_context(
+            $projectionId = insert_prose_projection(
+                $pdo,
+                (int) $definition['prose_family_id'],
+                (int) $definition['published_prose_draft_id'],
+                (string) $definition['projection_classval_id'],
+                (string) $definition['projection_type_id'],
+                (string) $definition['target_entity_id'],
+                (string) $definition['role_id'],
+                $projectionOrder,
+            );
+
+            write_prose_export_context_projection_membership(
                 $pdo,
                 $exportContextId,
-                $proseProjectionId,
+                $projectionId,
                 $exportOrder,
             );
         }
 
         $pdo->commit();
+
+        return $exportContextId;
 
     } catch (Throwable $e) {
 
@@ -93,6 +139,4 @@ function assemble_prose_export_context(
 
         throw $e;
     }
-
-    return $exportContextId;
 }

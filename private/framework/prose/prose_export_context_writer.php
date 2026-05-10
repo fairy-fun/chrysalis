@@ -5,10 +5,11 @@ declare(strict_types=1);
 /**
  * Canonical export-context persistence layer.
  *
- * Responsibilities:
+ * prose_export_contexts
+ *     = export assembly identity
  *
- * - prose_export_contexts persistence
- * - prose_export_context_projections persistence
+ * prose_export_context_projections
+ *     = projection membership + ordering
  *
  * Explicitly NOT responsible for:
  *
@@ -16,23 +17,16 @@ declare(strict_types=1);
  * - prose draft creation
  * - projection topology validation
  * - export resolution
- *
- * Architectural boundary:
- *
- * projection existence
- *     !=
- * export participation
  */
 
 /**
- * Insert export context row.
+ * Write export context row.
  */
-function insert_prose_export_context(
+function write_prose_export_context(
     PDO $pdo,
     string $exportContextKey,
     string $exportTypeId,
     ?string $label = null,
-    ?int $exportOrder = null,
 ): int {
 
     $exportContextKey = trim($exportContextKey);
@@ -50,12 +44,6 @@ function insert_prose_export_context(
     if ($exportTypeId === '') {
         throw new InvalidArgumentException(
             'exportTypeId must be non-empty'
-        );
-    }
-
-    if ($exportOrder !== null && $exportOrder < 1) {
-        throw new InvalidArgumentException(
-            'exportOrder must be null or positive'
         );
     }
 
@@ -79,7 +67,6 @@ function insert_prose_export_context(
             ':export_context_key' => $exportContextKey,
             ':export_type_id' => $exportTypeId,
             ':label' => $label,
-            ':export_order' => $exportOrder,
         ]);
 
     } catch (PDOException $e) {
@@ -109,16 +96,13 @@ function insert_prose_export_context(
 }
 
 /**
- * Attach projection to export context.
- *
- * This models export membership only.
- *
- * It intentionally does not mutate projection topology.
+ * Write projection membership row for an export context.
  */
-function attach_projection_to_export_context(
+function write_prose_export_context_projection_membership(
     PDO $pdo,
     int $proseExportContextId,
     int $proseProjectionId,
+    ?int $exportOrder = null,
 ): void {
 
     if ($proseExportContextId < 1) {
@@ -133,6 +117,11 @@ function attach_projection_to_export_context(
         );
     }
 
+    if ($exportOrder !== null && $exportOrder < 1) {
+        throw new InvalidArgumentException(
+            'exportOrder must be null or positive'
+        );
+    }
 
     $stmt = $pdo->prepare("
         INSERT INTO sxnzlfun_chrysalis.prose_export_context_projections (
@@ -153,6 +142,7 @@ function attach_projection_to_export_context(
         $stmt->execute([
             ':export_context_id' => $proseExportContextId,
             ':prose_projection_id' => $proseProjectionId,
+            ':export_order' => $exportOrder,
         ]);
 
     } catch (PDOException $e) {
@@ -162,7 +152,7 @@ function attach_projection_to_export_context(
             && (int) $e->errorInfo[1] === 1062
         ) {
             throw new RuntimeException(
-                'Projection already attached to export context'
+                'Projection already belongs to export context'
             );
         }
 
