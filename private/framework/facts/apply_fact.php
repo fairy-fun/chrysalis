@@ -41,7 +41,7 @@ function apply_event_fact(
         throw new InvalidArgumentException('All core fields are required for event fact');
     }
 
-    $governance ??= default_fact_governance();
+    $governance = resolve_fact_governance($governance);
 
     $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_event (
@@ -100,7 +100,8 @@ function apply_global_fact(
     string $factTypeId,
     string $objectEntityId,
     ?string $sourceDocument = null,
-    ?string $notes = null
+    ?string $notes = null,
+    ?array $governance = null
 ): array {
     if (
         $subjectEntityId === '' ||
@@ -110,20 +111,28 @@ function apply_global_fact(
         throw new InvalidArgumentException('All core fields are required for global fact');
     }
 
+    $governance = resolve_fact_governance($governance);
+
     $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_global (
     subject_entity_id,
     fact_type_id,
     object_entity_id,
     source_document,
-    notes
+    notes,
+    epistemic_origin_classval_id,
+    adjudication_status_classval_id,
+    contradiction_state_classval_id
 )
 VALUES (
     :subject,
     :fact_type,
     :object,
     :source,
-    :notes
+    :notes,
+    :epistemic_origin,
+    :adjudication_status,
+    :contradiction_state
 )
 ON DUPLICATE KEY UPDATE
     linked_fact_id = linked_fact_id
@@ -135,6 +144,9 @@ SQL);
         'object' => $objectEntityId,
         'source' => $sourceDocument,
         'notes' => $notes,
+        'epistemic_origin' => $governance['epistemic_origin_classval_id'],
+        'adjudication_status' => $governance['adjudication_status_classval_id'],
+        'contradiction_state' => $governance['contradiction_state_classval_id'],
     ]);
 
     return [
