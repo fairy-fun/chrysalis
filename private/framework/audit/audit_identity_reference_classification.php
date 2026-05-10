@@ -55,6 +55,57 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['idea_classifications', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['profile_type_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
 
+        // adjudication status
+        ['calendar_event_knowledge', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['calendar_events', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['characters', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['dreams', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['entities', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_event', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_global', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_legacy', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['events', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['narrative_theme_observations', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['places', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['prose_annotation_spans', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['prose_drafts', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['prose_projections', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['relationships', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['semantic_aliases', 'adjudication_status_classval_id', 'CLASSVAL'],
+
+// contradiction state
+        ['calendar_event_knowledge', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['calendar_events', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['dreams', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_event', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_legacy', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['narrative_theme_observations', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['prose_drafts', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['prose_projections', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['relationships', 'contradiction_state_classval_id', 'CLASSVAL'],
+
+// epistemic origin
+        ['calendar_event_knowledge', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['calendar_events', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['characters', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['dreams', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['entities', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['entity_linked_facts_legacy', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['events', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['narrative_theme_observations', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['places', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['prose_annotation_spans', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['prose_drafts', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['prose_projections', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['relationships', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['semantic_aliases', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+// authority level
+        ['prose_annotation_spans', 'authority_level_classval_id', 'CLASSVAL'],
+
 
         // classval references
         ['attribute_type_layer_map', 'layer_classval_id', 'CLASSVAL'],
