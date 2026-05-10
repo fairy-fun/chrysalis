@@ -22,6 +22,70 @@ function prepare_fact_write(PDO $pdo, string $sql): PDOStatement
     return $pdo->prepare($sql);
 }
 
+function assert_superseded_event_fact_exists(
+    PDO $pdo,
+    ?int $supersedesLinkedFactId
+): void {
+    if ($supersedesLinkedFactId === null) {
+        return;
+    }
+
+    if ($supersedesLinkedFactId < 1) {
+        throw new InvalidArgumentException(
+            'supersedesLinkedFactId must be positive'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT linked_fact_id
+        FROM entity_linked_facts_event
+        WHERE linked_fact_id = :id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        'id' => $supersedesLinkedFactId,
+    ]);
+
+    if ($stmt->fetch(PDO::FETCH_ASSOC) === false) {
+        throw new RuntimeException(
+            'Superseded event fact does not exist'
+        );
+    }
+}
+
+function assert_superseded_global_fact_exists(
+    PDO $pdo,
+    ?int $supersedesLinkedFactId
+): void {
+    if ($supersedesLinkedFactId === null) {
+        return;
+    }
+
+    if ($supersedesLinkedFactId < 1) {
+        throw new InvalidArgumentException(
+            'supersedesLinkedFactId must be positive'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT linked_fact_id
+        FROM entity_linked_facts_global
+        WHERE linked_fact_id = :id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        'id' => $supersedesLinkedFactId,
+    ]);
+
+    if ($stmt->fetch(PDO::FETCH_ASSOC) === false) {
+        throw new RuntimeException(
+            'Superseded global fact does not exist'
+        );
+    }
+}
+
 function apply_event_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -30,7 +94,8 @@ function apply_event_fact(
     string $objectEntityId,
     ?string $sourceDocument = null,
     ?string $notes = null,
-    ?array $governance = null
+    ?array $governance = null,
+    ?int $supersedesLinkedFactId = null
 ): array {
     if (
         $subjectEntityId === '' ||
@@ -40,6 +105,8 @@ function apply_event_fact(
     ) {
         throw new InvalidArgumentException('All core fields are required for event fact');
     }
+
+    assert_superseded_event_fact_exists($pdo, $supersedesLinkedFactId);
 
     $governance = resolve_fact_governance($governance);
 
@@ -53,7 +120,8 @@ INSERT INTO entity_linked_facts_event (
     notes,
     epistemic_origin_classval_id,
     adjudication_status_classval_id,
-    contradiction_state_classval_id
+    contradiction_state_classval_id,
+    supersedes_linked_fact_id
 )
 VALUES (
     :subject,
@@ -64,7 +132,8 @@ VALUES (
     :notes,
     :epistemic_origin,
     :adjudication_status,
-    :contradiction_state
+    :contradiction_state,
+    :supersedes_linked_fact_id
 )
 ON DUPLICATE KEY UPDATE
     linked_fact_id = linked_fact_id
@@ -80,6 +149,7 @@ SQL);
         'epistemic_origin' => $governance['epistemic_origin_classval_id'],
         'adjudication_status' => $governance['adjudication_status_classval_id'],
         'contradiction_state' => $governance['contradiction_state_classval_id'],
+        'supersedes_linked_fact_id' => $supersedesLinkedFactId,
     ]);
 
     return [
@@ -90,6 +160,7 @@ SQL);
             'context_entity_id' => $contextEntityId,
             'fact_type_id' => $factTypeId,
             'object_entity_id' => $objectEntityId,
+            'supersedes_linked_fact_id' => $supersedesLinkedFactId,
         ],
     ];
 }
@@ -101,7 +172,8 @@ function apply_global_fact(
     string $objectEntityId,
     ?string $sourceDocument = null,
     ?string $notes = null,
-    ?array $governance = null
+    ?array $governance = null,
+    ?int $supersedesLinkedFactId = null
 ): array {
     if (
         $subjectEntityId === '' ||
@@ -110,6 +182,8 @@ function apply_global_fact(
     ) {
         throw new InvalidArgumentException('All core fields are required for global fact');
     }
+
+    assert_superseded_global_fact_exists($pdo, $supersedesLinkedFactId);
 
     $governance = resolve_fact_governance($governance);
 
@@ -122,7 +196,8 @@ INSERT INTO entity_linked_facts_global (
     notes,
     epistemic_origin_classval_id,
     adjudication_status_classval_id,
-    contradiction_state_classval_id
+    contradiction_state_classval_id,
+    supersedes_linked_fact_id
 )
 VALUES (
     :subject,
@@ -132,7 +207,8 @@ VALUES (
     :notes,
     :epistemic_origin,
     :adjudication_status,
-    :contradiction_state
+    :contradiction_state,
+    :supersedes_linked_fact_id
 )
 ON DUPLICATE KEY UPDATE
     linked_fact_id = linked_fact_id
@@ -147,6 +223,7 @@ SQL);
         'epistemic_origin' => $governance['epistemic_origin_classval_id'],
         'adjudication_status' => $governance['adjudication_status_classval_id'],
         'contradiction_state' => $governance['contradiction_state_classval_id'],
+        'supersedes_linked_fact_id' => $supersedesLinkedFactId,
     ]);
 
     return [
@@ -156,6 +233,7 @@ SQL);
             'subject_entity_id' => $subjectEntityId,
             'fact_type_id' => $factTypeId,
             'object_entity_id' => $objectEntityId,
+            'supersedes_linked_fact_id' => $supersedesLinkedFactId,
         ],
     ];
 }
