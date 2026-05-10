@@ -110,10 +110,10 @@ These may introduce additional fields (e.g. `chronology_address`) but must still
 
 ## Core Invariants
 
-* Every projection row belongs to a **build**
-* Projections are **fully derived**
-* Projection tables are **not written to directly by domain logic**
-* Required fields are enforced by the **materializer**, not the database schema
+* Projection topology is persisted in `prose_projections`
+* Export assembly membership is persisted separately
+* Projection persistence is mediated through framework orchestration layers
+* Required projection semantics are enforced by orchestration/writer contracts
 
 ---
 
