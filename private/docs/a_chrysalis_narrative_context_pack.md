@@ -84,13 +84,22 @@ It may not write beyond the prose.
 
 # 4. Repository Files Referenced
 
-| Repository File | Purpose |
-|---|---|
-| `private/framework/calendar/calendar_subevent_service.php` | Canonical calendar subevent persistence and projection-aware materialization |
-| `private/framework/calendar/calendar_prose_batch_planner.php` | Semantic prose segmentation, beat extraction, and review-plan generation |
-| `private/docs/prose/limbic_documentation.md` | Event-scoped limbic state doctrine and suggestion/fact architecture |
-| `private/docs/prose/limbic_pov.md` | POV-bounded epistemic constraints, Shay doctrine, and NPC/PC asymmetry |
-| `private/docs/calendar/beat_classsets.md` | Referenced by planner for beat classset definitions and classifier contracts |
+| Repository File                                                  | Purpose                                                                      |
+|------------------------------------------------------------------|------------------------------------------------------------------------------|
+| `private/framework/calendar/calendar_subevent_service.php`       | Canonical calendar subevent persistence and projection-aware materialization |
+| `private/framework/calendar/calendar_prose_batch_planner.php`    | Semantic prose segmentation, beat extraction, and review-plan generation     |
+| `private/docs/prose/limbic_documentation.md`                     | Event-scoped limbic state doctrine and suggestion/fact architecture          |
+| `private/docs/prose/limbic_pov.md`                               | POV-bounded epistemic constraints, Shay doctrine, and NPC/PC asymmetry       |
+| `private/docs/calendar/beat_classsets.md`                        | Referenced by planner for beat classset definitions and classifier contracts |
+| File                                                             | Purpose                                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------  |
+| `private/framework/prose/prose_draft_creator.php`                | Unified prose ingestion, annotation persistence, and calendar orchestration  |
+| `private/framework/entity/entity_link_suggestions.php`           | Non-canonical SQL suggestion generation for entity linking                   |
+| `private/framework/limbic/limbic_fact_validator.php`             | Runtime POV admissibility enforcement and Shay protection                    |
+| `private/framework/limbic/limbic_fact_writer.php`                | Canonical limbic fact persistence                                            |
+| `public_html/pecherie/chill-api/prose/add_prose_annotations.php` | Annotation ingestion endpoint                                                |
+| `public_html/pecherie/chill-api/entity/suggest_link_entity.php`  | Suggestion-generation API endpoint                                           |
+
 
 ---
 
@@ -230,6 +239,37 @@ external steadiness ≠ internal regulation
 
 Especially important for Shay.
 
+### Existing Durable Suggestion Infrastructure
+entity_limbic_state_suggestions_event
+
+already supports:
+```text
+durable machine-generated inference persistence
+confidence values
+evidence/support metadata
+promotion tracking
+canonical fact linkage
+```
+
+#### Existing columns include:
+```text
+suggestion_id
+basis_type
+supporting_entities
+confidence
+promoted_at
+promoted_to_fact_id
+```
+#### And now planned additions:
+```text
+review_status
+reviewed_by_entity_id
+reviewed_at
+epistemic_scope
+inferred_by_entity_id
+supporting_annotation_ids
+```
+
 ---
 
 # 8. POV Doctrine
@@ -288,6 +328,27 @@ The system may think beyond the prose.
 It may not write beyond the prose.
 ```
 
+limbic_assert_pov_bounded_fact_support()
+
+already exist in runtime validation.
+
+#### Runtime Enforcement Exists
+
+private/framework/limbic/limbic_fact_validator.php
+
+already enforces:
+```text
+Shay POV restrictions
+explicit evidence requirements
+```
+
+Current doctrine is therefore:
+```text
+conceptual
+AND runtime-enforced
+```
+That is a major distinction.
+
 ---
 
 # 9. Long-Term Goal
@@ -334,6 +395,7 @@ Author remains sovereign.
 
 ```text
 prose
+→ annotation spans
 → segmentation
 → beat extraction
 → semantic inference
@@ -346,18 +408,332 @@ prose
 → manual Postman execution
 → canonical persistence
 ```
+### the system already includes:
+```text
+durable suggestions
+annotations
+semantic persistence layers
+```
+
+## Suggestion Governance
+
+Because this is now the real architectural center.
+```text
+Suggestions are durable but non-canonical.
+
+A suggestion may:
+- originate from machine inference
+- originate from NPC cognition
+- reference prose annotations
+- contain confidence metadata
+- contain epistemic scope metadata
+
+A suggestion may NOT become canonical truth
+without explicit author adjudication.
+
+Rejected suggestions remain durable
+to prevent continuity drift and repeated inference.
+```
+
+## Prose Annotation Layer
+
+Core persistence table:
+```text
+prose_annotation_spans
+```
+Supports:
+
+* span-level semantic grounding
+* subject-scoped annotations
+* ontology-typed annotations
+* source attribution
+* evidence linkage for inference review
+
+This is the explainability layer for semantic cognition.
+
+
+## Governance Model
+### 1. Separate Artifact From Canonical Status
+
+Never store:
+
+{
+"is_canonical": true
+}
+
+Instead:
+
+artifact
+artifact_revision
+artifact_adjudication
+artifact_promotion_event
+
+Canon is not a property.
+Canon is the result of governance history.
+
+### 2. Epistemic Classes
+
+Every machine-generated entity should carry an epistemic origin.
+
+Example:
+
+OBSERVED
+Directly stated in source material
+
+DERIVED
+Mechanically extracted from explicit text
+
+INFERRED
+Semantic implication generated by cognition systems
+
+SPECULATIVE
+Weak-confidence narrative possibility
+
+SYNTHETIC
+Machine-authored connective proposal
+
+AUTHOR_CONFIRMED
+Explicitly approved by human authority
+
+AUTHOR_REJECTED
+Explicitly denied by human authority
+
+This becomes critically important later when:
+
+contradictions emerge
+timelines fork
+POV boundaries matter
+NPC cognition diverges
+memory corruption exists intentionally
+
+3. Promotion Must Be Event-Based
+
+Do not mutate rows into canon.
+
+Instead:
+```text
+artifact_created
+artifact_reviewed
+artifact_promoted
+artifact_rejected
+artifact_superseded
+artifact_restored
+artifact_deprecated
+```
+
+This gives:
+
+* auditability
+* replayability
+* temporal truth reconstruction
+* provenance integrity
+
+You already have orchestration thinking aligned with this.
+
+### 4. Rejection Must Persist
+
+This is one of the most important pieces.
+
+A rejected inference cannot simply disappear.
+
+Because otherwise the system will regenerate it forever.
+
+You need durable rejection memory.
+
+Example:
+```text
+Suggestion:
+"Shay trusts Elias"
+
+Rejected because:
+"POV violation: Shay never internally resolves trust"
+
+Future inference systems must consult:
+- rejection history
+- rejection rationale
+- rejection class
+
+This turns rejection into training data for the cognition layer.
+```
+
+### 5. Rejection Types Matter
+
+Not all rejections mean the same thing.
+
+Suggested taxonomy:
+```text
+FACTUAL_ERROR
+TIMELINE_CONTRADICTION
+POV_VIOLATION
+THEMATIC_VIOLATION
+VOICE_VIOLATION
+TOO_EXPLICIT
+TOO_ON_THE_NOSE
+PREMATURE_REVELATION
+CHARACTER_INCONSISTENCY
+WORLD_RULE_CONFLICT
+AUTHORIAL_PREFERENCE
+```
+This becomes extraordinarily valuable later for:
+
+* adaptive inference suppression
+* stylistic tuning
+* narrative safety rails
+* future model steering
+
+### 6. Promotion Should Require Provenance Closure
+
+A promoted artifact should never exist without:
+
+* source lineage
+* supporting annotations
+* originating beats
+* inference chain
+* model/version metadata
+* adjudicator identity
+* timestamp
+
+You want future explainability:
+
+“Why does the system believe this?”
+
+Without this, continuity debugging becomes impossible at scale.
+
+7. Contradictions Need First-Class Representation
+
+Do not treat contradiction as corruption.
+
+Narratives often intentionally contain:
+
+* unreliable narration
+* memory fracture
+* conflicting testimony
+* evolving truths
+* retcons
+* perspective asymmetry
+
+So instead of:
+```text
+fact A invalidates fact B
+```
+You often need:
+```text
+fact A contradicts fact B
+under context:
+- narrator=shay
+- temporal_state=pre-collapse
+- confidence=subjective
+```
+Contradictions should be governable entities.
+
+### 8. Canon Should Be Temporal
+
+Avoid “current truth only.”
+
+Instead:
+```text
+canonical during revision window X
+superseded at Y
+restored at Z
+```
+This matters because:
+
+* books evolve
+* revisions happen
+* scenes migrate
+* interpretations sharpen
+* future tooling may need historical reconstruction
+
+### 9. Governance Requires Explicit Authority Hierarchy
+
+You already implicitly have this.
+
+You should formalize it.
+
+Example:
+```text
+AUTHOR
+absolute authority
+
+EDITOR
+review authority
+
+SYSTEM
+proposal authority only
+
+READER_MODEL
+non-authoritative inference
+
+AUTOMATION
+transport/extraction authority only
+```
+### 10. Shay POV Doctrine Should Become Enforcement Rules
+Our architecture repeatedly emphasizes:
+
+* anti-omniscience
+* constrained interpretation
+* emotional opacity
+* protected ambiguity
+
+That should become executable policy.
+
+#### RULE:
+No inferred internal emotional certainty may be promoted for Shay
+
+This prevents accidental canonization by automation.
+
+### Minimal Schema Layer
+
+Something approximately like:
+```text
+artifacts
+artifact_revisions
+artifact_sources
+artifact_annotations
+artifact_inferences
+artifact_adjudications
+artifact_promotion_events
+artifact_contradictions
+artifact_rejection_reasons
+artifact_authority
+```
+And critically:
+```text
+canonical_views
+```
+should probably be computed projections, not primary storage.
+
+---
+
+### Most Important Architectural Principle
+
+The cognition system should never ask:
+
+> “What is true?”
+
+It should ask:
+
+> “What is currently governably admissible as canon under this authority and temporal context?”
+
+That distinction is the difference between:
+
+* autocomplete lore systems
+and
+* durable narrative cognition infrastructure.
 
 ---
 
 # 12. Immediate Next Steps
-
-1. Define NPC/PC boundary contract
-2. Inspect limbic framework code
-3. Create POV admissibility validator
-4. Add Shay protection checks
-5. Prototype NPC response generator
-6. Keep all outputs suggestion-only
-7. Avoid auto-persistence
+```text
+1. Extend durable suggestion review governance
+2. Add review_status lifecycle support
+3. Persist author thumbs up/down decisions
+4. Add annotation-grounded evidence linkage
+5. Add epistemic_scope enforcement
+6. Prevent repeated rejected suggestions
+7. Build second-interview adjudication API
+8. Prototype NPC cognition constrained by epistemic scope
+```
 
 ---
 
