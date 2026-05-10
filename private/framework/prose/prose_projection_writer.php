@@ -158,7 +158,7 @@ function insert_prose_projection(
     );
 
     $stmt = $pdo->prepare("
-    INSERT INTO sxnzlfun_chrysalis.prose_projections (
+        INSERT INTO sxnzlfun_chrysalis.prose_projections (
         prose_family_id,
         published_prose_draft_id,
         projection_classval_id,
