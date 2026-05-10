@@ -720,6 +720,55 @@ That distinction is the difference between:
 * autocomplete lore systems
 and
 * durable narrative cognition infrastructure.
+  
+
+## Add defaults at insertion boundaries
+
+Not necessarily DB defaults yet, but application-level defaults:
+```text
+manual author creation:
+epistemic_origin = manual_author_entry
+adjudication_status = approved
+
+machine inference:
+epistemic_origin = inferred
+adjudication_status = pending
+
+semantic extraction:
+epistemic_origin = derived
+adjudication_status = pending
+
+imports:
+epistemic_origin = imported
+adjudication_status = pending
+```
+That gives immediate behavioral consistency across the system.
+
+The other major recommendation:
+
+Do NOT add these columns blindly to every table
+
+Only add them to:
+
+* semantic entities
+* inferred structures
+* annotations
+* relationships
+* extracted knowledge
+* cognition artifacts
+* generated summaries/projections
+
+Avoid operational tables like:
+
+* sessions
+* logs
+* transport queues
+* auth
+* caches
+* orchestration state
+* trigger audit tables
+
+The governance semantics only matter where narrative truth or semantic legitimacy exists.
 
 ---
 
