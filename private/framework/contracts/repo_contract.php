@@ -238,6 +238,24 @@ const FW_REPO_CONTRACT = [
             'audit_visibility_required' => true,
         ],
 
+        'applyGovernedGlobalFact' => [
+            'handler'
+            => 'public_html/pecherie/chill-api/facts/apply_governed_global_fact.php',
+            'visibility' => 'public',
+            'writes' => true,
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+
+        'applyGovernedEventFact' => [
+            'handler'
+            => 'public_html/pecherie/chill-api/facts/apply_governed_event_fact.php',
+            'visibility' => 'public',
+            'writes' => true,
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+
         'suggestEntityEventThemeLink' => [
             'handler' => 'public_html/pecherie/chill-api/expression/suggest_entity_event_theme_link.php',
             'behaviour_tested' => false,
