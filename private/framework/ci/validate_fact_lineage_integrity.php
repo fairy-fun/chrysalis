@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+/*
+* See private/docs/facts/fact_lineage.md for lineage invariants and atomic supersession contract.
+ *
+ */
+
+
 function fail(string $message): never
 {
     fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL);

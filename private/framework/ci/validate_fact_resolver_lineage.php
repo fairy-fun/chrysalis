@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-
 function fail(string $message): never
 {
     fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL);
