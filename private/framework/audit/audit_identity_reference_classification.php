@@ -160,6 +160,22 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['canonical_entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['canonical_entity_linked_facts_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
 
+        ['canonical_unresolved_contradictions_global', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['canonical_unresolved_contradictions_global', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['canonical_unresolved_contradictions_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['governed_canonical_entity_linked_facts_event', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['governed_canonical_entity_linked_facts_event', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['governed_canonical_entity_linked_facts_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['governed_canonical_entity_linked_facts_global', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['governed_canonical_entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['governed_canonical_entity_linked_facts_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['canonical_unresolved_contradictions_event', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['canonical_unresolved_contradictions_event', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['canonical_unresolved_contradictions_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
         ['unresolved_entity_fact_contradictions_event', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['unresolved_entity_fact_contradictions_event', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['unresolved_entity_fact_contradictions_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
