@@ -4,9 +4,15 @@ declare(strict_types=1);
 function default_fact_governance(): array
 {
     return [
-        'epistemic_origin_classval_id' => 'epistemic_origin_observed',
-        'adjudication_status_classval_id' => 'adjudication_status_unreviewed',
-        'contradiction_state_classval_id' => 'contradiction_state_unassessed',
+        'epistemic_origin_classval_id'
+        => '47ff0741-4c9a-11f1-80c0-fa163e40c938',
+
+        'adjudication_status_classval_id'
+        => '4807d536-4c9a-11f1-80c0-fa163e40c938',
+
+        // still canonical in current ontology
+        'contradiction_state_classval_id'
+        => 'contradiction_state_unassessed',
     ];
 }
 
