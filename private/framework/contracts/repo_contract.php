@@ -280,5 +280,14 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+
+        'resolveGlobalFact' => [
+            'handler'
+            => 'public_html/pecherie/chill-api/facts/resolve_global_fact.php',
+            'visibility' => 'public',
+            'writes' => false,
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];

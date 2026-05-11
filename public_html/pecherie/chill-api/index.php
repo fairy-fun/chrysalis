@@ -205,6 +205,10 @@ switch ($operation) {
         require __DIR__ . '/facts/apply_governed_event_fact.php';
         exit;
 
+    case 'resolveGlobalFact':
+        require __DIR__ . '/facts/resolve_global_fact.php';
+        exit;
+
     case 'resolveSongArtistPair':
         require __DIR__ . '/music/resolve_song_artist_pair.php';
         break;

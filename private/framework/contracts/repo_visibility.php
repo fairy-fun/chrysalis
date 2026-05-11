@@ -95,5 +95,6 @@ return [
         'resolveProseExportText' => 'public_html/pecherie/chill-api/prose/resolve_prose_export_text.php',
         'applyGovernedGlobalFact' => 'public_html/pecherie/chill-api/facts/apply_governed_global_fact.php',
         'applyGovernedEventFact' => 'public_html/pecherie/chill-api/facts/apply_governed_event_fact.php',
+        'resolveGlobalFact' => 'public_html/pecherie/chill-api/facts/resolve_global_fact.php',
     ],
 ];
