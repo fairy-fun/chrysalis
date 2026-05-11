@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require __DIR__ . '/../api/api_bootstrap.php';
+require __DIR__ . '/validate_fact_lineage_integrity.php';
+require __DIR__ . '/validate_fact_resolver_lineage.php';
 require __DIR__ . '/../audit/audit_traversal_trigger_integrity.php';
 require __DIR__ . '/../audit/audit_event_graph_identity.php';
 require __DIR__ . '/../audit/audit_attribute_domain_mapping.php';
@@ -31,6 +33,8 @@ $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
 
 $audits = [
+    'fact lineage integrity' => fn () => validate_fact_lineage_integrity($pdo),
+    'fact resolver lineage' => fn () => validate_fact_resolver_lineage($pdo),
     'traversal trigger absence' => fn () => assert_traversal_trigger_absence($pdo, $schemaName),
     'traversal root entity identity' => fn () => assert_traversal_root_entity_identity($pdo, $schemaName),
     'event graph identity' => fn () => assert_event_graph_identity($pdo, $schemaName),
