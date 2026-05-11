@@ -9,18 +9,27 @@ require_once __DIR__ . '/fact_governance.php';
  *
  * Canonical fact =
  * fact row that is NOT superseded by another row.
+ *
+ * When $forUpdate is true, this must be called inside a transaction.
  */
 function resolve_canonical_global_fact(
     PDO $pdo,
     string $subjectEntityId,
     string $factTypeId,
     ?string $objectEntityId = null,
-    bool $acceptedOnly = false
+    bool $acceptedOnly = false,
+    bool $forUpdate = false
 ): ?array {
 
     if ($subjectEntityId === '' || $factTypeId === '') {
         throw new InvalidArgumentException(
             'subjectEntityId and factTypeId are required'
+        );
+    }
+
+    if ($forUpdate && !$pdo->inTransaction()) {
+        throw new RuntimeException(
+            'FOR UPDATE canonical fact resolution requires an active transaction'
         );
     }
 
@@ -35,6 +44,10 @@ function resolve_canonical_global_fact(
         ? 'AND f.object_entity_id = :object'
         : '';
 
+    $forUpdateClause = $forUpdate
+        ? 'FOR UPDATE'
+        : '';
+
     $sql = <<<SQL
 SELECT f.*
 FROM entity_linked_facts_global f
@@ -46,6 +59,7 @@ WHERE newer.linked_fact_id IS NULL
   {$objectClause}
   {$acceptedClause}
 LIMIT 2
+{$forUpdateClause}
 SQL;
 
     $stmt = $pdo->prepare($sql);
@@ -77,6 +91,8 @@ SQL;
  *
  * Canonical fact =
  * fact row that is NOT superseded by another row.
+ *
+ * When $forUpdate is true, this must be called inside a transaction.
  */
 function resolve_canonical_event_fact(
     PDO $pdo,
@@ -84,7 +100,8 @@ function resolve_canonical_event_fact(
     string $contextEntityId,
     string $factTypeId,
     ?string $objectEntityId = null,
-    bool $acceptedOnly = false
+    bool $acceptedOnly = false,
+    bool $forUpdate = false
 ): ?array {
 
     if (
@@ -94,6 +111,12 @@ function resolve_canonical_event_fact(
     ) {
         throw new InvalidArgumentException(
             'subjectEntityId, contextEntityId, and factTypeId are required'
+        );
+    }
+
+    if ($forUpdate && !$pdo->inTransaction()) {
+        throw new RuntimeException(
+            'FOR UPDATE canonical fact resolution requires an active transaction'
         );
     }
 
@@ -108,6 +131,10 @@ function resolve_canonical_event_fact(
         ? 'AND f.object_entity_id = :object'
         : '';
 
+    $forUpdateClause = $forUpdate
+        ? 'FOR UPDATE'
+        : '';
+
     $sql = <<<SQL
 SELECT f.*
 FROM entity_linked_facts_event f
@@ -120,6 +147,7 @@ WHERE newer.linked_fact_id IS NULL
   {$objectClause}
   {$acceptedClause}
 LIMIT 2
+{$forUpdateClause}
 SQL;
 
     $stmt = $pdo->prepare($sql);

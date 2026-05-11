@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/fact_governance.php';
 require_once __DIR__ . '/fact_lineage.php';
+require_once __DIR__ . '/fact_resolver.php';
 
 function assert_not_legacy_fact_table(string $sql): void
 {
@@ -23,6 +24,55 @@ function prepare_fact_write(PDO $pdo, string $sql): PDOStatement
     return $pdo->prepare($sql);
 }
 
+function is_fact_lineage_conflict_exception(PDOException $e): bool
+{
+    return $e->getCode() === '23000';
+}
+
+function transactional_fact_write(
+    PDO $pdo,
+    callable $callback
+): array {
+    $startedTransaction = false;
+
+    if (!$pdo->inTransaction()) {
+        $pdo->beginTransaction();
+        $startedTransaction = true;
+    }
+
+    try {
+        $result = $callback();
+
+        if ($startedTransaction) {
+            $pdo->commit();
+        }
+
+        return $result;
+
+    } catch (PDOException $e) {
+        if ($startedTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        if (is_fact_lineage_conflict_exception($e)) {
+            throw new RuntimeException(
+                'Fact lineage conflict detected',
+                0,
+                $e
+            );
+        }
+
+        throw $e;
+
+    } catch (Throwable $e) {
+        if ($startedTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        throw $e;
+    }
+}
+
 function apply_event_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -40,25 +90,70 @@ function apply_event_fact(
         $factTypeId === '' ||
         $objectEntityId === ''
     ) {
-        throw new InvalidArgumentException('All core fields are required for event fact');
-    }
-
-    if ($supersedesLinkedFactId !== null) {
-        assert_valid_fact_supersession(
-            $pdo,
-            $supersedesLinkedFactId,
-            [
-                'subject_entity_id' => $subjectEntityId,
-                'context_entity_id' => $contextEntityId,
-                'fact_type_id' => $factTypeId,
-            ],
-            true
+        throw new InvalidArgumentException(
+            'All core fields are required for event fact'
         );
     }
 
-    $governance = resolve_fact_governance($governance);
+    $write = function () use (
+        $pdo,
+        $subjectEntityId,
+        $contextEntityId,
+        $factTypeId,
+        $objectEntityId,
+        $sourceDocument,
+        $notes,
+        $governance,
+        $supersedesLinkedFactId
+    ): array {
+        $current = resolve_canonical_event_fact(
+            $pdo,
+            $subjectEntityId,
+            $contextEntityId,
+            $factTypeId,
+            null,
+            false,
+            true
+        );
 
-    $stmt = prepare_fact_write($pdo, <<<SQL
+        $resolvedSupersedesId = null;
+
+        if ($current !== null) {
+            $currentHeadId = (int) $current['linked_fact_id'];
+
+            if ($supersedesLinkedFactId === null) {
+                throw new RuntimeException(
+                    'Explicit supersedesLinkedFactId is required when advancing an existing event fact lineage'
+                );
+            }
+
+            if ($supersedesLinkedFactId !== $currentHeadId) {
+                throw new RuntimeException(
+                    'Supersession target is not current event fact lineage head'
+                );
+            }
+
+            $resolvedSupersedesId = $currentHeadId;
+
+            assert_valid_fact_supersession(
+                $pdo,
+                $resolvedSupersedesId,
+                [
+                    'subject_entity_id' => $subjectEntityId,
+                    'context_entity_id' => $contextEntityId,
+                    'fact_type_id' => $factTypeId,
+                ],
+                true
+            );
+        } elseif ($supersedesLinkedFactId !== null) {
+            throw new RuntimeException(
+                'Cannot supersede event fact because no current lineage head exists for this slot'
+            );
+        }
+
+        $governanceResolved = resolve_fact_governance($governance);
+
+        $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_event (
     subject_entity_id,
     context_entity_id,
@@ -85,35 +180,38 @@ VALUES (
 )
 SQL);
 
-    $stmt->execute([
-        'subject' => $subjectEntityId,
-        'context' => $contextEntityId,
-        'fact_type' => $factTypeId,
-        'object' => $objectEntityId,
-        'source' => $sourceDocument,
-        'notes' => $notes,
-        'epistemic_origin' => $governance['epistemic_origin_classval_id'],
-        'adjudication_status' => $governance['adjudication_status_classval_id'],
-        'contradiction_state' => $governance['contradiction_state_classval_id'],
-        'supersedes_linked_fact_id' => $supersedesLinkedFactId,
-    ]);
+        $stmt->execute([
+            'subject' => $subjectEntityId,
+            'context' => $contextEntityId,
+            'fact_type' => $factTypeId,
+            'object' => $objectEntityId,
+            'source' => $sourceDocument,
+            'notes' => $notes,
+            'epistemic_origin' => $governanceResolved['epistemic_origin_classval_id'],
+            'adjudication_status' => $governanceResolved['adjudication_status_classval_id'],
+            'contradiction_state' => $governanceResolved['contradiction_state_classval_id'],
+            'supersedes_linked_fact_id' => $resolvedSupersedesId,
+        ]);
 
-    $linkedFactId = (int) $pdo->lastInsertId();
+        $linkedFactId = (int) $pdo->lastInsertId();
 
-    return [
-        'status' => 'applied',
-        'created' => true,
-        'linked_fact_id' => $linkedFactId,
-        'table' => 'entity_linked_facts_event',
-        'fact' => [
+        return [
+            'status' => 'applied',
+            'created' => true,
             'linked_fact_id' => $linkedFactId,
-            'subject_entity_id' => $subjectEntityId,
-            'context_entity_id' => $contextEntityId,
-            'fact_type_id' => $factTypeId,
-            'object_entity_id' => $objectEntityId,
-            'supersedes_linked_fact_id' => $supersedesLinkedFactId,
-        ],
-    ];
+            'table' => 'entity_linked_facts_event',
+            'fact' => [
+                'linked_fact_id' => $linkedFactId,
+                'subject_entity_id' => $subjectEntityId,
+                'context_entity_id' => $contextEntityId,
+                'fact_type_id' => $factTypeId,
+                'object_entity_id' => $objectEntityId,
+                'supersedes_linked_fact_id' => $resolvedSupersedesId,
+            ],
+        ];
+    };
+
+    return transactional_fact_write($pdo, $write);
 }
 
 function apply_global_fact(
@@ -131,24 +229,69 @@ function apply_global_fact(
         $factTypeId === '' ||
         $objectEntityId === ''
     ) {
-        throw new InvalidArgumentException('All core fields are required for global fact');
-    }
-
-    if ($supersedesLinkedFactId !== null) {
-        assert_valid_fact_supersession(
-            $pdo,
-            $supersedesLinkedFactId,
-            [
-                'subject_entity_id' => $subjectEntityId,
-                'fact_type_id' => $factTypeId,
-            ],
-            false
+        throw new InvalidArgumentException(
+            'All core fields are required for global fact'
         );
     }
 
-    $governance = resolve_fact_governance($governance);
+    return transactional_fact_write(
+        $pdo,
+        function () use (
+            $pdo,
+            $subjectEntityId,
+            $factTypeId,
+            $objectEntityId,
+            $sourceDocument,
+            $notes,
+            $governance,
+            $supersedesLinkedFactId
+        ): array {
+            $current = resolve_canonical_global_fact(
+                $pdo,
+                $subjectEntityId,
+                $factTypeId,
+                null,
+                false,
+                true
+            );
 
-    $stmt = prepare_fact_write($pdo, <<<SQL
+            $resolvedSupersedesId = null;
+
+            if ($current !== null) {
+                $currentHeadId = (int) $current['linked_fact_id'];
+
+                if ($supersedesLinkedFactId === null) {
+                    throw new RuntimeException(
+                        'Explicit supersedesLinkedFactId is required when advancing an existing global fact lineage'
+                    );
+                }
+
+                if ($supersedesLinkedFactId !== $currentHeadId) {
+                    throw new RuntimeException(
+                        'Supersession target is not current global fact lineage head'
+                    );
+                }
+
+                $resolvedSupersedesId = $currentHeadId;
+
+                assert_valid_fact_supersession(
+                    $pdo,
+                    $resolvedSupersedesId,
+                    [
+                        'subject_entity_id' => $subjectEntityId,
+                        'fact_type_id' => $factTypeId,
+                    ],
+                    false
+                );
+            } elseif ($supersedesLinkedFactId !== null) {
+                throw new RuntimeException(
+                    'Cannot supersede global fact because no current lineage head exists for this slot'
+                );
+            }
+
+            $governanceResolved = resolve_fact_governance($governance);
+
+            $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_global (
     subject_entity_id,
     fact_type_id,
@@ -173,31 +316,33 @@ VALUES (
 )
 SQL);
 
-    $stmt->execute([
-        'subject' => $subjectEntityId,
-        'fact_type' => $factTypeId,
-        'object' => $objectEntityId,
-        'source' => $sourceDocument,
-        'notes' => $notes,
-        'epistemic_origin' => $governance['epistemic_origin_classval_id'],
-        'adjudication_status' => $governance['adjudication_status_classval_id'],
-        'contradiction_state' => $governance['contradiction_state_classval_id'],
-        'supersedes_linked_fact_id' => $supersedesLinkedFactId,
-    ]);
+            $stmt->execute([
+                'subject' => $subjectEntityId,
+                'fact_type' => $factTypeId,
+                'object' => $objectEntityId,
+                'source' => $sourceDocument,
+                'notes' => $notes,
+                'epistemic_origin' => $governanceResolved['epistemic_origin_classval_id'],
+                'adjudication_status' => $governanceResolved['adjudication_status_classval_id'],
+                'contradiction_state' => $governanceResolved['contradiction_state_classval_id'],
+                'supersedes_linked_fact_id' => $resolvedSupersedesId,
+            ]);
 
-    $linkedFactId = (int) $pdo->lastInsertId();
+            $linkedFactId = (int) $pdo->lastInsertId();
 
-    return [
-        'status' => 'applied',
-        'created' => true,
-        'linked_fact_id' => $linkedFactId,
-        'table' => 'entity_linked_facts_global',
-        'fact' => [
-            'linked_fact_id' => $linkedFactId,
-            'subject_entity_id' => $subjectEntityId,
-            'fact_type_id' => $factTypeId,
-            'object_entity_id' => $objectEntityId,
-            'supersedes_linked_fact_id' => $supersedesLinkedFactId,
-        ],
-    ];
+            return [
+                'status' => 'applied',
+                'created' => true,
+                'linked_fact_id' => $linkedFactId,
+                'table' => 'entity_linked_facts_global',
+                'fact' => [
+                    'linked_fact_id' => $linkedFactId,
+                    'subject_entity_id' => $subjectEntityId,
+                    'fact_type_id' => $factTypeId,
+                    'object_entity_id' => $objectEntityId,
+                    'supersedes_linked_fact_id' => $resolvedSupersedesId,
+                ],
+            ];
+        }
+    );
 }
