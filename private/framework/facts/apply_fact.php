@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/fact_governance.php';
+require_once __DIR__ . '/fact_lineage.php';
 
 function assert_not_legacy_fact_table(string $sql): void
 {
@@ -20,70 +21,6 @@ function prepare_fact_write(PDO $pdo, string $sql): PDOStatement
 {
     assert_not_legacy_fact_table($sql);
     return $pdo->prepare($sql);
-}
-
-function assert_superseded_event_fact_exists(
-    PDO $pdo,
-    ?int $supersedesLinkedFactId
-): void {
-    if ($supersedesLinkedFactId === null) {
-        return;
-    }
-
-    if ($supersedesLinkedFactId < 1) {
-        throw new InvalidArgumentException(
-            'supersedesLinkedFactId must be positive'
-        );
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT linked_fact_id
-        FROM entity_linked_facts_event
-        WHERE linked_fact_id = :id
-        LIMIT 1
-    ");
-
-    $stmt->execute([
-        'id' => $supersedesLinkedFactId,
-    ]);
-
-    if ($stmt->fetch(PDO::FETCH_ASSOC) === false) {
-        throw new RuntimeException(
-            'Superseded event fact does not exist'
-        );
-    }
-}
-
-function assert_superseded_global_fact_exists(
-    PDO $pdo,
-    ?int $supersedesLinkedFactId
-): void {
-    if ($supersedesLinkedFactId === null) {
-        return;
-    }
-
-    if ($supersedesLinkedFactId < 1) {
-        throw new InvalidArgumentException(
-            'supersedesLinkedFactId must be positive'
-        );
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT linked_fact_id
-        FROM entity_linked_facts_global
-        WHERE linked_fact_id = :id
-        LIMIT 1
-    ");
-
-    $stmt->execute([
-        'id' => $supersedesLinkedFactId,
-    ]);
-
-    if ($stmt->fetch(PDO::FETCH_ASSOC) === false) {
-        throw new RuntimeException(
-            'Superseded global fact does not exist'
-        );
-    }
 }
 
 function apply_event_fact(
@@ -106,7 +43,18 @@ function apply_event_fact(
         throw new InvalidArgumentException('All core fields are required for event fact');
     }
 
-    assert_superseded_event_fact_exists($pdo, $supersedesLinkedFactId);
+    if ($supersedesLinkedFactId !== null) {
+        assert_valid_fact_supersession(
+            $pdo,
+            $supersedesLinkedFactId,
+            [
+                'subject_entity_id' => $subjectEntityId,
+                'context_entity_id' => $contextEntityId,
+                'fact_type_id' => $factTypeId,
+            ],
+            true
+        );
+    }
 
     $governance = resolve_fact_governance($governance);
 
@@ -135,8 +83,6 @@ VALUES (
     :contradiction_state,
     :supersedes_linked_fact_id
 )
-ON DUPLICATE KEY UPDATE
-    linked_fact_id = linked_fact_id
 SQL);
 
     $stmt->execute([
@@ -152,10 +98,15 @@ SQL);
         'supersedes_linked_fact_id' => $supersedesLinkedFactId,
     ]);
 
+    $linkedFactId = (int) $pdo->lastInsertId();
+
     return [
-        'status' => $stmt->rowCount() > 0 ? 'applied' : 'duplicate',
+        'status' => 'applied',
+        'created' => true,
+        'linked_fact_id' => $linkedFactId,
         'table' => 'entity_linked_facts_event',
         'fact' => [
+            'linked_fact_id' => $linkedFactId,
             'subject_entity_id' => $subjectEntityId,
             'context_entity_id' => $contextEntityId,
             'fact_type_id' => $factTypeId,
@@ -183,7 +134,17 @@ function apply_global_fact(
         throw new InvalidArgumentException('All core fields are required for global fact');
     }
 
-    assert_superseded_global_fact_exists($pdo, $supersedesLinkedFactId);
+    if ($supersedesLinkedFactId !== null) {
+        assert_valid_fact_supersession(
+            $pdo,
+            $supersedesLinkedFactId,
+            [
+                'subject_entity_id' => $subjectEntityId,
+                'fact_type_id' => $factTypeId,
+            ],
+            false
+        );
+    }
 
     $governance = resolve_fact_governance($governance);
 
@@ -210,8 +171,6 @@ VALUES (
     :contradiction_state,
     :supersedes_linked_fact_id
 )
-ON DUPLICATE KEY UPDATE
-    linked_fact_id = linked_fact_id
 SQL);
 
     $stmt->execute([
@@ -226,10 +185,15 @@ SQL);
         'supersedes_linked_fact_id' => $supersedesLinkedFactId,
     ]);
 
+    $linkedFactId = (int) $pdo->lastInsertId();
+
     return [
-        'status' => $stmt->rowCount() > 0 ? 'applied' : 'duplicate',
+        'status' => 'applied',
+        'created' => true,
+        'linked_fact_id' => $linkedFactId,
         'table' => 'entity_linked_facts_global',
         'fact' => [
+            'linked_fact_id' => $linkedFactId,
             'subject_entity_id' => $subjectEntityId,
             'fact_type_id' => $factTypeId,
             'object_entity_id' => $objectEntityId,
