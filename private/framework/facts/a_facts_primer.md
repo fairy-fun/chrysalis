@@ -82,14 +82,16 @@ Canonical truth is:
 Current canonical-head logic:
 
 ```sql
-LEFT JOIN newer
-    ON newer.supersedes_linked_fact_id = f.linked_fact_id
-WHERE newer.linked_fact_id IS NULL
+AND NOT EXISTS (
+    SELECT 1
+    FROM entity_linked_facts_global newer
+    WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
+)
 ```
 
 Meaning:
 
-> “Return only facts that no newer fact supersedes.”
+> “Return only facts that are unsuperseded lineage heads.”
 
 ---
 
@@ -426,11 +428,11 @@ Likely future concepts:
 
 Future canonical truth may become:
 
-> latest adjudication-valid lineage head under policy constraints
+> policy-valid lineage head under policy constraints
 
 rather than merely:
 
-> latest unsuperseded row
+> unsuperseded lineage head
 
 ---
 

@@ -69,7 +69,6 @@ function fact_lineage_successor(
         SELECT *
         FROM {$table}
         WHERE supersedes_linked_fact_id = :id
-        ORDER BY linked_fact_id ASC
         LIMIT 2
     ");
 
