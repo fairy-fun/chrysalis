@@ -96,8 +96,21 @@ try {
     ]);
 
 } catch (Throwable $e) {
+    respond(500, [
+        'status' => 'error',
+        'error' => 'Failed to resolve canonical global fact',
+        'message' => $e->getMessage(),
+        'exception' => get_class($e),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'database' => $expectedDatabase,
+    ]);
+}
+
+
+/*catch (Throwable $e) {
     debugRespond(500, [
         'error' => 'Failed to resolve canonical global fact',
         'database' => $expectedDatabase,
     ], $e);
-}
+}*/
