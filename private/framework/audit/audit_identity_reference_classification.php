@@ -207,20 +207,61 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 
         $stmt = $pdo->query($discoverySql);
 
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $key = $row['TABLE_NAME'] . '.' . $row['COLUMN_NAME'];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $key = $row['TABLE_NAME'] . '.' . $row['COLUMN_NAME'];
 
-            if (!isset($classifiedReferences[$key])) {
-                $violations[] = [
-                    'table_name' => $row['TABLE_NAME'],
-                    'column_name' => $row['COLUMN_NAME'],
-                    'expected_kind' => 'UNCLASSIFIED_REFERENCE',
-                    'invalid_value' => null,
-                    'actual_entity_type_id' => null,
-                    'reference_count' => 0,
-                ];
-            }
+        if (isset($classifiedReferences[$key])) {
+            continue;
         }
+
+        $quotedSchema = '`' . str_replace('`', '``', $schemaName) . '`';
+        $quotedTable = '`' . str_replace('`', '``', $row['TABLE_NAME']) . '`';
+        $quotedColumn = '`' . str_replace('`', '``', $row['COLUMN_NAME']) . '`';
+
+        $referenceCountSql = "
+        SELECT
+            COUNT(*) AS reference_count,
+            MIN({$quotedColumn}) AS invalid_value
+        FROM {$quotedSchema}.{$quotedTable}
+        WHERE {$quotedColumn} IS NOT NULL
+          AND {$quotedColumn} <> ''
+    ";
+
+        try {
+            $countStmt = $pdo->query($referenceCountSql);
+
+            $summary = $countStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            $referenceCount = (int) ($summary['reference_count'] ?? 0);
+
+            /*
+             * Zero references
+             * !=
+             * invalid classification.
+             *
+             * Only fail when actual reference values exist.
+             */
+            if ($referenceCount <= 0) {
+                continue;
+            }
+
+            $violations[] = [
+                'table_name' => $row['TABLE_NAME'],
+                'column_name' => $row['COLUMN_NAME'],
+                'expected_kind' => 'UNCLASSIFIED_REFERENCE',
+                'invalid_value' => $summary['invalid_value'] ?? null,
+                'actual_entity_type_id' => null,
+                'reference_count' => $referenceCount,
+            ];
+        } catch (Throwable $e) {
+            $queryErrors[] = [
+                'table_name' => $row['TABLE_NAME'],
+                'column_name' => $row['COLUMN_NAME'],
+                'expected_kind' => 'UNCLASSIFIED_REFERENCE',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
 
     foreach ($references as [$tableName, $columnName, $expectedKind]) {
         if ($expectedKind === 'DOMAIN_ENTITY' || $expectedKind === 'DOMAIN_ENTITY_FK') {
