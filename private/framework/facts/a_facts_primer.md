@@ -310,37 +310,36 @@ Meaning:
 
 > “Return only accepted canonical truth.”
 
-This applies:
+This applies the framework’s canonical accepted-governance filter.
 
-```sql
-AND f.adjudication_status_classval_id =
-    'adjudication_status_approved'
-```
-
-Important:
-
-The current adjudication ontology uses:
+Runtime code must not hardcode adjudication classval IDs directly. Accepted-canon filtering resolves through:
 
 ```text
-adjudication_status_approved
+private/framework/facts/fact_governance.php
 ```
 
-NOT:
+The resolver should use the governance default returned by:
 
-```text
-adjudication_status_accepted
-```
+`governance_default_adjudication_status()`
 
-This distinction matters because:
+rather than embedding a literal such as:
 
-AI-generated speculation should NOT become canon automatically.
+`adjudication_status_accepted`
+
+or:
+
+`adjudication_status_approved
+`
+#### Important:
+
+Accepted canon is not created merely because a fact exists.
 
 Accepted canon should remain:
 
-author-governed
-adjudicated
-explicitly approved
-
+* author-governed
+* adjudicated
+* explicitly accepted by the governance layer
+* 
 ---
 
 # Example Lineage
