@@ -23,14 +23,22 @@ These are accepted historical states and are not currently CI violations.
 
 New writes must not introduce additional semantic canonical IDs.
 
-## 3. Resolver Semantics
+## 3. Resolver and Canonical Semantics
 
-Resolvers operate on canonical-head resolution.
+Resolvers consume governed canonical projection layers rather than
+reconstructing canonicality ad hoc.
 
-A fact is canonical if:
+Canonical semantics are defined by:
 
-* no newer row supersedes it through `supersedes_linked_fact_id`
-* Canonical resolution uses anti-join semantics rather than timestamp ordering.
+* governed projection views
+* accepted supersession state
+* immutable lineage traversal
+
+A fact remains canonical unless superseded by an ACCEPTED successor.
+
+Canonicality is therefore governance-aware rather than purely structural.
+
+Timestamp ordering is not authoritative.
 
 ## 4. Supersession Rules
 
@@ -62,6 +70,15 @@ Document explicitly whether:
 
 This is the one area future developers are most likely to misunderstand.
 
+The system effectively has:
+
+| Layer	        | Meaning                      |
+|---------------|------------------------------|
+| supersession	 | historical succession        |
+| adjudication	| governance acceptance        | 
+|contradiction state	| unresolved semantic conflict |
+|canonical projection	| governed operational truth   |
+
 ## 7. CI Authority
 
 CI is the enforcement authority for ontology identity compliance.
@@ -73,8 +90,28 @@ Developer assumptions do not override:
 * resolver invariants
 
 If CI passes, the ontology state is considered policy-compliant.
+## 8. Projection Authority
 
-## 8. Migration Guidance
+Canonical truth semantics are centralized in projection views.
+
+Application resolvers should consume:
+
+* canonical_entity_linked_facts_global
+* canonical_entity_linked_facts_event
+
+rather than recomputing supersession semantics independently.
+
+This prevents semantic drift between write-path governance,
+resolver behavior, and CI enforcement.
+
+## 10. Lineage Doctrine
+
+* immutable provenance chains
+* recursive traversal expectations
+* ancestry semantics
+* historical archaeology
+
+## 11. Migration Guidance
 
 Future migrations should:
 
@@ -82,3 +119,10 @@ Future migrations should:
 * avoid mutating historical canonical rows
 * prefer additive correction rows
 * avoid introducing new semantic aliases
+
+be aligned to:
+*   governed projections
+*   accepted supersession semantics
+*   centralized canonicality
+*   lineage traversal doctrine
+*   contradiction separation semantics
