@@ -4,14 +4,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/fact_governance.php';
 
-/**
- * Resolve canonical global fact.
- *
- * Canonical fact =
- * fact row that is NOT superseded by another row.
- *
- * When $forUpdate is true, this must be called inside a transaction.
- */
 function resolve_canonical_global_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -34,8 +26,7 @@ function resolve_canonical_global_fact(
     }
 
     $acceptedClause = $acceptedOnly
-        ? 'AND ' .
-        governance_filter_accepted_adjudication_sql(
+        ? 'AND ' . governance_filter_accepted_adjudication_sql(
             'f.adjudication_status_classval_id'
         )
         : '';
@@ -44,20 +35,20 @@ function resolve_canonical_global_fact(
         ? 'AND f.object_entity_id = :object'
         : '';
 
-    $forUpdateClause = $forUpdate
-        ? 'FOR UPDATE'
-        : '';
+    $forUpdateClause = $forUpdate ? 'FOR UPDATE' : '';
 
     $sql = <<<SQL
 SELECT f.*
 FROM entity_linked_facts_global f
-LEFT JOIN entity_linked_facts_global newer
-    ON newer.supersedes_linked_fact_id = f.linked_fact_id
-WHERE newer.linked_fact_id IS NULL
-  AND f.subject_entity_id = :subject
+WHERE f.subject_entity_id = :subject
   AND f.fact_type_id = :fact_type
   {$objectClause}
   {$acceptedClause}
+  AND NOT EXISTS (
+      SELECT 1
+      FROM entity_linked_facts_global newer
+      WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
+  )
 LIMIT 2
 {$forUpdateClause}
 SQL;
@@ -86,14 +77,6 @@ SQL;
     return $rows[0] ?? null;
 }
 
-/**
- * Resolve canonical event fact.
- *
- * Canonical fact =
- * fact row that is NOT superseded by another row.
- *
- * When $forUpdate is true, this must be called inside a transaction.
- */
 function resolve_canonical_event_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -121,8 +104,7 @@ function resolve_canonical_event_fact(
     }
 
     $acceptedClause = $acceptedOnly
-        ? 'AND ' .
-        governance_filter_accepted_adjudication_sql(
+        ? 'AND ' . governance_filter_accepted_adjudication_sql(
             'f.adjudication_status_classval_id'
         )
         : '';
@@ -131,21 +113,21 @@ function resolve_canonical_event_fact(
         ? 'AND f.object_entity_id = :object'
         : '';
 
-    $forUpdateClause = $forUpdate
-        ? 'FOR UPDATE'
-        : '';
+    $forUpdateClause = $forUpdate ? 'FOR UPDATE' : '';
 
     $sql = <<<SQL
 SELECT f.*
 FROM entity_linked_facts_event f
-LEFT JOIN entity_linked_facts_event newer
-    ON newer.supersedes_linked_fact_id = f.linked_fact_id
-WHERE newer.linked_fact_id IS NULL
-  AND f.subject_entity_id = :subject
+WHERE f.subject_entity_id = :subject
   AND f.context_entity_id = :context
   AND f.fact_type_id = :fact_type
   {$objectClause}
   {$acceptedClause}
+  AND NOT EXISTS (
+      SELECT 1
+      FROM entity_linked_facts_event newer
+      WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
+  )
 LIMIT 2
 {$forUpdateClause}
 SQL;
