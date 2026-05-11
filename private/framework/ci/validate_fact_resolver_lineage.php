@@ -2,11 +2,28 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../bootstrap.php';
-require_once __DIR__ . '/../framework/facts/apply_fact.php';
-require_once __DIR__ . '/../framework/facts/fact_resolver.php';
+function fail(string $message): never
+{
+    fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL);
+    exit(1);
+}
 
-$pdo = db();
+function ok(string $message): void
+{
+    fwrite(STDOUT, 'OK: ' . $message . PHP_EOL);
+}
+
+$repoRoot = dirname(__DIR__, 3);
+
+require_once $repoRoot . '/private/framework/api/api_bootstrap.php';
+require_once $repoRoot . '/private/framework/facts/apply_fact.php';
+require_once $repoRoot . '/private/framework/facts/fact_resolver.php';
+
+try {
+    $pdo = makePdo();
+} catch (Throwable $e) {
+    fail('Could not create PDO: ' . $e->getMessage());
+}
 
 echo PHP_EOL;
 echo '=== FACT RESOLVER TEST ===' . PHP_EOL;
