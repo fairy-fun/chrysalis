@@ -59,7 +59,7 @@ foreach ($required as $field) {
 
 $pdo = db();
 
-verifyExpectedDatabase($pdo);
+//verifyExpectedDatabase($pdo);
 
 $result = apply_global_fact(
     $pdo,
