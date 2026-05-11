@@ -143,6 +143,31 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['team_choreography_status', 'status_classval_id', 'CLASSVAL'],
         ['teams', 'team_domain_classval_id', 'CLASSVAL'],
 
+        // governed fact view-projected classval references
+        ['accepted_canonical_entity_linked_facts_event', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['accepted_canonical_entity_linked_facts_event', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['accepted_canonical_entity_linked_facts_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['accepted_canonical_entity_linked_facts_global', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['accepted_canonical_entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['accepted_canonical_entity_linked_facts_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['canonical_entity_linked_facts_event', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['canonical_entity_linked_facts_event', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['canonical_entity_linked_facts_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['canonical_entity_linked_facts_global', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['canonical_entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['canonical_entity_linked_facts_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['unresolved_entity_fact_contradictions_event', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['unresolved_entity_fact_contradictions_event', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['unresolved_entity_fact_contradictions_event', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
+        ['unresolved_entity_fact_contradictions_global', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['unresolved_entity_fact_contradictions_global', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['unresolved_entity_fact_contradictions_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
+
         // view-projected classval references
         ['v_character_appearance_resolved', 'value_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'group_classval_id', 'CLASSVAL'],
