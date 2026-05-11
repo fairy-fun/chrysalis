@@ -158,17 +158,64 @@ try {
         throw new RuntimeException('Lineage successor mismatch');
     }
 
+    $root = fact_lineage_root(
+        $pdo,
+        $linkedB
+    );
+
+    if ($root === null) {
+        throw new RuntimeException('Lineage root missing');
+    }
+
+    if ((int) $root['linked_fact_id'] !== $linkedA) {
+        throw new RuntimeException('Lineage root mismatch');
+    }
+
+    $head = fact_lineage_head(
+        $pdo,
+        $linkedA
+    );
+
+    if ($head === null) {
+        throw new RuntimeException('Lineage head missing');
+    }
+
+    if ((int) $head['linked_fact_id'] !== $linkedB) {
+        throw new RuntimeException('Lineage head mismatch');
+    }
+
+    $fullLineage = fact_lineage_full(
+        $pdo,
+        $linkedB
+    );
+
+    if (count($fullLineage) !== 2) {
+        throw new RuntimeException('Unexpected full lineage count');
+    }
+
+    if ((int) $fullLineage[0]['linked_fact_id'] !== $linkedA) {
+        throw new RuntimeException('Full lineage root mismatch');
+    }
+
+    if ((int) $fullLineage[1]['linked_fact_id'] !== $linkedB) {
+        throw new RuntimeException('Full lineage head mismatch');
+    }
+
     $forkRejected = false;
 
     try {
-        assert_valid_fact_supersession(
+        apply_global_fact(
             $pdo,
-            $linkedA,
+            $subjectEntityId,
+            $factTypeId,
+            'ci_lineage_fork_attempt',
+            'ci_lineage',
+            'Invalid fork attempt',
             [
-                'subject_entity_id' => $subjectEntityId,
-                'fact_type_id' => $factTypeId,
+                'adjudication_status_classval_id'
+                => governance_default_adjudication_status(),
             ],
-            false
+            $linkedA
         );
     } catch (RuntimeException $e) {
         $forkRejected = str_contains(
@@ -178,7 +225,7 @@ try {
     }
 
     if (!$forkRejected) {
-        throw new RuntimeException('Fork rejection failed');
+        throw new RuntimeException('Write-path fork rejection failed');
     }
 
     $scopeRejected = false;
