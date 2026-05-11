@@ -9,7 +9,7 @@ declare(strict_types=1);
  *   a fact row that is not superseded by any newer fact
  *   on the same ontology surface.
  *
- * This does not mean "accepted canon" unless explicitly requested.
+ * This does not mean "approved canon" unless explicitly requested.
  */
 
 function resolve_canonical_global_fact(
@@ -17,7 +17,7 @@ function resolve_canonical_global_fact(
     string $subjectEntityId,
     string $factTypeId,
     ?string $objectEntityId = null,
-    bool $acceptedOnly = false
+    bool $approvedOnly = false
 ): ?array {
     if ($subjectEntityId === '' || $factTypeId === '') {
         throw new InvalidArgumentException(
@@ -25,8 +25,8 @@ function resolve_canonical_global_fact(
         );
     }
 
-    $acceptedClause = $acceptedOnly
-        ? "AND f.adjudication_status_classval_id = 'adjudication_status_accepted'"
+    $approvedClause = $approvedOnly
+        ? "AND f.adjudication_status_classval_id = 'adjudication_status_approved'"
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -42,7 +42,7 @@ WHERE newer.linked_fact_id IS NULL
   AND f.subject_entity_id = :subject
   AND f.fact_type_id = :fact_type
   {$objectClause}
-  {$acceptedClause}
+  {$approvedClause}
 ORDER BY f.linked_fact_id DESC
 'LIMIT' 1
 SQL;
@@ -71,7 +71,7 @@ function resolve_canonical_event_fact(
     string $contextEntityId,
     string $factTypeId,
     ?string $objectEntityId = null,
-    bool $acceptedOnly = false
+    bool $approvedOnly = false
 ): ?array {
     if (
         $subjectEntityId === '' ||
@@ -83,8 +83,8 @@ function resolve_canonical_event_fact(
         );
     }
 
-    $acceptedClause = $acceptedOnly
-        ? "AND f.adjudication_status_classval_id = 'adjudication_status_accepted'"
+    $approvedClause = $approvedOnly
+        ? "AND f.adjudication_status_classval_id = 'adjudication_status_approved'"
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -101,7 +101,7 @@ WHERE newer.linked_fact_id IS NULL
   AND f.context_entity_id = :context
   AND f.fact_type_id = :fact_type
   {$objectClause}
-  {$acceptedClause}
+  {$approvedClause}
 ORDER BY f.linked_fact_id DESC
 'LIMIT' 1
 SQL;
