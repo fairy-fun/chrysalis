@@ -186,6 +186,83 @@ function fact_lineage_forward_path(
     return $results;
 }
 
+function fact_lineage_root(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $eventScoped = false
+): ?array {
+    $chain = fact_lineage_ancestry_chain(
+        $pdo,
+        $linkedFactId,
+        $eventScoped
+    );
+
+    return $chain[0] ?? null;
+}
+
+function fact_lineage_head(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $eventScoped = false
+): ?array {
+    if ($linkedFactId < 1) {
+        throw new InvalidArgumentException(
+            'linkedFactId must be positive'
+        );
+    }
+
+    $table = fact_lineage_table($eventScoped);
+
+    $current = fetch_linked_fact(
+        $pdo,
+        $table,
+        $linkedFactId
+    );
+
+    if ($current === null) {
+        return null;
+    }
+
+    $forwardPath = fact_lineage_forward_path(
+        $pdo,
+        $linkedFactId,
+        $eventScoped
+    );
+
+    if ($forwardPath === []) {
+        return $current;
+    }
+
+    return $forwardPath[count($forwardPath) - 1];
+}
+
+function fact_lineage_full(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $eventScoped = false
+): array {
+    $backward = fact_lineage_ancestry_chain(
+        $pdo,
+        $linkedFactId,
+        $eventScoped
+    );
+
+    if ($backward === []) {
+        return [];
+    }
+
+    $forward = fact_lineage_forward_path(
+        $pdo,
+        $linkedFactId,
+        $eventScoped
+    );
+
+    return array_merge(
+        $backward,
+        $forward
+    );
+}
+
 function assert_valid_fact_supersession(
     PDO $pdo,
     int $supersedesLinkedFactId,
