@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+
 function fail(string $message): never
 {
     fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL);
@@ -18,6 +19,8 @@ $repoRoot = dirname(__DIR__, 3);
 require_once $repoRoot . '/private/framework/api/api_bootstrap.php';
 require_once $repoRoot . '/private/framework/facts/apply_fact.php';
 require_once $repoRoot . '/private/framework/facts/fact_resolver.php';
+require_once $repoRoot .
+    '/private/framework/facts/fact_governance.php';
 
 try {
     $pdo = makePdo();
@@ -51,7 +54,7 @@ try {
         'CI resolver lineage old fact',
         [
             'adjudication_status_classval_id'
-            => 'adjudication_status_accepted',
+            => governance_default_adjudication_status(),
         ]
     );
 

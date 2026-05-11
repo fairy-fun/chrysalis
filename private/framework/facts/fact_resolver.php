@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/fact_governance.php';
+
 /**
  * Read-side canonical fact resolver.
  *
@@ -34,7 +36,10 @@ function resolve_canonical_global_fact(
     }
 
     $acceptedClause = $acceptedOnly
-        ? "AND f.adjudication_status_classval_id = 'adjudication_status_accepted'"
+        ? 'AND ' .
+    governance_filter_accepted_adjudication_sql(
+        'f.adjudication_status_classval_id'
+    )
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -89,7 +94,10 @@ function resolve_canonical_event_fact(
     }
 
     $acceptedClause = $acceptedOnly
-        ? "AND f.adjudication_status_classval_id = 'adjudication_status_accepted'"
+        ? 'AND ' .
+    governance_filter_accepted_adjudication_sql(
+        'f.adjudication_status_classval_id'
+    )
         : '';
 
     $objectClause = $objectEntityId !== null

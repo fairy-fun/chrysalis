@@ -158,3 +158,13 @@ function assert_valid_fact_governance(
         }
     }
 }
+
+function governance_filter_accepted_adjudication_sql(
+    string $column = 'adjudication_status_classval_id'
+): string {
+    return sprintf(
+        "%s = '%s'",
+        $column,
+        governance_default_adjudication_status()
+    );
+}
