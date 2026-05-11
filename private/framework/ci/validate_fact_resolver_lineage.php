@@ -89,7 +89,7 @@ try {
         'CI resolver lineage new fact',
         [
             'adjudication_status_classval_id'
-            => 'adjudication_status_accepted',
+            => governance_default_adjudication_status(),
         ],
         $oldLinkedFactId
     );
