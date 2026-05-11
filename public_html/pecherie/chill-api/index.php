@@ -197,6 +197,14 @@ switch ($operation) {
         require __DIR__ . '/audit/traversal_optionality_integrity.php';
         break;
 
+    case 'applyGovernedGlobalFact':
+        require __DIR__ . '/facts/apply_governed_global_fact.php';
+        exit;
+
+    case 'applyGovernedEventFact':
+        require __DIR__ . '/facts/apply_governed_event_fact.php';
+        exit;
+
     case 'resolveSongArtistPair':
         require __DIR__ . '/music/resolve_song_artist_pair.php';
         break;

@@ -21,6 +21,7 @@ return [
         'public_html/pecherie/chill-api/choreography',
         'public_html/pecherie/chill-api/entity',
         'public_html/pecherie/chill-api/expression',
+        'public_html/pecherie/chill-api/facts',
         'public_html/pecherie/chill-api/audit',
         'public_html/pecherie/chill-api/calendar',
         'public_html/pecherie/chill-api/prose',
@@ -92,5 +93,7 @@ return [
         'generateCalendarBatchFromProse' => 'public_html/pecherie/chill-api/calendar/generate_calendar_batch_from_prose.php',
         'executeCalendarBatchFromProse' => 'public_html/pecherie/chill-api/calendar/execute_calendar_batch_from_prose.php',
         'resolveProseExportText' => 'public_html/pecherie/chill-api/prose/resolve_prose_export_text.php',
+        'applyGovernedGlobalFact' => 'public_html/pecherie/chill-api/facts/apply_governed_global_fact.php',
+        'applyGovernedEventFact' => 'public_html/pecherie/chill-api/facts/apply_governed_event_fact.php',
     ],
 ];
