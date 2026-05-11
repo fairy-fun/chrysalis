@@ -5,23 +5,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/fact_governance.php';
 
 /**
- * Read-side canonical fact resolver.
+ * Resolve canonical global fact.
  *
- * Canonical semantics are delegated to the database projection layer:
- *
- *   canonical_entity_linked_facts_global
- *   canonical_entity_linked_facts_event
- *
- * These views define:
- *   - supersession semantics
- *   - accepted governance semantics
- *   - canonical head selection
- *
- * The resolver layer is intentionally thin and only handles:
- *   - lookup ergonomics
- *   - optional filtering
+ * Canonical fact =
+ * fact row that is NOT superseded by another row.
  */
-
 function resolve_canonical_global_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -29,6 +17,7 @@ function resolve_canonical_global_fact(
     ?string $objectEntityId = null,
     bool $acceptedOnly = false
 ): ?array {
+
     if ($subjectEntityId === '' || $factTypeId === '') {
         throw new InvalidArgumentException(
             'subjectEntityId and factTypeId are required'
@@ -37,9 +26,9 @@ function resolve_canonical_global_fact(
 
     $acceptedClause = $acceptedOnly
         ? 'AND ' .
-    governance_filter_accepted_adjudication_sql(
-        'f.adjudication_status_classval_id'
-    )
+        governance_filter_accepted_adjudication_sql(
+            'f.adjudication_status_classval_id'
+        )
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -48,13 +37,15 @@ function resolve_canonical_global_fact(
 
     $sql = <<<SQL
 SELECT f.*
-FROM canonical_entity_linked_facts_global f
-WHERE f.subject_entity_id = :subject
+FROM entity_linked_facts_global f
+LEFT JOIN entity_linked_facts_global newer
+    ON newer.supersedes_linked_fact_id = f.linked_fact_id
+WHERE newer.linked_fact_id IS NULL
+  AND f.subject_entity_id = :subject
   AND f.fact_type_id = :fact_type
   {$objectClause}
   {$acceptedClause}
-ORDER BY f.linked_fact_id DESC
-LIMIT 1
+LIMIT 2
 SQL;
 
     $stmt = $pdo->prepare($sql);
@@ -70,11 +61,23 @@ SQL;
 
     $stmt->execute($params);
 
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    return $row === false ? null : $row;
+    if (count($rows) > 1) {
+        throw new RuntimeException(
+            'Multiple current global facts found for canonical slot'
+        );
+    }
+
+    return $rows[0] ?? null;
 }
 
+/**
+ * Resolve canonical event fact.
+ *
+ * Canonical fact =
+ * fact row that is NOT superseded by another row.
+ */
 function resolve_canonical_event_fact(
     PDO $pdo,
     string $subjectEntityId,
@@ -83,6 +86,7 @@ function resolve_canonical_event_fact(
     ?string $objectEntityId = null,
     bool $acceptedOnly = false
 ): ?array {
+
     if (
         $subjectEntityId === '' ||
         $contextEntityId === '' ||
@@ -95,9 +99,9 @@ function resolve_canonical_event_fact(
 
     $acceptedClause = $acceptedOnly
         ? 'AND ' .
-    governance_filter_accepted_adjudication_sql(
-        'f.adjudication_status_classval_id'
-    )
+        governance_filter_accepted_adjudication_sql(
+            'f.adjudication_status_classval_id'
+        )
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -106,14 +110,16 @@ function resolve_canonical_event_fact(
 
     $sql = <<<SQL
 SELECT f.*
-FROM canonical_entity_linked_facts_event f
-WHERE f.subject_entity_id = :subject
+FROM entity_linked_facts_event f
+LEFT JOIN entity_linked_facts_event newer
+    ON newer.supersedes_linked_fact_id = f.linked_fact_id
+WHERE newer.linked_fact_id IS NULL
+  AND f.subject_entity_id = :subject
   AND f.context_entity_id = :context
   AND f.fact_type_id = :fact_type
   {$objectClause}
   {$acceptedClause}
-ORDER BY f.linked_fact_id DESC
-LIMIT 1
+LIMIT 2
 SQL;
 
     $stmt = $pdo->prepare($sql);
@@ -130,7 +136,13 @@ SQL;
 
     $stmt->execute($params);
 
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    return $row === false ? null : $row;
+    if (count($rows) > 1) {
+        throw new RuntimeException(
+            'Multiple current event facts found for canonical slot'
+        );
+    }
+
+    return $rows[0] ?? null;
 }
