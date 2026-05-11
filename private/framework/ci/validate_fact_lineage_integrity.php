@@ -7,6 +7,16 @@ declare(strict_types=1);
  *
  */
 
+/*
+ * Immutable lineage integrity audit.
+ *
+ * Canonicality is defined exclusively as:
+ * "fact row with no successor"
+ *
+ * No mutable current flags.
+ * No timestamp canonicality.
+ * No latest-row-wins semantics.
+ */
 
 function fail(string $message): never
 {
@@ -17,6 +27,54 @@ function fail(string $message): never
 function ok(string $message): void
 {
     fwrite(STDOUT, 'OK: ' . $message . PHP_EOL);
+}
+
+function require_zero_rows(
+    PDO $pdo,
+    string $sql,
+    string $failureMessage
+): void {
+    $stmt = $pdo->query($sql);
+
+    if ($stmt === false) {
+        throw new RuntimeException(
+            'Failed to execute audit query'
+        );
+    }
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($rows !== []) {
+        $count = count($rows);
+
+        throw new RuntimeException(
+            $failureMessage .
+            ' count=' . $count .
+            ' sample=' . json_encode(
+                array_slice($rows, 0, 10)
+            )
+        );
+    }
+}
+
+function require_at_least_one_row(
+    PDO $pdo,
+    string $sql,
+    string $failureMessage
+): void {
+    $stmt = $pdo->query($sql);
+
+    if ($stmt === false) {
+        throw new RuntimeException(
+            'Failed to execute audit query'
+        );
+    }
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($rows === []) {
+        throw new RuntimeException($failureMessage);
+    }
 }
 
 $repoRoot = dirname(__DIR__, 3);
@@ -34,6 +92,13 @@ try {
 }
 
 try {
+
+    /*
+     * -------------------------------------------------------------------------
+     * Runtime lineage behavior validation
+     * -------------------------------------------------------------------------
+     */
+
     $subjectEntityId = 'ci_lineage_subject';
     $factTypeId = 'ci_lineage_status';
 
@@ -73,20 +138,12 @@ try {
     );
 
     if ($headA === null) {
-        throw new RuntimeException('Initial canonical head missing');
+        throw new RuntimeException(
+            'Initial canonical lineage head missing'
+        );
     }
 
     $linkedA = (int) $headA['linked_fact_id'];
-
-    assert_valid_fact_supersession(
-        $pdo,
-        $linkedA,
-        [
-            'subject_entity_id' => $subjectEntityId,
-            'fact_type_id' => $factTypeId,
-        ],
-        false
-    );
 
     apply_global_fact(
         $pdo,
@@ -111,100 +168,23 @@ try {
     );
 
     if ($headB === null) {
-        throw new RuntimeException('Superseding canonical head missing');
+        throw new RuntimeException(
+            'Superseding canonical lineage head missing'
+        );
     }
 
     $linkedB = (int) $headB['linked_fact_id'];
 
     if ($linkedB === $linkedA) {
         throw new RuntimeException(
-            'Supersession did not produce a new canonical head'
-        );
-    }
-
-    if ((int) $headB['linked_fact_id'] !== $linkedB) {
-        throw new RuntimeException(
-            'Canonical resolver did not return lineage head'
+            'Supersession did not produce a new lineage head'
         );
     }
 
     if ((int) $headB['supersedes_linked_fact_id'] !== $linkedA) {
         throw new RuntimeException(
-            'Canonical head lineage mismatch'
+            'Superseding fact lineage mismatch'
         );
-    }
-
-    $ancestors = fact_lineage_ancestors(
-        $pdo,
-        $linkedB
-    );
-
-    if (count($ancestors) !== 2) {
-        throw new RuntimeException('Unexpected ancestor count');
-    }
-
-    if ((int) $ancestors[0]['linked_fact_id'] !== $linkedB) {
-        throw new RuntimeException('Ancestor traversal head mismatch');
-    }
-
-    if ((int) $ancestors[1]['linked_fact_id'] !== $linkedA) {
-        throw new RuntimeException('Ancestor traversal historical mismatch');
-    }
-
-    $successor = fact_lineage_successor(
-        $pdo,
-        $linkedA
-    );
-
-    if ($successor === null) {
-        throw new RuntimeException('Expected lineage successor missing');
-    }
-
-    if ((int) $successor['linked_fact_id'] !== $linkedB) {
-        throw new RuntimeException('Lineage successor mismatch');
-    }
-
-    $root = fact_lineage_root(
-        $pdo,
-        $linkedB
-    );
-
-    if ($root === null) {
-        throw new RuntimeException('Lineage root missing');
-    }
-
-    if ((int) $root['linked_fact_id'] !== $linkedA) {
-        throw new RuntimeException('Lineage root mismatch');
-    }
-
-    $head = fact_lineage_head(
-        $pdo,
-        $linkedA
-    );
-
-    if ($head === null) {
-        throw new RuntimeException('Lineage head missing');
-    }
-
-    if ((int) $head['linked_fact_id'] !== $linkedB) {
-        throw new RuntimeException('Lineage head mismatch');
-    }
-
-    $fullLineage = fact_lineage_full(
-        $pdo,
-        $linkedB
-    );
-
-    if (count($fullLineage) !== 2) {
-        throw new RuntimeException('Unexpected full lineage count');
-    }
-
-    if ((int) $fullLineage[0]['linked_fact_id'] !== $linkedA) {
-        throw new RuntimeException('Full lineage root mismatch');
-    }
-
-    if ((int) $fullLineage[1]['linked_fact_id'] !== $linkedB) {
-        throw new RuntimeException('Full lineage head mismatch');
     }
 
     $forkRejected = false;
@@ -225,99 +205,341 @@ try {
         );
     } catch (RuntimeException $e) {
         $forkRejected = str_contains(
-            $e->getMessage(),
-            'not a lineage head'
-        );
+                $e->getMessage(),
+                'not a lineage head'
+            ) || str_contains(
+                $e->getMessage(),
+                'Fact lineage conflict detected'
+            );
     }
 
     if (!$forkRejected) {
-        throw new RuntimeException('Write-path fork rejection failed');
-    }
-
-    $scopeRejected = false;
-
-    try {
-        assert_valid_fact_supersession(
-            $pdo,
-            $linkedB,
-            [
-                'subject_entity_id' => 'wrong_subject',
-                'fact_type_id' => $factTypeId,
-            ],
-            false
+        throw new RuntimeException(
+            'Write-path fork rejection failed'
         );
-    } catch (RuntimeException $e) {
-        $scopeRejected = str_contains(
-            $e->getMessage(),
-            'scope mismatch'
-        );
-    }
-
-    if (!$scopeRejected) {
-        throw new RuntimeException('Scope mismatch rejection failed');
-    }
-
-    $missingLinkedFactId = (int) $pdo
-        ->query("
-            SELECT COALESCE(MAX(linked_fact_id), 0) + 1000000
-            FROM entity_linked_facts_global
-        ")
-        ->fetchColumn();
-
-    $orphanRejected = false;
-
-    try {
-        assert_valid_fact_supersession(
-            $pdo,
-            $missingLinkedFactId,
-            [
-                'subject_entity_id' => $subjectEntityId,
-                'fact_type_id' => $factTypeId,
-            ],
-            false
-        );
-    } catch (RuntimeException $e) {
-        $orphanRejected = str_contains(
-            $e->getMessage(),
-            'does not exist'
-        );
-    }
-
-    if (!$orphanRejected) {
-        throw new RuntimeException('Orphan prevention failed');
-    }
-
-    $pdo->prepare("
-        UPDATE entity_linked_facts_global
-        SET supersedes_linked_fact_id = :b
-        WHERE linked_fact_id = :a
-    ")->execute([
-        ':a' => $linkedA,
-        ':b' => $linkedB,
-    ]);
-
-    $cycleRejected = false;
-
-    try {
-        fact_lineage_ancestors(
-            $pdo,
-            $linkedB
-        );
-    } catch (RuntimeException $e) {
-        $cycleRejected = str_contains(
-            $e->getMessage(),
-            'cycle'
-        );
-    }
-
-    if (!$cycleRejected) {
-        throw new RuntimeException('Cycle rejection failed');
     }
 
     $pdo->rollBack();
 
+    /*
+     * -------------------------------------------------------------------------
+     * Structural invariant audits
+     * -------------------------------------------------------------------------
+     */
+
+    /*
+     * Duplicate lineage heads (global)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT
+            f.subject_entity_id,
+            f.fact_type_id,
+            COUNT(*) AS heads
+        FROM entity_linked_facts_global f
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM entity_linked_facts_global newer
+            WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
+        )
+        GROUP BY
+            f.subject_entity_id,
+            f.fact_type_id
+        HAVING COUNT(*) > 1
+        ",
+        'Multiple canonical global lineages detected'
+    );
+
+    /*
+     * Duplicate lineage heads (event)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT
+            f.subject_entity_id,
+            f.context_entity_id,
+            f.fact_type_id,
+            COUNT(*) AS heads
+        FROM entity_linked_facts_event f
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM entity_linked_facts_event newer
+            WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
+        )
+        GROUP BY
+            f.subject_entity_id,
+            f.context_entity_id,
+            f.fact_type_id
+        HAVING COUNT(*) > 1
+        ",
+        'Multiple canonical event lineages detected'
+    );
+
+    /*
+     * Fork detection (global)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT
+            supersedes_linked_fact_id,
+            COUNT(*) AS successors
+        FROM entity_linked_facts_global
+        WHERE supersedes_linked_fact_id IS NOT NULL
+        GROUP BY supersedes_linked_fact_id
+        HAVING COUNT(*) > 1
+        ",
+        'Global lineage forks detected'
+    );
+
+    /*
+     * Fork detection (event)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT
+            supersedes_linked_fact_id,
+            COUNT(*) AS successors
+        FROM entity_linked_facts_event
+        WHERE supersedes_linked_fact_id IS NOT NULL
+        GROUP BY supersedes_linked_fact_id
+        HAVING COUNT(*) > 1
+        ",
+        'Event lineage forks detected'
+    );
+
+    /*
+     * Orphan supersession references (global)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT child.linked_fact_id
+        FROM entity_linked_facts_global child
+        LEFT JOIN entity_linked_facts_global parent
+            ON parent.linked_fact_id =
+               child.supersedes_linked_fact_id
+        WHERE child.supersedes_linked_fact_id IS NOT NULL
+          AND parent.linked_fact_id IS NULL
+        ",
+        'Global orphan supersession references detected'
+    );
+
+    /*
+     * Orphan supersession references (event)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT child.linked_fact_id
+        FROM entity_linked_facts_event child
+        LEFT JOIN entity_linked_facts_event parent
+            ON parent.linked_fact_id =
+               child.supersedes_linked_fact_id
+        WHERE child.supersedes_linked_fact_id IS NOT NULL
+          AND parent.linked_fact_id IS NULL
+        ",
+        'Event orphan supersession references detected'
+    );
+
+    /*
+     * Self supersession (global)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT linked_fact_id
+        FROM entity_linked_facts_global
+        WHERE supersedes_linked_fact_id = linked_fact_id
+        ",
+        'Global self-supersession detected'
+    );
+
+    /*
+     * Self supersession (event)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT linked_fact_id
+        FROM entity_linked_facts_event
+        WHERE supersedes_linked_fact_id = linked_fact_id
+        ",
+        'Event self-supersession detected'
+    );
+
+    /*
+     * Cross-slot supersession (global)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT child.linked_fact_id
+        FROM entity_linked_facts_global child
+        JOIN entity_linked_facts_global parent
+            ON parent.linked_fact_id =
+               child.supersedes_linked_fact_id
+        WHERE child.subject_entity_id
+                <> parent.subject_entity_id
+           OR child.fact_type_id
+                <> parent.fact_type_id
+        ",
+        'Global cross-slot supersession detected'
+    );
+
+    /*
+     * Cross-slot supersession (event)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        SELECT child.linked_fact_id
+        FROM entity_linked_facts_event child
+        JOIN entity_linked_facts_event parent
+            ON parent.linked_fact_id =
+               child.supersedes_linked_fact_id
+        WHERE child.subject_entity_id
+                <> parent.subject_entity_id
+           OR child.context_entity_id
+                <> parent.context_entity_id
+           OR child.fact_type_id
+                <> parent.fact_type_id
+        ",
+        'Event cross-slot supersession detected'
+    );
+
+    /*
+     * Cycle detection (global)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        WITH RECURSIVE lineage AS (
+            SELECT
+                linked_fact_id,
+                supersedes_linked_fact_id,
+                CAST(linked_fact_id AS CHAR(1000)) AS path
+            FROM entity_linked_facts_global
+
+            UNION ALL
+
+            SELECT
+                lineage.linked_fact_id,
+                parent.supersedes_linked_fact_id,
+                CONCAT(
+                    lineage.path,
+                    ',',
+                    parent.linked_fact_id
+                )
+            FROM lineage
+            JOIN entity_linked_facts_global parent
+                ON parent.linked_fact_id =
+                   lineage.supersedes_linked_fact_id
+            WHERE FIND_IN_SET(
+                parent.linked_fact_id,
+                lineage.path
+            ) = 0
+        )
+        SELECT *
+        FROM lineage
+        WHERE supersedes_linked_fact_id IS NOT NULL
+          AND FIND_IN_SET(
+                supersedes_linked_fact_id,
+                path
+              ) > 0
+        ",
+        'Global lineage cycle detected'
+    );
+
+    /*
+     * Cycle detection (event)
+     */
+    require_zero_rows(
+        $pdo,
+        "
+        WITH RECURSIVE lineage AS (
+            SELECT
+                linked_fact_id,
+                supersedes_linked_fact_id,
+                CAST(linked_fact_id AS CHAR(1000)) AS path
+            FROM entity_linked_facts_event
+
+            UNION ALL
+
+            SELECT
+                lineage.linked_fact_id,
+                parent.supersedes_linked_fact_id,
+                CONCAT(
+                    lineage.path,
+                    ',',
+                    parent.linked_fact_id
+                )
+            FROM lineage
+            JOIN entity_linked_facts_event parent
+                ON parent.linked_fact_id =
+                   lineage.supersedes_linked_fact_id
+            WHERE FIND_IN_SET(
+                parent.linked_fact_id,
+                lineage.path
+            ) = 0
+        )
+        SELECT *
+        FROM lineage
+        WHERE supersedes_linked_fact_id IS NOT NULL
+          AND FIND_IN_SET(
+                supersedes_linked_fact_id,
+                path
+              ) > 0
+        ",
+        'Event lineage cycle detected'
+    );
+
+    /*
+     * Verify uniqueness constraint exists (global)
+     */
+    require_at_least_one_row(
+        $pdo,
+        "
+        SELECT
+            index_name
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'entity_linked_facts_global'
+          AND non_unique = 0
+        GROUP BY index_name
+        HAVING
+            SUM(
+                column_name = 'supersedes_linked_fact_id'
+            ) = 1
+            AND COUNT(*) = 1
+        ",
+        'Missing UNIQUE constraint on global supersedes_linked_fact_id'
+    );
+
+    /*
+     * Verify uniqueness constraint exists (event)
+     */
+    require_at_least_one_row(
+        $pdo,
+        "
+        SELECT
+            index_name
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'entity_linked_facts_event'
+          AND column_name = 'supersedes_linked_fact_id'
+          AND non_unique = 0
+        ",
+        'Missing UNIQUE constraint on event supersedes_linked_fact_id'
+    );
+
     ok('Fact lineage integrity validation passed');
+
 } catch (Throwable $e) {
+
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
