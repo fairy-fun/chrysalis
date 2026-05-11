@@ -44,7 +44,7 @@ WHERE newer.linked_fact_id IS NULL
   {$objectClause}
   {$approvedClause}
 ORDER BY f.linked_fact_id DESC
-'LIMIT' 1
+LIMIT 1
 SQL;
 
     $stmt = $pdo->prepare($sql);
@@ -103,7 +103,7 @@ WHERE newer.linked_fact_id IS NULL
   {$objectClause}
   {$approvedClause}
 ORDER BY f.linked_fact_id DESC
-'LIMIT' 1
+LIMIT 1
 SQL;
 
     $stmt = $pdo->prepare($sql);
