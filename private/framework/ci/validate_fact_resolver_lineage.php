@@ -51,7 +51,7 @@ try {
         'CI resolver lineage old fact',
         [
             'adjudication_status_classval_id'
-            => 'adjudication_status_approved',
+            => 'adjudication_status_accepted',
         ]
     );
 
@@ -64,7 +64,7 @@ try {
     );
 
     if ($oldHead === null) {
-        throw new RuntimeException('Resolver did not return initial approved fact');
+        throw new RuntimeException('Resolver did not return initial accepted fact');
     }
 
     if (($oldHead['object_entity_id'] ?? null) !== $oldObjectEntityId) {
@@ -86,7 +86,7 @@ try {
         'CI resolver lineage new fact',
         [
             'adjudication_status_classval_id'
-            => 'adjudication_status_approved',
+            => 'adjudication_status_accepted',
         ],
         $oldLinkedFactId
     );
@@ -100,11 +100,17 @@ try {
     );
 
     if ($newHead === null) {
-        throw new RuntimeException('Resolver did not return superseding approved fact');
+        throw new RuntimeException('Resolver did not return superseding accepted fact');
     }
 
     if (($newHead['object_entity_id'] ?? null) !== $newObjectEntityId) {
         throw new RuntimeException('Canonical head was not superseding fact');
+    }
+
+    if ((int) ($newHead['supersedes_linked_fact_id'] ?? 0) !== $oldLinkedFactId) {
+        throw new RuntimeException(
+            'Superseding fact does not point to previous linked_fact_id'
+        );
     }
 
     $historicalStmt = $pdo->prepare("
@@ -124,7 +130,7 @@ try {
 
     $pdo->rollBack();
 
-    ok('Fact resolver lineage validation passed');
+    ok('Fact resolver canonical lineage validation passed');
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
