@@ -25,149 +25,110 @@ try {
     fail('Could not create PDO: ' . $e->getMessage());
 }
 
-echo PHP_EOL;
-echo '=== FACT RESOLVER TEST ===' . PHP_EOL;
-echo PHP_EOL;
+try {
+    $subjectEntityId = 'ci_fact_resolver_subject';
+    $factTypeId = 'ci_fact_resolver_status';
+    $oldObjectEntityId = 'ci_fact_resolver_old_status';
+    $newObjectEntityId = 'ci_fact_resolver_new_status';
 
-/*
-|--------------------------------------------------------------------------
-| Step 1
-|--------------------------------------------------------------------------
-| Create initial fact.
-*/
+    $pdo->beginTransaction();
 
-$resultA = apply_global_fact(
-    $pdo,
-    'entity:test_character',
-    'fact_type:test_status',
-    'status:active',
-    'test_script',
-    'Initial status fact',
-    [
-        'adjudication_status_classval_id'
-        => 'adjudication_status_approved',
-    ]
-);
+    $pdo->prepare("
+        DELETE FROM entity_linked_facts_global
+        WHERE subject_entity_id = :subject
+          AND fact_type_id = :fact_type
+    ")->execute([
+        ':subject' => $subjectEntityId,
+        ':fact_type' => $factTypeId,
+    ]);
 
-echo 'Inserted Fact A' . PHP_EOL;
-print_r($resultA);
-
-echo PHP_EOL;
-
-/*
-|--------------------------------------------------------------------------
-| Step 2
-|--------------------------------------------------------------------------
-| Fetch canonical head after first insert.
-*/
-
-$canonicalA = resolve_canonical_global_fact(
-    $pdo,
-    'entity:test_character',
-    'fact_type:test_status'
-);
-
-echo 'Canonical after Fact A:' . PHP_EOL;
-print_r($canonicalA);
-
-echo PHP_EOL;
-
-if (!isset($canonicalA['linked_fact_id'])) {
-    throw new RuntimeException(
-        'Failed to resolve canonical fact after Fact A'
+    apply_global_fact(
+        $pdo,
+        $subjectEntityId,
+        $factTypeId,
+        $oldObjectEntityId,
+        'ci_fact_resolver_lineage',
+        'CI resolver lineage old fact',
+        [
+            'adjudication_status_classval_id'
+            => 'adjudication_status_approved',
+        ]
     );
-}
 
-/*
-|--------------------------------------------------------------------------
-| Step 3
-|--------------------------------------------------------------------------
-| Insert superseding fact.
-*/
-
-$resultB = apply_global_fact(
-    $pdo,
-    'entity:test_character',
-    'fact_type:test_status',
-    'status:inactive',
-    'test_script',
-    'Superseding status fact',
-    [
-        'adjudication_status_classval_id'
-        => 'adjudication_status_approved',
-    ],
-    (int) $canonicalA['linked_fact_id']
-);
-
-echo 'Inserted Fact B' . PHP_EOL;
-print_r($resultB);
-
-echo PHP_EOL;
-
-/*
-|--------------------------------------------------------------------------
-| Step 4
-|--------------------------------------------------------------------------
-| Resolve canonical head again.
-*/
-
-$canonicalB = resolve_canonical_global_fact(
-    $pdo,
-    'entity:test_character',
-    'fact_type:test_status'
-);
-
-echo 'Canonical after Fact B:' . PHP_EOL;
-print_r($canonicalB);
-
-echo PHP_EOL;
-
-/*
-|--------------------------------------------------------------------------
-| Step 5
-|--------------------------------------------------------------------------
-| Verify supersession worked.
-*/
-
-if (
-    !isset($canonicalB['object_entity_id'])
-    || $canonicalB['object_entity_id'] !== 'status:inactive'
-) {
-    throw new RuntimeException(
-        'Canonical resolver failed to return superseding fact'
+    $oldHead = resolve_canonical_global_fact(
+        $pdo,
+        $subjectEntityId,
+        $factTypeId,
+        null,
+        true
     );
-}
 
-echo 'SUCCESS: resolver returned superseding canonical head.' . PHP_EOL;
-echo PHP_EOL;
+    if ($oldHead === null) {
+        throw new RuntimeException('Resolver did not return initial approved fact');
+    }
 
-/*
-|--------------------------------------------------------------------------
-| Step 6
-|--------------------------------------------------------------------------
-| Verify historical fact still exists.
-*/
+    if (($oldHead['object_entity_id'] ?? null) !== $oldObjectEntityId) {
+        throw new RuntimeException('Initial canonical head was not the old fact');
+    }
 
-$stmt = $pdo->prepare("
-    SELECT *
-    FROM entity_linked_facts_global
-    WHERE object_entity_id = :object
-    LIMIT 1
-");
+    $oldLinkedFactId = (int) ($oldHead['linked_fact_id'] ?? 0);
 
-$stmt->execute([
-    'object' => 'status:active',
-]);
+    if ($oldLinkedFactId < 1) {
+        throw new RuntimeException('Initial canonical head has invalid linked_fact_id');
+    }
 
-$historical = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if ($historical === false) {
-    throw new RuntimeException(
-        'Historical fact disappeared unexpectedly'
+    apply_global_fact(
+        $pdo,
+        $subjectEntityId,
+        $factTypeId,
+        $newObjectEntityId,
+        'ci_fact_resolver_lineage',
+        'CI resolver lineage new fact',
+        [
+            'adjudication_status_classval_id'
+            => 'adjudication_status_approved',
+        ],
+        $oldLinkedFactId
     );
+
+    $newHead = resolve_canonical_global_fact(
+        $pdo,
+        $subjectEntityId,
+        $factTypeId,
+        null,
+        true
+    );
+
+    if ($newHead === null) {
+        throw new RuntimeException('Resolver did not return superseding approved fact');
+    }
+
+    if (($newHead['object_entity_id'] ?? null) !== $newObjectEntityId) {
+        throw new RuntimeException('Canonical head was not superseding fact');
+    }
+
+    $historicalStmt = $pdo->prepare("
+        SELECT linked_fact_id
+        FROM entity_linked_facts_global
+        WHERE linked_fact_id = :linked_fact_id
+        LIMIT 1
+    ");
+
+    $historicalStmt->execute([
+        ':linked_fact_id' => $oldLinkedFactId,
+    ]);
+
+    if ($historicalStmt->fetchColumn() === false) {
+        throw new RuntimeException('Historical superseded fact disappeared');
+    }
+
+    $pdo->rollBack();
+
+    ok('Fact resolver lineage validation passed');
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    fail($e->getMessage());
 }
-
-echo 'SUCCESS: historical fact still exists.' . PHP_EOL;
-echo PHP_EOL;
-
-echo '=== TEST COMPLETE ===' . PHP_EOL;
