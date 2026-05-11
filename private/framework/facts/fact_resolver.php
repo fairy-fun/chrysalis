@@ -5,11 +5,19 @@ declare(strict_types=1);
 /**
  * Read-side canonical fact resolver.
  *
- * Canonical head means:
- *   a fact row that is not superseded by any newer fact
- *   on the same ontology surface.
+ * Canonical semantics are delegated to the database projection layer:
  *
- * This does not mean "approved canon" unless explicitly requested.
+ *   canonical_entity_linked_facts_global
+ *   canonical_entity_linked_facts_event
+ *
+ * These views define:
+ *   - supersession semantics
+ *   - accepted governance semantics
+ *   - canonical head selection
+ *
+ * The resolver layer is intentionally thin and only handles:
+ *   - lookup ergonomics
+ *   - optional filtering
  */
 
 function resolve_canonical_global_fact(
@@ -17,7 +25,7 @@ function resolve_canonical_global_fact(
     string $subjectEntityId,
     string $factTypeId,
     ?string $objectEntityId = null,
-    bool $approvedOnly = false
+    bool $acceptedOnly = false
 ): ?array {
     if ($subjectEntityId === '' || $factTypeId === '') {
         throw new InvalidArgumentException(
@@ -25,8 +33,8 @@ function resolve_canonical_global_fact(
         );
     }
 
-    $approvedClause = $approvedOnly
-        ? "AND f.adjudication_status_classval_id = 'adjudication_status_approved'"
+    $acceptedClause = $acceptedOnly
+        ? "AND f.adjudication_status_classval_id = 'adjudication_status_accepted'"
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -35,14 +43,11 @@ function resolve_canonical_global_fact(
 
     $sql = <<<SQL
 SELECT f.*
-FROM entity_linked_facts_global f
-LEFT JOIN entity_linked_facts_global newer
-    ON newer.supersedes_linked_fact_id = f.linked_fact_id
-WHERE newer.linked_fact_id IS NULL
-  AND f.subject_entity_id = :subject
+FROM canonical_entity_linked_facts_global f
+WHERE f.subject_entity_id = :subject
   AND f.fact_type_id = :fact_type
   {$objectClause}
-  {$approvedClause}
+  {$acceptedClause}
 ORDER BY f.linked_fact_id DESC
 LIMIT 1
 SQL;
@@ -71,7 +76,7 @@ function resolve_canonical_event_fact(
     string $contextEntityId,
     string $factTypeId,
     ?string $objectEntityId = null,
-    bool $approvedOnly = false
+    bool $acceptedOnly = false
 ): ?array {
     if (
         $subjectEntityId === '' ||
@@ -83,8 +88,8 @@ function resolve_canonical_event_fact(
         );
     }
 
-    $approvedClause = $approvedOnly
-        ? "AND f.adjudication_status_classval_id = 'adjudication_status_approved'"
+    $acceptedClause = $acceptedOnly
+        ? "AND f.adjudication_status_classval_id = 'adjudication_status_accepted'"
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -93,15 +98,12 @@ function resolve_canonical_event_fact(
 
     $sql = <<<SQL
 SELECT f.*
-FROM entity_linked_facts_event f
-LEFT JOIN entity_linked_facts_event newer
-    ON newer.supersedes_linked_fact_id = f.linked_fact_id
-WHERE newer.linked_fact_id IS NULL
-  AND f.subject_entity_id = :subject
+FROM canonical_entity_linked_facts_event f
+WHERE f.subject_entity_id = :subject
   AND f.context_entity_id = :context
   AND f.fact_type_id = :fact_type
   {$objectClause}
-  {$approvedClause}
+  {$acceptedClause}
 ORDER BY f.linked_fact_id DESC
 LIMIT 1
 SQL;
