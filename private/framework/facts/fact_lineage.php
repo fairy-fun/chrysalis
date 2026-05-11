@@ -7,24 +7,15 @@ declare(strict_types=1);
 | Fact Lineage Utilities
 |--------------------------------------------------------------------------
 |
-| Read-side lineage traversal + write-side lineage validation helpers.
-|
-| Doctrine:
+| Lineage doctrine:
 |
 | - facts are immutable
 | - supersession defines lineage
-| - canonicality is projection-side
-| - lineage traversal is historical/read-side
-| - lineage validation is ingress/write-side
+| - lineage is linear, not branching
+| - only a current lineage head may be superseded
+| - canonicality remains projection-side
+| - governance remains policy-side
 |
-*/
-
-require_once __DIR__ . '/fact_governance.php';
-
-/*
-|--------------------------------------------------------------------------
-| Internal Helpers
-|--------------------------------------------------------------------------
 */
 
 function fact_lineage_table(bool $eventScoped): string
@@ -52,16 +43,44 @@ function fetch_linked_fact(
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    return $row === false
-        ? null
-        : $row;
+    return $row === false ? null : $row;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Read-Side Lineage Traversal
-|--------------------------------------------------------------------------
-*/
+function fact_lineage_successor(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $eventScoped = false
+): ?array {
+    if ($linkedFactId < 1) {
+        throw new InvalidArgumentException(
+            'linkedFactId must be positive'
+        );
+    }
+
+    $table = fact_lineage_table($eventScoped);
+
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM {$table}
+        WHERE supersedes_linked_fact_id = :id
+        ORDER BY linked_fact_id ASC
+        LIMIT 2
+    ");
+
+    $stmt->execute([
+        'id' => $linkedFactId,
+    ]);
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (count($rows) > 1) {
+        throw new RuntimeException(
+            'Fact lineage fork detected'
+        );
+    }
+
+    return $rows[0] ?? null;
+}
 
 function fact_lineage_ancestors(
     PDO $pdo,
@@ -78,11 +97,9 @@ function fact_lineage_ancestors(
 
     $results = [];
     $visited = [];
-
     $currentId = $linkedFactId;
 
     while ($currentId !== null) {
-
         if (isset($visited[$currentId])) {
             throw new RuntimeException(
                 'Fact lineage cycle detected'
@@ -103,11 +120,8 @@ function fact_lineage_ancestors(
 
         $results[] = $fact;
 
-        $currentId = isset(
-            $fact['supersedes_linked_fact_id']
-        )
-            ? (int) $fact['supersedes_linked_fact_id']
-            : null;
+        $nextId = $fact['supersedes_linked_fact_id'] ?? null;
+        $currentId = $nextId === null ? null : (int) $nextId;
 
         if ($currentId < 1) {
             $currentId = null;
@@ -117,7 +131,21 @@ function fact_lineage_ancestors(
     return $results;
 }
 
-function fact_lineage_descendants(
+function fact_lineage_ancestry_chain(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $eventScoped = false
+): array {
+    return array_reverse(
+        fact_lineage_ancestors(
+            $pdo,
+            $linkedFactId,
+            $eventScoped
+        )
+    );
+}
+
+function fact_lineage_forward_path(
     PDO $pdo,
     int $linkedFactId,
     bool $eventScoped = false
@@ -128,59 +156,35 @@ function fact_lineage_descendants(
         );
     }
 
-    $table = fact_lineage_table($eventScoped);
-
     $results = [];
-
+    $visited = [];
     $currentId = $linkedFactId;
 
     while (true) {
+        if (isset($visited[$currentId])) {
+            throw new RuntimeException(
+                'Fact lineage cycle detected'
+            );
+        }
 
-        $stmt = $pdo->prepare("
-            SELECT *
-            FROM {$table}
-            WHERE supersedes_linked_fact_id = :id
-            ORDER BY linked_fact_id ASC
-            LIMIT 1
-        ");
+        $visited[$currentId] = true;
 
-        $stmt->execute([
-            'id' => $currentId,
-        ]);
+        $successor = fact_lineage_successor(
+            $pdo,
+            $currentId,
+            $eventScoped
+        );
 
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($row === false) {
+        if ($successor === null) {
             break;
         }
 
-        $results[] = $row;
-
-        $currentId = (int) $row['linked_fact_id'];
+        $results[] = $successor;
+        $currentId = (int) $successor['linked_fact_id'];
     }
 
     return $results;
 }
-
-function fact_lineage_chain(
-    PDO $pdo,
-    int $linkedFactId,
-    bool $eventScoped = false
-): array {
-    $ancestors = fact_lineage_ancestors(
-        $pdo,
-        $linkedFactId,
-        $eventScoped
-    );
-
-    return array_reverse($ancestors);
-}
-
-/*
-|--------------------------------------------------------------------------
-| Write-Side Validation
-|--------------------------------------------------------------------------
-*/
 
 function assert_valid_fact_supersession(
     PDO $pdo,
@@ -208,11 +212,17 @@ function assert_valid_fact_supersession(
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Scope Integrity
-    |--------------------------------------------------------------------------
-    */
+    $existingSuccessor = fact_lineage_successor(
+        $pdo,
+        $supersedesLinkedFactId,
+        $eventScoped
+    );
+
+    if ($existingSuccessor !== null) {
+        throw new RuntimeException(
+            'Superseded fact is not a lineage head'
+        );
+    }
 
     $requiredFields = [
         'subject_entity_id',
@@ -224,7 +234,6 @@ function assert_valid_fact_supersession(
     }
 
     foreach ($requiredFields as $field) {
-
         if (
             ($candidateFact[$field] ?? null)
             !==
@@ -236,44 +245,9 @@ function assert_valid_fact_supersession(
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cycle Detection
-    |--------------------------------------------------------------------------
-    */
-
-    $visited = [];
-
-    $currentId = $supersedesLinkedFactId;
-
-    while ($currentId !== null) {
-
-        if (isset($visited[$currentId])) {
-            throw new RuntimeException(
-                'Fact lineage cycle detected'
-            );
-        }
-
-        $visited[$currentId] = true;
-
-        $fact = fetch_linked_fact(
-            $pdo,
-            $table,
-            $currentId
-        );
-
-        if ($fact === null) {
-            break;
-        }
-
-        $currentId = isset(
-            $fact['supersedes_linked_fact_id']
-        )
-            ? (int) $fact['supersedes_linked_fact_id']
-            : null;
-
-        if ($currentId < 1) {
-            $currentId = null;
-        }
-    }
+    fact_lineage_ancestors(
+        $pdo,
+        $supersedesLinkedFactId,
+        $eventScoped
+    );
 }
