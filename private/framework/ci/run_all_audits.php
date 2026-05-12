@@ -74,7 +74,7 @@ foreach ($audits as $auditName => $runAudit) {
 
     try {
         $runAudit();
-        echo "OK: {$auditName} passed\n";
+        echo "OK: $auditName passed\n";
     } catch (Throwable $e) {
         fwrite(STDERR, "\nFAIL: {$auditName}\n");
         fwrite(STDERR, $e->getMessage() . "\n");
