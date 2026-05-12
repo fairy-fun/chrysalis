@@ -22,11 +22,8 @@ function validate_fact_lineage_conflicts(): void
     $initialObjectEntityId =
         'ci_lineage_conflict_status_initial';
 
-    $branchAObjectEntityId =
-        'ci_lineage_conflict_status_branch_a';
-
-    $branchBObjectEntityId =
-        'ci_lineage_conflict_status_branch_b';
+    $branchAObjectEntityId = $initialObjectEntityId;
+    $branchBObjectEntityId = $initialObjectEntityId;
 
     $initial = apply_global_fact(
         $pdoA,
@@ -160,15 +157,22 @@ function validate_fact_lineage_conflicts(): void
             );
         }
 
-        $forked = resolve_canonical_global_fact(
-            $pdoA,
-            $subjectEntityId,
-            $factTypeId,
-            $branchBObjectEntityId,
-            false
-        );
+        $forkStmt = $pdoA->prepare("
+            SELECT COUNT(*)
+            FROM entity_linked_facts_global
+            WHERE subject_entity_id = :subject
+              AND fact_type_id = :fact_type
+              AND object_entity_id = :object
+              AND notes = 'Branch B fork attempt'
+        ");
 
-        if ($forked !== null) {
+        $forkStmt->execute([
+            'subject' => $subjectEntityId,
+            'fact_type' => $factTypeId,
+            'object' => $initialObjectEntityId,
+        ]);
+
+        if ((int) $forkStmt->fetchColumn() !== 0) {
             throw new RuntimeException(
                 'Fork lineage branch unexpectedly persisted'
             );
