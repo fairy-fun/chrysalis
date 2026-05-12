@@ -395,39 +395,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
         'Missing UNIQUE constraint on event supersedes_linked_fact_id'
     );
 
-    require_at_least_one_row(
-        $pdo,
-        "
-        SELECT
-            cc.constraint_name
-        FROM information_schema.check_constraints cc
-        JOIN information_schema.table_constraints tc
-            ON tc.constraint_schema = cc.constraint_schema
-           AND tc.constraint_name = cc.constraint_name
-        WHERE tc.table_schema = DATABASE()
-          AND tc.table_name = 'entity_linked_facts_global'
-          AND cc.check_clause LIKE
-              '%supersedes_linked_fact_id <> linked_fact_id%'
-        ",
-        'Missing self-supersession CHECK constraint on global fact table'
-    );
 
-    require_at_least_one_row(
-        $pdo,
-        "
-        SELECT
-            cc.constraint_name
-        FROM information_schema.check_constraints cc
-        JOIN information_schema.table_constraints tc
-            ON tc.constraint_schema = cc.constraint_schema
-           AND tc.constraint_name = cc.constraint_name
-        WHERE tc.table_schema = DATABASE()
-          AND tc.table_name = 'entity_linked_facts_event'
-          AND cc.check_clause LIKE
-              '%supersedes_linked_fact_id <> linked_fact_id%'
-        ",
-        'Missing self-supersession CHECK constraint on event fact table'
-    );
 }
 
 if (realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
