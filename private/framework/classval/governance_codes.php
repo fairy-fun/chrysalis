@@ -4,12 +4,30 @@ declare(strict_types=1);
 
 final class GovernanceCodes
 {
+    /*
+    |--------------------------------------------------------------------------
+    | Epistemic Origin
+    |--------------------------------------------------------------------------
+    */
+
     public const EPISTEMIC_ASSERTED =
-        'epistemic_origin_asserted';
+        'manual_author_entry';
+
+    /*
+    |--------------------------------------------------------------------------
+    | Adjudication Status
+    |--------------------------------------------------------------------------
+    */
 
     public const ADJUDICATION_ACCEPTED =
-        'adjudication_status_accepted';
+        'implicitly_retained';
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contradiction State
+    |--------------------------------------------------------------------------
+    */
 
     public const CONTRADICTION_UNASSESSED =
-        'contradiction_state_unassessed';
+        'UNASSESSED';
 }
