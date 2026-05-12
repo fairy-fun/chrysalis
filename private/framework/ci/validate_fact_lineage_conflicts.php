@@ -138,7 +138,13 @@ function validate_fact_lineage_conflicts(): void
 
         } catch (PDOException $e) {
 
-            if ($e->getCode() === '23000') {
+            if (
+                $e->getCode() === '23000'
+                && str_contains(
+                    $e->getMessage(),
+                    'supersedes_linked_fact_id'
+                )
+            ) {
                 $branchBConflictObserved = true;
             } else {
                 throw $e;
@@ -161,7 +167,7 @@ function validate_fact_lineage_conflicts(): void
             $pdoA,
             $subjectEntityId,
             $factTypeId,
-            null,
+            $branchAObjectEntityId,
             false
         );
 
