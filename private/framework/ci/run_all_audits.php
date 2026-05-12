@@ -29,6 +29,7 @@ require __DIR__ . '/../audit/audit_deprecated_calendar_beat_' . 'domain_map_usag
 require __DIR__ . '/../audit/audit_calendar_beat_classset_integrity.php';
 require __DIR__ . '/../audit/audit_projection_identity_contract.php';
 require __DIR__ . '/validate_fact_supersession_requirements.php';
+require __DIR__ . '/validate_fact_lineage_conflicts.php';
 
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
@@ -37,6 +38,7 @@ $audits = [
     'fact lineage integrity' => fn () => validate_fact_lineage_integrity($pdo),
     'fact resolver lineage' => fn () => validate_fact_resolver_lineage($pdo),
     'fact supersession requirements' => fn () => validate_fact_supersession_requirements($pdo),
+    'fact lineage conflicts' => fn () => validate_fact_lineage_conflicts(),
     'traversal trigger absence' => fn () => assert_traversal_trigger_absence($pdo, $schemaName),
     'traversal root entity identity' => fn () => assert_traversal_root_entity_identity($pdo, $schemaName),
     'event graph identity' => fn () => assert_event_graph_identity($pdo, $schemaName),
