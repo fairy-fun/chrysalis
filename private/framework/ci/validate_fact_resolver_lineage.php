@@ -11,7 +11,8 @@ require_once $repoRoot . '/private/framework/facts/fact_governance.php';
 
 function validate_fact_resolver_lineage(PDO $pdo): void
 {
-    $subjectEntityId = 'ci_fact_resolver_subject';
+    $subjectEntityId =
+    'ci_fact_resolver_subject_' . bin2hex(random_bytes(8));
     $factTypeId = 'ci_fact_resolver_status';
 
     $oldObjectEntityId = 'ci_fact_resolver_old_status';
