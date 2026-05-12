@@ -111,7 +111,7 @@ function apply_event_fact(
             $subjectEntityId,
             $contextEntityId,
             $factTypeId,
-            null,
+            $objectEntityId,
             false,
             true
         );
@@ -250,7 +250,7 @@ function apply_global_fact(
             $pdo,
             $subjectEntityId,
             $factTypeId,
-            null,
+            $objectEntityId,
             false,
             true
         );
