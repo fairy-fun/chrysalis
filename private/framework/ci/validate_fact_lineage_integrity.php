@@ -219,7 +219,8 @@ function validate_fact_lineage_integrity(PDO $pdo): void
         )
         GROUP BY
             f.subject_entity_id,
-            f.fact_type_id
+            f.fact_type_id,
+            COALESCE(f.object_entity_id, '__NULL__')
         HAVING COUNT(*) > 1
         ",
         'Multiple canonical global lineages detected'
@@ -229,10 +230,11 @@ function validate_fact_lineage_integrity(PDO $pdo): void
         $pdo,
         "
         SELECT
-            f.subject_entity_id,
-            f.context_entity_id,
-            f.fact_type_id,
-            COUNT(*) AS heads
+        f.subject_entity_id,
+        f.context_entity_id,
+        f.fact_type_id,
+        f.object_entity_id,
+        COUNT(*) AS heads
         FROM entity_linked_facts_event f
         WHERE NOT EXISTS (
             SELECT 1
@@ -242,7 +244,8 @@ function validate_fact_lineage_integrity(PDO $pdo): void
         GROUP BY
             f.subject_entity_id,
             f.context_entity_id,
-            f.fact_type_id
+            f.fact_type_id,
+            COALESCE(f.object_entity_id, '__NULL__')
         HAVING COUNT(*) > 1
         ",
         'Multiple canonical event lineages detected'
