@@ -81,15 +81,6 @@ function validate_fact_lineage_integrity(PDO $pdo): void
 
     try {
 
-        $pdo->prepare("
-            DELETE FROM entity_linked_facts_global
-            WHERE subject_entity_id = :subject
-              AND fact_type_id = :fact_type
-        ")->execute([
-            ':subject' => $subjectEntityId,
-            ':fact_type' => $factTypeId,
-        ]);
-
         apply_global_fact(
             $pdo,
             $subjectEntityId,
@@ -99,7 +90,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
             'Initial lineage fact',
             [
                 'adjudication_status_classval_id'
-                => governance_default_adjudication_status(),
+                => governance_default_adjudication_status($pdo),
             ]
         );
 
@@ -128,7 +119,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
             'Superseding lineage fact',
             [
                 'adjudication_status_classval_id'
-                => governance_default_adjudication_status(),
+                => governance_default_adjudication_status($pdo),
             ],
             $linkedA
         );
@@ -173,7 +164,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
                 'Invalid fork attempt',
                 [
                     'adjudication_status_classval_id'
-                    => governance_default_adjudication_status(),
+                    => governance_default_adjudication_status($pdo),
                 ],
                 $linkedA
             );
