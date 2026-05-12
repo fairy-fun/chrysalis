@@ -21,15 +21,6 @@ function validate_fact_resolver_lineage(PDO $pdo): void
 
     try {
 
-        $pdo->prepare("
-            DELETE FROM entity_linked_facts_global
-            WHERE subject_entity_id = :subject
-              AND fact_type_id = :fact_type
-        ")->execute([
-            ':subject' => $subjectEntityId,
-            ':fact_type' => $factTypeId,
-        ]);
-
         apply_global_fact(
             $pdo,
             $subjectEntityId,
@@ -39,7 +30,7 @@ function validate_fact_resolver_lineage(PDO $pdo): void
             'CI resolver lineage old fact',
             [
                 'adjudication_status_classval_id'
-                => governance_default_adjudication_status(),
+                => governance_default_adjudication_status($pdo),
             ]
         );
 
@@ -86,7 +77,7 @@ function validate_fact_resolver_lineage(PDO $pdo): void
             'CI resolver lineage new fact',
             [
                 'adjudication_status_classval_id'
-                => governance_default_adjudication_status(),
+                => governance_default_adjudication_status($pdo),
             ],
             $oldLinkedFactId
         );
