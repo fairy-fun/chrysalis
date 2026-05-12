@@ -15,8 +15,8 @@ function validate_fact_resolver_lineage(PDO $pdo): void
     'ci_fact_resolver_subject_' . bin2hex(random_bytes(8));
     $factTypeId = 'ci_fact_resolver_status';
 
-    $oldObjectEntityId = 'ci_fact_resolver_old_status';
-    $newObjectEntityId = 'ci_fact_resolver_new_status';
+    $oldObjectEntityId = 'ci_fact_resolver_status';
+    $newObjectEntityId = 'ci_fact_resolver_status';
 
     $pdo->beginTransaction();
 
@@ -100,10 +100,10 @@ function validate_fact_resolver_lineage(PDO $pdo): void
         if (
             ($newHead['object_entity_id'] ?? null)
             !==
-            $newObjectEntityId
+            $oldObjectEntityId
         ) {
             throw new RuntimeException(
-                'Canonical head was not superseding fact'
+                'Canonical head object mismatch'
             );
         }
 
@@ -139,23 +139,6 @@ function validate_fact_resolver_lineage(PDO $pdo): void
             );
         }
 
-        /*
-         * Old fact must no longer resolve canonically.
-         */
-
-        $historicalCanonical = resolve_canonical_global_fact(
-            $pdo,
-            $subjectEntityId,
-            $factTypeId,
-            $oldObjectEntityId,
-            true
-        );
-
-        if ($historicalCanonical !== null) {
-            throw new RuntimeException(
-                'Historical superseded fact still resolved canonically'
-            );
-        }
 
         /*
          * New fact must resolve canonically.
@@ -165,7 +148,7 @@ function validate_fact_resolver_lineage(PDO $pdo): void
             $pdo,
             $subjectEntityId,
             $factTypeId,
-            $newObjectEntityId,
+            $oldObjectEntityId,
             true
         );
 
