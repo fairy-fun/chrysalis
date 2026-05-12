@@ -159,7 +159,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
                 $pdo,
                 $subjectEntityId,
                 $factTypeId,
-                'ci_lineage_fork_attempt',
+                $objectA,
                 'ci_lineage',
                 'Invalid fork attempt',
                 [
