@@ -142,6 +142,7 @@ function apply_event_fact(
                     'subject_entity_id' => $subjectEntityId,
                     'context_entity_id' => $contextEntityId,
                     'fact_type_id' => $factTypeId,
+                    'object_entity_id' => $objectEntityId,
                 ],
                 true
             );
@@ -280,6 +281,7 @@ function apply_global_fact(
                 [
                     'subject_entity_id' => $subjectEntityId,
                     'fact_type_id' => $factTypeId,
+                    'object_entity_id' => $objectEntityId,
                 ],
                 false
             );
