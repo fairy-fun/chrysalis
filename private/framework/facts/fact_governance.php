@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../classval/governance_domains.php';
+require_once __DIR__ . '/../classval/governance_codes.php';
+require_once __DIR__ . '/../classval/governance_classvals.php';
+
 /*
 |--------------------------------------------------------------------------
 | Canonical Governance Defaults
