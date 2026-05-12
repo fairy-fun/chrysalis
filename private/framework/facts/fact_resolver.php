@@ -64,7 +64,7 @@ SQL;
 
     if ($acceptedOnly) {
         $params['accepted'] =
-            governance_default_adjudication_status($pdo);
+            governance_accepted_adjudication_id($pdo);
     }
 
     $stmt->execute($params);
@@ -147,7 +147,7 @@ SQL;
 
     if ($acceptedOnly) {
         $params['accepted'] =
-            governance_default_adjudication_status($pdo);
+            governance_accepted_adjudication_id($pdo);
     }
 
     $stmt->execute($params);
