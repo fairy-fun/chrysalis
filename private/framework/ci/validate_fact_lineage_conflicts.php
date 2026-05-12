@@ -83,28 +83,54 @@ function validate_fact_lineage_conflicts(): void
 
         try {
 
-            apply_global_fact(
-                $pdoB,
-                $subjectEntityId,
-                $factTypeId,
-                $branchBObjectEntityId,
-                'ci_lineage_conflicts',
-                'Branch B fork attempt',
-                [
-                    'adjudication_status_classval_id'
-                    => governance_default_adjudication_status($pdoB),
-                ],
-                $initialHeadId
-            );
+            $governance = resolve_fact_governance($pdoB, [
+                'adjudication_status_classval_id'
+                => governance_default_adjudication_status($pdoB),
+            ]);
 
-        } catch (RuntimeException $e) {
+            $stmt = prepare_fact_write($pdoB, "
+        INSERT INTO entity_linked_facts_global (
+            subject_entity_id,
+            fact_type_id,
+            object_entity_id,
+            source_document,
+            notes,
+            epistemic_origin_classval_id,
+            adjudication_status_classval_id,
+            contradiction_state_classval_id,
+            supersedes_linked_fact_id
+        )
+        VALUES (
+            :subject,
+            :fact_type,
+            :object,
+            :source,
+            :notes,
+            :epistemic_origin,
+            :adjudication_status,
+            :contradiction_state,
+            :supersedes_linked_fact_id
+        )
+    ");
 
-            if (
-                str_contains(
-                    $e->getMessage(),
-                    'Fact lineage conflict detected'
-                )
-            ) {
+            $stmt->execute([
+                'subject' => $subjectEntityId,
+                'fact_type' => $factTypeId,
+                'object' => $branchBObjectEntityId,
+                'source' => 'ci_lineage_conflicts',
+                'notes' => 'Branch B fork attempt',
+                'epistemic_origin'
+                => $governance['epistemic_origin_classval_id'],
+                'adjudication_status'
+                => $governance['adjudication_status_classval_id'],
+                'contradiction_state'
+                => $governance['contradiction_state_classval_id'],
+                'supersedes_linked_fact_id' => $initialHeadId,
+            ]);
+
+        } catch (PDOException $e) {
+
+            if ($e->getCode() === '23000') {
                 $branchBConflictObserved = true;
             } else {
                 throw $e;
