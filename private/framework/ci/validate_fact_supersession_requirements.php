@@ -23,7 +23,7 @@ function validate_fact_supersession_requirements(PDO $pdo): void
 
         $globalFactTypeId = 'ci_supersession_required_status';
         $globalObjectId = 'ci_supersession_required_status';
-        $globalNewObjectId = 'ci_supersession_required_status_new';
+        $globalNewObjectId = $globalObjectId;
 
         $globalInitial = apply_global_fact(
             $pdo,
@@ -101,7 +101,7 @@ function validate_fact_supersession_requirements(PDO $pdo): void
 
         $eventFactTypeId = 'ci_supersession_required_status';
         $eventObjectId = 'ci_supersession_required_status';
-        $eventNewObjectId = 'ci_supersession_required_status_new';
+        $eventNewObjectId = $eventObjectId;
 
         $eventInitial = apply_event_fact(
             $pdo,
