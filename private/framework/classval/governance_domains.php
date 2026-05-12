@@ -1,16 +1,15 @@
 <?php
 
-
 declare(strict_types=1);
 
 final class GovernanceDomains
 {
     public const EPISTEMIC_ORIGIN =
-        'cvt_epistemic_origin';
+        'epistemic_origin_classvals';
 
     public const ADJUDICATION_STATUS =
-        'cvt_adjudication_status';
+        'adjudication_status_classvals';
 
     public const CONTRADICTION_STATE =
-        'cvt_contradiction_state';
+        'contradiction_state_classvals';
 }
