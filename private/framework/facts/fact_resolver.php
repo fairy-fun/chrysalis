@@ -26,9 +26,7 @@ function resolve_canonical_global_fact(
     }
 
     $acceptedClause = $acceptedOnly
-        ? 'AND ' . governance_filter_accepted_adjudication_sql(
-            'f.adjudication_status_classval_id'
-        )
+        ? 'AND f.adjudication_status_classval_id = :accepted'
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -62,6 +60,11 @@ SQL;
 
     if ($objectEntityId !== null) {
         $params['object'] = $objectEntityId;
+    }
+
+    if ($acceptedOnly) {
+        $params['accepted'] =
+            governance_default_adjudication_status($pdo);
     }
 
     $stmt->execute($params);
@@ -104,9 +107,7 @@ function resolve_canonical_event_fact(
     }
 
     $acceptedClause = $acceptedOnly
-        ? 'AND ' . governance_filter_accepted_adjudication_sql(
-            'f.adjudication_status_classval_id'
-        )
+        ? 'AND f.adjudication_status_classval_id = :accepted'
         : '';
 
     $objectClause = $objectEntityId !== null
@@ -142,6 +143,11 @@ SQL;
 
     if ($objectEntityId !== null) {
         $params['object'] = $objectEntityId;
+    }
+
+    if ($acceptedOnly) {
+        $params['accepted'] =
+            governance_default_adjudication_status($pdo);
     }
 
     $stmt->execute($params);

@@ -20,35 +20,9 @@ declare(strict_types=1);
 |
 */
 
-const FACT_GOVERNANCE_DEFAULTS = [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Epistemic Origin
-    |--------------------------------------------------------------------------
-    */
 
-    'epistemic_origin_classval_id'
-    => 'epistemic_origin_asserted',
 
-    /*
-    |--------------------------------------------------------------------------
-    | Adjudication Status
-    |--------------------------------------------------------------------------
-    */
-
-    'adjudication_status_classval_id'
-    => 'adjudication_status_accepted',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Contradiction State
-    |--------------------------------------------------------------------------
-    */
-
-    'contradiction_state_classval_id'
-    => 'contradiction_state_unassessed',
-];
 
 /*
 |--------------------------------------------------------------------------
@@ -56,26 +30,53 @@ const FACT_GOVERNANCE_DEFAULTS = [
 |--------------------------------------------------------------------------
 */
 
-function governance_default_epistemic_origin(): string
+    /*
+    |--------------------------------------------------------------------------
+    | Epistemic Origin
+    |--------------------------------------------------------------------------
+    */
+function governance_default_epistemic_origin(PDO $pdo): string
 {
-    return FACT_GOVERNANCE_DEFAULTS[
-    'epistemic_origin_classval_id'
-    ];
+    return governance_classval_id(
+        $pdo,
+        GovernanceDomains::EPISTEMIC_ORIGIN,
+        GovernanceCodes::EPISTEMIC_ASSERTED
+    );
 }
 
-function governance_default_adjudication_status(): string
+
+/*
+    |--------------------------------------------------------------------------
+    | Adjudication Status
+    |--------------------------------------------------------------------------
+    */
+
+function governance_default_adjudication_status(PDO $pdo): string
 {
-    return FACT_GOVERNANCE_DEFAULTS[
-    'adjudication_status_classval_id'
-    ];
+    return governance_classval_id(
+        $pdo,
+        GovernanceDomains::ADJUDICATION_STATUS,
+        GovernanceCodes::ADJUDICATION_ACCEPTED
+    );
 }
 
-function governance_default_contradiction_state(): string
+
+/*
+    |--------------------------------------------------------------------------
+    | Contradiction State
+    |--------------------------------------------------------------------------
+    */
+
+function governance_default_contradiction_state(PDO $pdo): string
 {
-    return FACT_GOVERNANCE_DEFAULTS[
-    'contradiction_state_classval_id'
-    ];
+    return governance_classval_id(
+        $pdo,
+        GovernanceDomains::CONTRADICTION_STATE,
+        GovernanceCodes::CONTRADICTION_UNASSESSED
+    );
 }
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -87,19 +88,20 @@ function governance_default_contradiction_state(): string
 |
 */
 
-function governance_profile_default(): array
+function governance_profile_default(PDO $pdo): array
 {
     return [
         'epistemic_origin_classval_id'
-        => governance_default_epistemic_origin(),
+        => governance_default_epistemic_origin($pdo),
 
         'adjudication_status_classval_id'
-        => governance_default_adjudication_status(),
+        => governance_default_adjudication_status($pdo),
 
         'contradiction_state_classval_id'
-        => governance_default_contradiction_state(),
+        => governance_default_contradiction_state($pdo),
     ];
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -107,16 +109,17 @@ function governance_profile_default(): array
 |--------------------------------------------------------------------------
 */
 
-function default_fact_governance(): array
+function default_fact_governance(PDO $pdo): array
 {
-    return governance_profile_default();
+    return governance_profile_default($pdo);
 }
 
 function resolve_fact_governance(
+    PDO $pdo,
     ?array $governance = null
 ): array {
     $resolved = array_merge(
-        governance_profile_default(),
+        governance_profile_default($pdo),
         $governance ?? []
     );
 
@@ -159,12 +162,8 @@ function assert_valid_fact_governance(
     }
 }
 
-function governance_filter_accepted_adjudication_sql(
-    string $column = 'adjudication_status_classval_id'
+function governance_accepted_adjudication_id(
+    PDO $pdo
 ): string {
-    return sprintf(
-        "%s = '%s'",
-        $column,
-        governance_default_adjudication_status()
-    );
+    return governance_default_adjudication_status($pdo);
 }
