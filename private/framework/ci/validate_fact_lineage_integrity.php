@@ -75,7 +75,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
     $factTypeId = 'ci_lineage_status';
 
     $objectA = 'ci_lineage_a';
-    $objectB = 'ci_lineage_b';
+    $objectB = 'ci_lineage_a';
 
     $pdo->beginTransaction();
 
@@ -331,34 +331,52 @@ function validate_fact_lineage_integrity(PDO $pdo): void
     require_zero_rows(
         $pdo,
         "
-        SELECT child.linked_fact_id
-        FROM entity_linked_facts_global child
-        JOIN entity_linked_facts_global parent
-            ON parent.linked_fact_id =
-               child.supersedes_linked_fact_id
-        WHERE child.subject_entity_id
-                <> parent.subject_entity_id
-           OR child.fact_type_id
-                <> parent.fact_type_id
-        ",
+    SELECT child.linked_fact_id
+    FROM entity_linked_facts_global child
+    JOIN entity_linked_facts_global parent
+        ON parent.linked_fact_id =
+           child.supersedes_linked_fact_id
+    WHERE child.subject_entity_id
+            <> parent.subject_entity_id
+       OR child.fact_type_id
+            <> parent.fact_type_id
+       OR COALESCE(
+            child.object_entity_id,
+            '__NULL__'
+          )
+            <>
+          COALESCE(
+            parent.object_entity_id,
+            '__NULL__'
+          )
+    ",
         'Global cross-slot supersession detected'
     );
 
     require_zero_rows(
         $pdo,
         "
-        SELECT child.linked_fact_id
-        FROM entity_linked_facts_event child
-        JOIN entity_linked_facts_event parent
-            ON parent.linked_fact_id =
-               child.supersedes_linked_fact_id
-        WHERE child.subject_entity_id
-                <> parent.subject_entity_id
-           OR child.context_entity_id
-                <> parent.context_entity_id
-           OR child.fact_type_id
-                <> parent.fact_type_id
-        ",
+    SELECT child.linked_fact_id
+    FROM entity_linked_facts_event child
+    JOIN entity_linked_facts_event parent
+        ON parent.linked_fact_id =
+           child.supersedes_linked_fact_id
+    WHERE child.subject_entity_id
+            <> parent.subject_entity_id
+       OR child.context_entity_id
+            <> parent.context_entity_id
+       OR child.fact_type_id
+            <> parent.fact_type_id
+       OR COALESCE(
+            child.object_entity_id,
+            '__NULL__'
+          )
+            <>
+          COALESCE(
+            parent.object_entity_id,
+            '__NULL__'
+          )
+    ",
         'Event cross-slot supersession detected'
     );
 
