@@ -151,7 +151,7 @@ function apply_event_fact(
             );
         }
 
-        $governanceResolved = resolve_fact_governance($governance);
+        $governanceResolved = resolve_fact_governance($pdo,$governance);
 
         $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_event (
@@ -290,7 +290,7 @@ function apply_global_fact(
             );
         }
 
-        $governanceResolved = resolve_fact_governance($governance);
+        $governanceResolved = resolve_fact_governance($pdo,$governance);
 
         $stmt = prepare_fact_write($pdo, <<<SQL
 INSERT INTO entity_linked_facts_global (
