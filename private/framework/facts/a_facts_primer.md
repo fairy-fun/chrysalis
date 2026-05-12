@@ -494,6 +494,44 @@ These are not contradictory across timeline space.
 
 They are sequential truths.
 
+
+## Canonical Resolution Indexing
+
+Canonical lineage-head resolution relies on:
+
+```sql
+NOT EXISTS (
+    SELECT 1
+    FROM ...
+    WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
+)
+```
+Required structural indexes:
+
+Global:
+
+* idx_global_canonical_lookup(
+subject_entity_id,
+fact_type_id,
+object_entity_id
+)
+
+Event:
+
+* idx_event_canonical_lookup(
+subject_entity_id,
+context_entity_id,
+fact_type_id,
+object_entity_id
+)
+
+Lineage integrity:
+
+* UNIQUE(supersedes_linked_fact_id)
+
+These indexes are structural performance/invariant requirements,
+not mutable-state semantics.
+
 ---
 
 # Strategic Importance

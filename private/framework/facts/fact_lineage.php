@@ -309,6 +309,7 @@ function assert_valid_fact_supersession(
     $requiredFields = [
         'subject_entity_id',
         'fact_type_id',
+        'object_entity_id',
     ];
 
     if ($eventScoped) {
