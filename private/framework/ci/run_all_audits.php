@@ -10,7 +10,6 @@ require __DIR__ . '/../audit/audit_event_graph_identity.php';
 require __DIR__ . '/../audit/audit_attribute_domain_mapping.php';
 require __DIR__ . '/../audit/audit_classval_uniqueness.php';
 require __DIR__ . '/../audit/audit_classval_reference_integrity.php';
-require __DIR__ . '/../audit/audit_classval_entity_mirror.php';
 require __DIR__ . '/../audit/audit_profile_type_entity_mirror.php';
 require __DIR__ . '/../audit/audit_status_entity_mirror.php';
 require __DIR__ . '/../audit/audit_figure_entity_mirror.php';
@@ -45,7 +44,6 @@ $audits = [
     'attribute domain mapping' => fn () => assert_attribute_domain_mapping($pdo, $schemaName),
     'classval uniqueness' => fn () => assert_classval_uniqueness($pdo, $schemaName),
     'classval reference integrity' => fn () => assert_classval_reference_integrity($pdo, $schemaName),
-    'classval entity mirror' => fn () => assert_classval_entity_mirror($pdo, $schemaName),
     'profile type entity mirror' => fn () => assert_profile_type_entity_mirror($pdo, $schemaName),
     'status entity mirror' => fn () => assert_status_entity_mirror($pdo, $schemaName),
     'figure entity mirror' => fn () => assert_figure_entity_mirror($pdo, $schemaName),

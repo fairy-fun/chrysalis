@@ -46,3 +46,19 @@ These are:
 * not canonical fact subjects/objects
 
 They are vocabulary atoms.
+
+---
+
+### What To Remove
+
+The following doctrine becomes obsolete:
+
+entity_type_classval
+
+and:
+
+audit_classval_entity_mirror.php
+
+because classvals are no longer required to exist in entities.
+
+That audit should eventually be deleted entirely.
