@@ -14,6 +14,9 @@ function validate_fact_lineage_conflicts(): void
     $pdoA = makePdo();
     $pdoB = makePdo();
 
+    $cleanupPdo = makePdo();
+    $cleanupPdo->beginTransaction();
+
     $subjectEntityId =
         'ci_lineage_conflict_subject_' . bin2hex(random_bytes(8));
 
@@ -80,6 +83,11 @@ function validate_fact_lineage_conflicts(): void
          */
 
         $pdoA->commit();
+
+        /*
+         * Re-enter rollbackable cleanup transaction boundary.
+         */
+        $cleanupPdo->exec('SET autocommit = 0');
 
         try {
 
