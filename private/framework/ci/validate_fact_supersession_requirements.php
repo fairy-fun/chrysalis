@@ -154,6 +154,8 @@ function validate_fact_supersession_requirements(PDO $pdo): void
                 'Event fact slot advancement without explicit supersession did not fail'
             );
         }
+        var_dump($eventInitial);
+        var_dump($eventInitial['linked_fact_id']);
 
         apply_event_fact(
             $pdo,
