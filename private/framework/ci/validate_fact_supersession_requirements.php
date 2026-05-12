@@ -93,14 +93,13 @@ function validate_fact_supersession_requirements(PDO $pdo): void
          * EVENT FACT ENFORCEMENT
          */
 
-        $eventSubjectId =
-            'ci_supersession_required_event_' . bin2hex(random_bytes(8));
-
-        $eventContextId =
-            'ci_supersession_required_context_' . bin2hex(random_bytes(8));
+        $eventSubjectId = 'ci_fact_resolver_status';
+        $eventContextId = 'ci_fact_resolver_status';
 
         $eventFactTypeId = 'ci_supersession_required_status';
-        $eventObjectId = 'ci_supersession_required_status';
+
+        $eventObjectId = 'ci_fact_resolver_status';
+
         $eventNewObjectId = $eventObjectId;
 
         $eventInitial = apply_event_fact(
