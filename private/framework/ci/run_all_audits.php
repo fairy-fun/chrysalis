@@ -11,6 +11,7 @@ require __DIR__ . '/../audit/audit_attribute_domain_mapping.php';
 require __DIR__ . '/../audit/audit_classval_uniqueness.php';
 require __DIR__ . '/../audit/audit_classval_reference_integrity.php';
 require __DIR__ . '/../audit/audit_profile_type_entity_mirror.php';
+require __DIR__ . '/../audit/audit_classval_fk_integrity.php';
 require __DIR__ . '/../audit/audit_status_entity_mirror.php';
 require __DIR__ . '/../audit/audit_figure_entity_mirror.php';
 require __DIR__ . '/../audit/audit_typed_entity_reference_integrity.php';
@@ -30,6 +31,7 @@ require __DIR__ . '/../audit/audit_projection_identity_contract.php';
 require __DIR__ . '/validate_fact_supersession_requirements.php';
 require __DIR__ . '/validate_fact_lineage_conflicts.php';
 
+
 $pdo = makePdo();
 $schemaName = verifyExpectedDatabase($pdo);
 
@@ -44,6 +46,7 @@ $audits = [
     'attribute domain mapping' => fn () => assert_attribute_domain_mapping($pdo, $schemaName),
     'classval uniqueness' => fn () => assert_classval_uniqueness($pdo, $schemaName),
     'classval reference integrity' => fn () => assert_classval_reference_integrity($pdo, $schemaName),
+    'classval FK integrity' => fn () => assert_classval_fk_integrity($pdo, $schemaName),
     'profile type entity mirror' => fn () => assert_profile_type_entity_mirror($pdo, $schemaName),
     'status entity mirror' => fn () => assert_status_entity_mirror($pdo, $schemaName),
     'figure entity mirror' => fn () => assert_figure_entity_mirror($pdo, $schemaName),
