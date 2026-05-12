@@ -11,8 +11,8 @@ require_once $repoRoot . '/private/framework/facts/fact_resolver.php';
 
 function validate_fact_lineage_conflicts(): void
 {
-    $pdoA = makePdo('write');
-    $pdoB = makePdo('write');
+    $pdoA = makePdo();
+    $pdoB = makePdo();
 
     $subjectEntityId =
         'ci_lineage_conflict_subject_' . bin2hex(random_bytes(8));
