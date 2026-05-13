@@ -43,6 +43,9 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
      * Do not downgrade DOMAIN_ENTITY_FK references back to audit-only.
      */
     $references = [
+
+        ['figure_realizations', 'realization_classval_id', 'CLASSVAL'],
+
         // domain entity references
         ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['attribute_domains', 'domain_id', 'DOMAIN_ENTITY_FK'],
