@@ -943,7 +943,9 @@ canonical choreography composition identity
 ```
 The choreography system composes reusable figure anchors through stable relational figure references.
 
-Runtime occurrence semantics belong to higher-level runtime/event systems rather than reusable choreography composition structures.
+Runtime occurrence semantics belng to higher-level runtime/event systems rather than reusable choreography composition structures.
+
+Canonical choreography traversal identity uses numeric relational figure FK references.
 ### Runtime Boundary Rule
 
 No runtime code, recursive traversal, CI audit, legality graph, or choreography composition system may depend on deprecated `*_figure_entity_id` traversal columns.
