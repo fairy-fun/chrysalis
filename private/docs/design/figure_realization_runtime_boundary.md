@@ -586,7 +586,88 @@ choreography composition/runtime structure
 ```
 Reusable figure anchors may participate in choreography graphs without creating new ontology identity.
 
-They do not replace realization ontology.
+They do not replace realization ontology. 
+
+### Choreography Entity vs Choreography Content
+
+The term choreography in the schema does not exclusively mean
+runtime sequencing or figure traversal semantics.
+
+A choreography entity may represent:
+
+* authored choreography work
+* choreography ownership/authorship
+* choreography attribution
+* choreography organizational structure
+* choreography metadata relationships
+
+rather than figure sequencing itself.
+
+In particular:
+
+```text
+segments
+```
+
+represent the atomic choreography content units.
+
+A segment becomes choreography because it composes and sequences
+multiple reusable figure anchors.
+
+Therefore:
+```text
+figure
+!=
+choreography
+```
+while:
+```text
+segment
+=
+atomic choreography unit
+```
+`segment_figures` represents the internal figure composition
+of choreography content.
+
+By contrast:
+```text
+choreography_relationships
+```
+should not automatically be interpreted as runtime traversal edges.
+
+The structure may instead represent choreography entity relationships such as:
+
+* choreographer attribution
+* organizational ownership
+* entity relationship semantics
+* choreography metadata associations
+
+including relationships involving entities sourced from:
+```text
+characters
+```
+Therefore:
+```text
+choreography_relationships
+!=
+necessarily runtime sequencing graph semantics
+```
+The choreography content/runtime boundary should therefore distinguish:
+
+| layer	   | meaning              |
+|----------|----------------------|
+| figures	 | reusable dance units |
+|segment_figures	|figure composition inside choreography|
+|segments	|atomic choreography content|
+|choreography_relationships	|relationships ABOUT choreography entities|
+|performance_routines	|assembled performance/routine structures|
+
+This preserves the distinction between:
+
+* choreography content
+* choreography metadata
+* choreography authorship
+* choreography runtime composition
 
 ### Routine / Performance Boundary
 
