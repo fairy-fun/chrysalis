@@ -815,8 +815,18 @@ try {
 
 
     /*
-     * Seed figures by business key: figures.classval_id
-     */
+ * Seed reusable choreography figure anchors.
+ *
+ * Canonical choreography/traversal authority operates on:
+ * figures.id
+ *
+ * NOT:
+ * figures.classval_id
+ *
+ * classval linkage is transitional compatibility state only.
+ */
+
+    /*
     $stmt = $pdo->prepare(
             <<<'SQL'
     INSERT INTO figures (
@@ -877,10 +887,12 @@ SQL
     if ($figure1Id < 1 || $figure2Id < 1) {
         throw new RuntimeException('Resolved seeded figure ids were invalid');
     }
+*/
 
     /*
      * Seed segment by business key: segments.code
      */
+    /*
     $stmt = $pdo->prepare(
         <<<'SQL'
 INSERT INTO segments (
@@ -936,10 +948,13 @@ SQL
     $medleyEntityId = 'ci_medley_1';
 
     upsert_entity($pdo, $medleyEntityId, $entityTypeMedley);
+*/
 
     /*
      * Seed medley by business key: medleys.code
      */
+
+    /*
     $medleyEntityId = 'ci_medley_1';
 
     upsert_entity($pdo, $medleyEntityId, $entityTypeMedley);
@@ -995,10 +1010,11 @@ SQL
     if ($medleyId < 1) {
         throw new RuntimeException('Resolved seeded medley id was invalid');
     }
-
+*/
     /*
      * Seed medley segment ordering.
      */
+    /*
     $stmt = $pdo->prepare(
         <<<'SQL'
 INSERT INTO medley_segments (
@@ -1026,10 +1042,11 @@ SQL
         ':sequence_index' => 1,
         ':subsequence_index' => 1,
     ]);
-
+*/
     /*
      * Seed segment figures ordering.
      */
+    /*
     $stmt = $pdo->prepare(
         <<<'SQL'
 INSERT INTO segment_figures (
@@ -1060,10 +1077,11 @@ SQL
         ':figure_id' => $figure2Id,
         ':sequence_index' => 2,
     ]);
-
+*/
     /*
      * Seed one legal transition.
      */
+    /*
     $stmt = $pdo->prepare(
         <<<'SQL'
 INSERT INTO figure_transitions (
@@ -1091,6 +1109,8 @@ SQL
         ':transition_legality_id' => 'legal',
         ':dance_id' => 1,
     ]);
+    */
+
 
     /*
      * Expression-output fixture.
