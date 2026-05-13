@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+require_once __DIR__
+    . '/../classvals/classval_resolver.php';
+
 function governance_classval_id(
     PDO $pdo,
     string $classvalTypeId,
@@ -21,37 +24,9 @@ function governance_classval_id(
         );
     }
 
-    static $cache = [];
-
-    $key = $classvalTypeId . ':' . $code;
-
-    if (isset($cache[$key])) {
-        return $cache[$key];
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT id
-        FROM classvals
-        WHERE classval_type_id = :classval_type_id
-          AND code = :code
-        LIMIT 1
-    ");
-
-    $stmt->execute([
-        ':classval_type_id' => $classvalTypeId,
-        ':code' => $code,
-    ]);
-
-    $id = $stmt->fetchColumn();
-
-    if (!is_string($id) || trim($id) === '') {
-        throw new RuntimeException(
-            'Missing governance classval: '
-            . $classvalTypeId . ' / ' . $code
-        );
-    }
-
-    $cache[$key] = $id;
-
-    return $id;
+    return resolve_classval_id(
+        $pdo,
+        $classvalTypeId,
+        $code
+    );
 }
