@@ -754,6 +754,24 @@ new choreography identity
 ```
 The current schema structure supports this interpretation.
 
+A segment's internal figure composition is part of segment identity.
+
+Material changes to:
+
+* figure composition
+* figure ordering
+* choreography structure within the segment
+
+produce a distinct segment identity.
+
+Therefore:
+
+```text
+segment composition change
+=
+new segment identity
+```
+
 In particular:
 
 * `segments` does not presently contain direct routine ownership
@@ -787,6 +805,10 @@ This preserves:
 * medley/program assembly flexibility
 
 ## Routine Identity vs Performance Occurrence
+
+Segment ordering is part of routine identity.
+
+Therefore, reordering segments produces a distinct routine even if the same reusable segments are retained.
 
 `performance_routines` represents reusable assembled choreography/program structure.
 
@@ -873,7 +895,51 @@ These are legacy compatibility surfaces.
 
 They must not be treated as final ontology authority.
 
+## Canonical Composition Identity
 
+Choreography composition systems operate canonically on numeric relational figure identity.
+
+Specifically:
+```text
+segment_figures.figure_id
+=
+canonical choreography composition reference
+
+figure_transitions.predecessor_figure_id
+=
+canonical traversal predecessor reference
+
+figure_transitions.successor_figure_id
+=
+canonical traversal successor reference
+```
+Entity-id fields currently present in choreography composition and traversal systems are transitional compatibility surfaces.
+
+Examples include:
+```text
+segment_figures.figure_entity_id
+figure_transitions.predecessor_figure_entity_id
+figure_transitions.successor_figure_entity_id
+```
+These fields must not be treated as authoritative choreography composition identity.
+
+Their role is limited to:
+
+* entity/runtime addressing compatibility
+* migration overlap support
+* external entity-oriented integration surfaces
+
+Canonical choreography composition and traversal authority remains relational numeric figure identity.
+
+Therefore:
+```text
+entity/runtime addressing
+!=
+canonical choreography composition identity
+```
+The choreography system composes reusable figure anchors through stable relational figure references.
+
+Runtime occurrence semantics belong to higher-level runtime/event systems rather than reusable choreography composition structures.
 
 ## Canonical Authority
 
