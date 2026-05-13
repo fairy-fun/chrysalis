@@ -1,270 +1,436 @@
 # Prose Subevent Segmentation Doctrine
 **Chrysalis Story-World Database — Narrative Ontology Layer**
 `private/docs/prose/prose_subevent_segmentation_doctrine.md`
-Version 1.0 — May 2026
+Version 1.1 — May 2026
 
 ---
 
 ## 1. Purpose
 
-This document governs how prose narrative is decomposed into calendar subevents in `sxnzlfun_chrysalis`. It defines what a subevent *is*, where its boundaries lie, and what constitutes valid versus invalid segmentation. It is the authoritative reference for any session that maps prose to schema structure.
+This document governs how prose narrative is decomposed into runtime calendar subevents in `sxnzlfun_chrysalis`.
 
-Without this doctrine, segmentation is ad hoc. Ad hoc segmentation produces non-deterministic replay — the same prose passage will be sliced differently in different sessions, breaking the calendar's integrity as a queryable story record.
+This is not merely a note about segmentation. It is an ontology contract for deterministic experiential chronology decomposition.
+
+It defines:
+- what a subevent *is*
+- where its boundaries lie
+- how chronology hierarchy behaves
+- how prose becomes executable runtime chronology
+- what constitutes valid versus invalid segmentation
+
+It is the authoritative reference for any session or runtime process that maps prose into `calendar_events`.
+
+Without this doctrine, segmentation becomes ad hoc. Ad hoc segmentation produces non-deterministic replay — the same prose passage will be segmented differently in different sessions, breaking the calendar's integrity as a queryable experiential chronology record.
 
 ---
 
-## 2. What a Subevent Is
+## 2. Runtime Ontology Position
 
-A subevent (`subevent_index ≥ 1` in `calendar_events`) is **one coherent experiential unit** within a parent event's time slot.
+`calendar_events` is the authoritative executable chronology hierarchy.
+
+Runtime chronology traversal, parent-child hierarchy, chronological decomposition, and replay semantics are all defined within `calendar_events`.
+
+Subevents are not screenplay fragments.
+
+They are deterministic experiential chronology units attached beneath concrete runtime calendar hierarchy nodes.
+
+The runtime doctrine is:
+
+```text
+raw prose
+→ segmentation proposal
+→ deterministic boundary validation
+→ canonical subevent generation
+→ runtime persistence
+```
+
+Segmentation itself is therefore a first-class runtime operation.
+
+---
+
+## 3. What a Subevent Is
+
+A subevent is one coherent experiential unit within a parent event's runtime chronology slot.
 
 Formally: a subevent represents a stretch of narrative time during which:
-- The subject's primary attention, action, or inner state is *stable* or *continuously evolving toward a single outcome*
+- The subject's primary attention, action, or inner state is stable or continuously evolving toward a single outcome
 - The social configuration (who is present and in what relational mode) does not fundamentally shift
 - The location does not change in a way that constitutes a scene break
-- No new structural event (a rehearsal becoming a confrontation, a meal becoming a negotiation) supersedes the framing established at the subevent's opening
+- No new structural event supersedes the framing established at the subevent's opening
 
-A subevent ends when any of the above conditions breaks.
+A subevent ends when one of the above conditions breaks.
 
-**Minimum unit**: A subevent must be narratively substantial enough to produce at least one sentence of prose summary. Do not create subevents for beats that could be absorbed into adjacent continuity without loss.
+A subevent is not a beat-level fragment.
 
-**Maximum unit**: A subevent must not span two distinct experiential states that the narrative treats as separate moments. If the story marks a transition with a paragraph break, tonal shift, or new character action that reorients the scene, that transition is a segmentation boundary.
+It is a deterministic experiential chronology segment suitable for:
+- replay-safe traversal
+- stable runtime chronology
+- canonical hierarchy generation
+- deterministic queryability
+- stable client identity generation
 
----
+### Minimum unit
 
-## 3. Valid Segmentation Boundaries
+A subevent must be narratively substantial enough to produce at least one sentence of prose summary.
 
-A boundary between subevents is valid when *at least one* of the following is true:
+Do not create subevents for beats that can be absorbed into adjacent continuity without structural loss.
 
-### 3.1 Structural Event Transition
-The formal purpose of the activity changes. Examples:
-- Warm-up ends; drilling begins
-- Drilling ends; full run-through begins
-- A social meal becomes a private conversation after others leave
-- A debrief opens into a conflict
+### Maximum unit
 
-### 3.2 Location Transition (Scene Break)
-The subject moves to a different physical space and the narrative follows. A brief exit and return within the same scene (stepping out for water, returning to the floor) does **not** constitute a boundary unless the narrative marks it as a distinct beat.
+A subevent must not span two distinct experiential states that the narrative treats as separate moments.
 
-### 3.3 Social Configuration Shift
-The set of active participants changes *and* the relational dynamic of the scene materially changes as a result. Examples:
-- Kai leaves; Shay and Sebastian are alone for the first time
-- A third party arrives and changes the register of an ongoing conversation
-- The group breaks into pairs; Shay's dyadic interaction begins
+If the prose marks a transition with:
+- paragraph break
+- tonal shift
+- location transition
+- social reconfiguration
+- structural activity change
+- threshold experiential shift
 
-A participant entering or leaving without affecting the relational frame of the scene does **not** constitute a boundary.
-
-### 3.4 Experiential State Transition
-The subject's inner state shifts categorically, not merely intensifies. Examples:
-- Observation → participation
-- Performance anxiety → flow state
-- Social discomfort → private resolve
-- Confusion → understanding (threshold moment, not gradual accumulation)
-
-Gradual emotional build within a continuous activity is **not** a boundary. A qualitative shift that the prose marks as a turning point **is**.
-
-### 3.5 Chronological Gap
-Narrative time jumps forward and the prose does not bridge the gap. A time-skip of more than a few minutes, marked by a scene transition or summary passage, creates a boundary.
+then the transition is a candidate segmentation boundary.
 
 ---
 
-## 4. Invalid Fragmentation Patterns
+## 4. Valid Segmentation Boundaries
 
-The following patterns produce phantom subevents and must be rejected:
+A boundary between subevents is valid when at least one of the following is true.
 
-### 4.1 Beat-Level Fragmentation
-Splitting individual moments of action or dialogue that belong to a continuous sequence.
+### 4.1 Structural Event Transition
 
-*Bad*: Subevent 3 = "Shay notices Sebastian watching her." / Subevent 4 = "Shay continues drilling."  
-*Good*: One subevent covers the entire drilling sequence including the noticing moment as an embedded beat.
+The formal purpose of the activity changes.
 
-### 4.2 Emotion-as-Boundary
-Treating every emotional beat as a segmentation trigger. Emotional texture within a continuous activity belongs to the subevent's `description`, not to separate subevents.
+Examples:
+- warm-up ends; drilling begins
+- drilling ends; full run-through begins
+- social meal becomes negotiation
+- debrief becomes confrontation
 
-### 4.3 Dialogue-as-Boundary
-A conversation that opens, develops, and resolves within one structural activity is one subevent. Do not create a new subevent for each exchange unless the conversation itself undergoes a structural transition (e.g., small talk → confrontation → resolution — three phases, potentially three subevents).
+### 4.2 Location Transition
 
-### 4.4 Micro-Location Changes
-Moving from one side of the studio to the other, stepping off the floor to receive a note, or going to the mirror wall are not location transitions. The scene remains continuous.
+The narrative follows the subject into a new physical scene-space.
 
-### 4.5 Participant Flicker
-A character briefly entering or exiting a scene without changing its fundamental dynamic does not constitute a boundary. Only apply Rule 3.3 when the relational frame of the scene actually changes.
+Minor movement inside the same active scene does not qualify.
+
+### 4.3 Social Configuration Shift
+
+The active relational structure of the scene changes materially.
+
+Examples:
+- group becomes dyad
+- private exchange begins
+- third-party arrival changes scene register
+
+### 4.4 Experiential State Transition
+
+The subject's experiential orientation changes categorically, not incrementally.
+
+Examples:
+- observation → participation
+- anxiety → flow state
+- confusion → understanding
+- social masking → private resolve
+
+### 4.5 Chronological Gap
+
+Narrative time advances discontinuously.
+
+Explicit scene breaks, skipped time, or summary jumps create segmentation boundaries.
 
 ---
 
-## 5. Continuity Pressure Doctrine
+## 5. Invalid Fragmentation Patterns
 
-When in doubt, **merge rather than split**.
+### 5.1 Beat-Level Fragmentation
+
+Do not create standalone subevents for isolated observations, reactions, gestures, or dialogue beats embedded within continuous activity.
+
+### 5.2 Emotion-as-Boundary
+
+Emotional texture belongs inside subevent description unless the full experiential transition criteria are met.
+
+### 5.3 Dialogue-as-Boundary
+
+Continuous conversation inside a stable activity remains one subevent unless the conversation itself structurally transforms.
+
+### 5.4 Micro-Location Changes
+
+Small physical repositioning inside the same scene-space does not create a new subevent.
+
+### 5.5 Participant Flicker
+
+Brief entrance or exit without relational restructuring does not qualify.
+
+---
+
+## 6. Continuity Pressure Doctrine
+
+When uncertain, merge rather than split.
 
 This doctrine exists because:
-1. Subevents are deterministic schema records. Splitting creates two rows where one should exist, and that cannot be invisibly corrected later without breaking downstream references.
-2. The calendar is a story record, not a screenplay breakdown. It does not need to capture every beat — it needs to capture the shape of the day.
-3. Over-segmented calendars produce noisy query results. A well-segmented calendar reveals narrative structure at a glance.
 
-**The test**: If removing the boundary between two candidate subevents would produce a single coherent summary sentence without losing structural information, merge them.
+1. Subevents are deterministic runtime chronology records.
+2. The calendar is a story record, not a screenplay breakdown.
+3. Over-segmentation damages replay fidelity and query coherence.
+4. Fragmentation introduces unstable chronology identity.
+5. Runtime chronology should reveal the shape of experiential flow, not every beat.
 
-**The exception**: If the story explicitly marks the transition as significant — through a paragraph break, a tonal shift, a chapter beat — honour that mark. The author's intent is data.
+### Compression heuristic
 
----
+If removing the boundary between two candidate subevents would produce a single coherent summary sentence without structural loss, merge them.
 
-## 6. Experiential State Transition Rules
+### Exception
 
-Experiential state transitions are the subtlest segmentation trigger and the most commonly misapplied.
+If the narrative explicitly marks the transition as significant, preserve the boundary.
 
-### 6.1 What qualifies
-A valid experiential state transition must meet all three conditions:
-- The shift is *categorical*, not *incremental* (anxiety → resolve, not mild anxiety → stronger anxiety)
-- The narrative marks it as a threshold (a line of internal narration, a physical action that signals the change, a shift in register)
-- The new state persists for the remainder of the subevent or until the next valid boundary
-
-### 6.2 What does not qualify
-- Intensification of an existing state
-- A passing thought or observation that does not redirect the subject's orientation
-- A reaction to an event that resolves within the same beat
-
-### 6.3 Compound states
-Some subevents contain multiple emotional registers held simultaneously (performance focus + social anxiety, for example). These are not split. The subevent description should capture the compound state.
+Authorial structural signalling is ontology data.
 
 ---
 
-## 7. Dialogue Handling Rules
+## 7. Experiential State Transition Rules
 
-### 7.1 Embedded dialogue
-Dialogue that is part of a continuous activity (notes during drilling, banter between formations) is embedded in the parent subevent. It does not generate its own subevent.
+Experiential transitions are the most subtle segmentation trigger and the most commonly over-applied.
 
-### 7.2 Dialogue as primary activity
-When conversation *is* the activity — a debrief, a private exchange, a formal instruction session — it is its own subevent. The subevent covers the full conversational unit.
+### 7.1 Valid experiential transition
 
-### 7.3 Dialogue with structural phases
-A single conversation may contain distinct structural phases (opening small talk → substantive content → closing challenge). These phases may warrant separate subevents if each phase is narratively substantial and the transitions between them are marked.
+A valid experiential transition must satisfy all conditions:
+- the shift is categorical, not incremental
+- the prose marks the threshold
+- the resulting state persists structurally
 
-Apply the continuity pressure doctrine: if a two-sentence summary covers the whole conversation without distortion, it is one subevent.
+### 7.2 Invalid experiential transition
 
-### 7.4 Dialogue across a location change
-If a conversation begins in one space and continues in another (moves from studio floor to corridor, for example) and the narrative follows it, the boundary is the location change, not the dialogue structure.
+The following do not qualify:
+- emotional intensification
+- passing observation
+- transient reaction
+- unresolved flicker
 
----
+### 7.3 Compound states
 
-## 8. Emotional Transition Handling
-
-Emotional transitions belong to subevent `description` unless they meet the full criteria in §6.1.
-
-When an emotional transition *does* meet §6.1:
-- The boundary falls at the moment of transition, not before or after it
-- The preceding subevent ends at the last beat of the prior state
-- The new subevent begins at the first beat of the new state
-- The transition moment itself belongs to whichever subevent it more naturally closes (usually the prior state — the moment of shift is the conclusion of what came before)
+Multiple simultaneous emotional registers inside one continuous activity remain one subevent.
 
 ---
 
-## 9. Chronological Transition Handling
+## 8. Dialogue Handling Rules
 
-### 9.1 Explicit time gaps
-If prose skips forward in time with a clear break (scene ending, white space, transitional narration like "an hour later"), that gap is a boundary.
+### 8.1 Embedded dialogue
 
-### 9.2 Compressed time
-Narrative compression within a continuous activity ("they ran it four more times before Kai called a break") does not create a boundary. The activity remains one subevent.
+Dialogue embedded inside continuous activity belongs to the parent subevent.
 
-### 9.3 Summary-then-scene
-If a subevent opens with a summary of time passing and then zooms into a specific moment, the subevent covers both — the summary is the opening, the scene is the body.
+### 8.2 Dialogue as primary activity
 
-### 9.4 Real date alignment
-Each subevent's `real_date_start_id` and `real_date_end_id` must be consistent with the parent event's date. Subevents do not cross midnight unless the parent event explicitly spans two dates.
+If conversation itself is the activity, the conversation is the subevent.
 
----
+### 8.3 Structural conversational phases
 
-## 10. Schema Boundary Notes
+A conversation may contain distinct structural phases.
 
-### 10.1 Subevent index
-`subevent_index` is 1-based. The parent event row has `subevent_index = NULL`. Children are 1, 2, 3… in chronological order. Gaps in the sequence are not permitted — subevents must be assigned consecutively.
+Separate subevents are warranted only if:
+- phases are narratively substantial
+- transitions are structurally marked
+- continuity pressure does not collapse them cleanly
 
-### 10.2 Event code inheritance
-Subevents share the parent's `event_index`. They do not generate new `event_index` values. Their `event_code` in the `events` table follows the `CAL-WWDTES` format where S is the subevent index.
+### 8.4 Dialogue across location transition
 
-### 10.3 Summary field
-Every subevent row requires a non-null `summary`. The summary must be a prose sentence, not a label. It should express *what happened* in the subevent, not just name the activity.
-
-### 10.4 Parent reference
-`parent_event_id` references `events.id`, not `calendar_events.id`. Always verify this before inserting.
+If conversation continues across a scene-space transition, the location change defines the segmentation boundary.
 
 ---
 
-## 11. Planner Heuristics
+## 9. Emotional Transition Handling
 
-When planning subevent decomposition before writing SQL, apply these in order:
+Emotional transitions belong inside subevent description unless they satisfy the full experiential transition doctrine.
 
-1. **Read the full prose passage** before assigning any boundaries. Do not segment line by line.
-2. **Identify the structural skeleton**: what are the distinct activities in this time slot?
-3. **Apply the valid boundary checklist** (§3) to each candidate transition between activities.
-4. **Apply continuity pressure** (§5) to any boundary that is not clearly structural.
-5. **Assign subevents to the surviving boundaries**, in chronological order, 1-based.
-6. **Write the summary** for each subevent before writing any SQL. If a summary cannot be written in one sentence without distortion, reconsider the segmentation.
-7. **Verify event codes** against the `CAL-WWDTES` format and confirm no collisions with existing rows.
-8. **Check `MAX(id)`** in `calendar_events` before inserting — the id column is not auto-increment.
+When a valid experiential transition occurs:
+- the boundary falls at the transition threshold
+- the prior state closes the previous subevent
+- the new state opens the next subevent
 
 ---
 
-## 12. Deterministic Replay Implications
+## 10. Chronological Transition Handling
 
-The calendar is a deterministic story record. This means:
+### 10.1 Explicit time gaps
 
-- The same prose passage must always produce the same set of subevents, regardless of which session processes it
-- Segmentation decisions made in one session are binding on all future sessions
-- If a future session would segment differently, the discrepancy must be resolved explicitly — either by documenting why the original segmentation was wrong and correcting it, or by confirming that the original was correct and the new impulse was fragmentation pressure
+Clear scene jumps create segmentation boundaries.
 
-**The test for replay fidelity**: Given only the subevent summaries in the database, could a reader reconstruct the shape of the scene — who was there, what happened structurally, what changed — without reading the prose? If yes, the segmentation is complete. If no, something structural was lost in a merge or buried in a fragment.
+### 10.2 Compressed time
 
----
+Compressed repetition inside continuous activity remains one subevent.
 
-## 13. Examples
+### 10.3 Summary-then-scene
 
-### 13.1 Good segmentation — Monday morning rehearsal
+Summary opening plus zoomed scene remains one subevent unless a later structural transition occurs.
 
-**Prose summary**: Shay arrives, changes, joins warm-up on the floor with the full team. Kai runs a structured warm-up sequence — footwork drills, frame exercises, partner rotations. Then the team breaks into formation lines and runs the opening segment three times. After the third run, Kai stops them and gives Shay individual correction on her entry timing. The others wait.
+### 10.4 Real date alignment
 
-**Subevents**:
-1. Warm-up sequence (structural activity: team warm-up; full social configuration; continuous)
-2. Formation run-throughs (structural transition: activity changes to full-formation drilling)
-3. Individual correction from Kai (structural + social configuration transition: group dynamic suspended; Shay singled out)
+Subevents inherit chronology compatibility from the parent runtime chronology node.
 
-**Why not more?**: The three run-throughs are compressed repetition within one structural activity — they do not generate three subevents. Shay's emotional response to being singled out is embedded in subevent 3's description, not a fourth subevent.
+Subevents do not cross midnight unless the parent chronology node explicitly spans multiple dates.
 
 ---
 
-### 13.2 Bad segmentation — beat-level fragmentation
+## 11. Runtime Schema Doctrine
 
-**Prose moment**: Shay notices Sebastian watching her from the side during drilling.
+### 11.1 Runtime chronology authority
 
-**Bad**: Subevent = "Shay notices Sebastian watching her."  
-**Why bad**: This is an embedded beat within a drilling subevent. It does not change the structural activity, social configuration, or her experiential state categorically. It belongs in the drilling subevent's description.
+`calendar_events` is the authoritative executable chronology hierarchy.
+
+Hierarchy traversal, replay semantics, chronology decomposition, and runtime chronology reconstruction all occur inside `calendar_events`.
+
+Legacy or compatibility structures must not supersede runtime chronology authority.
+
+### 11.2 Layer semantics
+
+Rows where:
+
+```text
+layer_id = calendar_layer_event
+```
+
+MUST contain:
+
+```text
+subevent_index IS NULL
+```
+
+Rows where:
+
+```text
+layer_id = calendar_layer_subevent
+```
+
+MUST contain:
+
+```text
+subevent_index >= 1
+```
+
+`subevent_index` has meaning only inside the subevent layer.
+
+### 11.3 Subevent indexing
+
+Subevents are:
+- 1-based
+- consecutive
+- chronological
+- gapless within parent chronology scope
+
+### 11.4 Parent hierarchy
+
+`parent_event_id` references `calendar_events.id`.
+
+Subevents attach beneath concrete runtime chronology nodes inside the executable `calendar_events` hierarchy.
+
+### 11.5 Summary semantics
+
+Every subevent requires a non-null prose `summary`.
+
+The summary describes what structurally occurred within the experiential chronology unit.
+
+It is not merely:
+- a label
+- a planner note
+- a beat tag
+- an export fragment
+
+### 11.6 Runtime persistence doctrine
+
+Segmentation decisions become canonical runtime chronology once persisted.
+
+The same prose passage should always produce the same segmentation output under the same chronology context.
 
 ---
 
-### 13.3 Borderline case — conversation with structural phases
+## 12. Segmentation Execution Pipeline
 
-**Prose summary**: After rehearsal, Shay and Jorge FaceTime. They open with catch-up (Jorge's work, her flat). Then Jorge asks directly how she's finding the team. Shay deflects. Jorge pushes. She admits she feels watched by people who haven't decided whether to accept her yet. Jorge says something that makes her laugh and reframes it.
+Segmentation is a deterministic runtime transformation phase.
 
-**Segmentation decision**: One subevent or two?
+Canonical flow:
 
-Apply continuity pressure: the conversation has an emotional arc — deflection to admission to reframe — but it is one continuous FaceTime call with one continuous social configuration (Shay + Jorge only). The structural phases (catch-up → direct question → admission → reframe) are all within the same conversational activity.
+```text
+raw prose
+→ segmentation proposal
+→ deterministic boundary validation
+→ canonical subevent generation
+→ runtime persistence
+```
 
-**Decision**: One subevent. The summary captures the arc: Shay FaceTimes Jorge; deflects his questions about the team before admitting she feels on probation; Jorge reframes it. Structural detail beyond that belongs in a prose note, not a new subevent.
+### 12.1 Segmentation proposal
 
-**Exception trigger**: If the reframe moment is a genuine experiential state transition that the narrative marks as a threshold (new paragraph, shift in Shay's internal register, change in how she holds herself for the rest of the day), it may warrant a second subevent. Apply §6.1 criteria.
+Candidate boundaries are generated from structural, social, locational, experiential, and chronological transitions.
+
+### 12.2 Deterministic validation
+
+Continuity pressure doctrine is applied.
+
+Boundary candidates that fail structural significance collapse into adjacent chronology continuity.
+
+### 12.3 Canonical generation
+
+Validated boundaries become canonical runtime subevent decomposition.
+
+### 12.4 Runtime persistence
+
+Persistence occurs only after validation.
+
+Runtime chronology writes should never occur directly from unvalidated beat-level decomposition.
 
 ---
 
-## 14. Governing Principles Summary
+## 13. Planner Heuristics
+
+1. Read the full prose passage before assigning boundaries.
+2. Identify the structural chronology skeleton.
+3. Apply valid boundary doctrine.
+4. Apply continuity pressure.
+5. Assign surviving subevents chronologically.
+6. Write summaries before persistence.
+7. Validate chronology integrity.
+8. Verify runtime hierarchy references before insertion.
+
+Do not segment line-by-line.
+
+---
+
+## 14. Deterministic Replay Doctrine
+
+The calendar is a deterministic experiential chronology record.
+
+Therefore:
+- identical prose should produce identical segmentation
+- segmentation decisions become replay-significant runtime ontology
+- future reinterpretation must be resolved explicitly
+- runtime chronology identity stability matters
+
+### Replay fidelity test
+
+Given only persisted subevent summaries, a reader should be able to reconstruct:
+- structural flow
+- social configuration
+- chronology progression
+- experiential transitions
+- narrative shape
+
+without reading the underlying prose.
+
+---
+
+## 15. Governing Principles Summary
 
 | Principle | Rule |
 |---|---|
 | Default | Merge rather than split |
-| Boundary trigger | Structural, locational, social, experiential, or chronological — and marked by the narrative |
-| Fragmentation test | Can two candidate subevents be summarised in one sentence without loss? If yes, merge. |
-| Emotion handling | Belongs in description unless it meets the full §6.1 categorical threshold criteria |
-| Dialogue handling | Embedded in parent unless conversation is the primary activity |
-| Replay fidelity | Segmentation must be deterministic — same prose always produces same subevents |
-| Schema fidelity | `summary` is required, non-null, prose. `subevent_index` is consecutive, 1-based. `parent_event_id` references `events.id`. |
+| Calendar ontology | Calendar is a story record, not screenplay decomposition |
+| Runtime authority | `calendar_events` is authoritative chronology hierarchy |
+| Boundary trigger | Structural, locational, social, experiential, or chronological transition |
+| Fragmentation test | If one coherent summary sentence preserves structure, merge |
+| Emotional handling | Embedded unless categorical experiential transition occurs |
+| Dialogue handling | Embedded unless conversation itself becomes the structural activity |
+| Replay fidelity | Same prose should always produce same segmentation |
+| Runtime persistence | Segmentation becomes canonical runtime chronology |
+| Layer semantics | Event rows use `subevent_index = NULL`; subevent rows require `subevent_index >= 1` |
+| Hierarchy doctrine | `parent_event_id` references `calendar_events.id` |
 
 ---
 
-*This document governs all calendar subevent decomposition in sxnzlfun_chrysalis. Update version and date when revised. All changes must be applied retroactively to any in-progress calendar population that contradicts revised rules.*
+*This document governs runtime chronology decomposition in sxnzlfun_chrysalis. All future segmentation systems, replay systems, chronology compilers, prose ingestion runtimes, and calendar persistence infrastructure must conform to this doctrine.*
