@@ -786,6 +786,70 @@ This preserves:
 * future choreography versioning
 * medley/program assembly flexibility
 
+## Routine Identity vs Performance Occurrence
+
+`performance_routines` represents reusable assembled choreography/program structure.
+
+A routine is not merely a runtime event occurrence.
+
+A routine defines:
+
+* segment composition
+* segment ordering
+* choreography assembly structure
+* reusable authored program identity
+
+Therefore:
+
+```text
+performance_routine
+=
+assembled choreography program identity
+``` 
+A routine may be performed:
+
+* at multiple events
+* across multiple dates
+* by varying casts/teams
+* in multiple competitive contexts
+
+without creating new routine identity.
+
+These represent performance occurrences or performance assignments operating over the same reusable routine structure.
+
+Therefore:
+```text
+performance occurrence
+!=
+new routine identity
+``` 
+However, changes to the choreography assembly structure itself create a new routine identity.
+
+Examples include:
+
+* altered segment ordering
+* segment addition/removal
+* materially changed choreography composition
+* structural choreography recombination
+
+Therefore:
+```text
+routine structure change
+=
+new routine identity
+``` 
+Routine identity is therefore composition-dependent, not merely label-dependent.
+
+This preserves the distinction between:
+
+layer	meaning
+segments	reusable choreography modules
+performance_routines	assembled choreography program identity
+performance occurrences	executions/performances of a routine
+
+A performance occurrence may vary in execution context without changing the underlying routine identity.
+
+But modifications to the assembled choreography structure itself produce a distinct routine.
 ## Current Transitional State
 
 The current schema still contains legacy overlap between:
