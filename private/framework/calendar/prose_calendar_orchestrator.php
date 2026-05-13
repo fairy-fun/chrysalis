@@ -5,47 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../prose/prose_subevent_segmenter.php';
 require_once __DIR__ . '/calendar_subevent_service.php';
 
-function execute_calendar_batch_from_prose(
-    PDO $pdo,
-    string $parentEventEntityId,
-    string $prose
-): array {
-
-    $parentEventEntityId = trim($parentEventEntityId);
-
-    if ($parentEventEntityId === '') {
-        throw new InvalidArgumentException(
-            'parentEventEntityId must be non-empty'
-        );
-    }
-
-    $subevents = segment_prose_into_subevents($prose);
-
-    if ($subevents === []) {
-        return [
-            'status' => 'ok',
-            'parent_event_entity_id' => $parentEventEntityId,
-            'subevent_count' => 0,
-            'persisted_count' => 0,
-            'results' => [],
-        ];
-    }
-
-    $persisted = persist_segmented_subevents(
-        $pdo,
-        $parentEventEntityId,
-        $subevents
-    );
-
-    return [
-        'status' => 'ok',
-        'parent_event_entity_id' => $parentEventEntityId,
-        'subevent_count' => count($subevents),
-        'persisted_count' => count($persisted),
-        'results' => $persisted,
-    ];
-}
-
 function build_subevent_client_id(
     string $parentEventEntityId,
     int $slot
@@ -71,6 +30,7 @@ function build_subevent_client_id(
         $slot
     );
 }
+
 
 function persist_segmented_subevents(
     PDO $pdo,
@@ -124,3 +84,46 @@ function persist_segmented_subevents(
 
     return $results;
 }
+
+function execute_calendar_batch_from_prose(
+    PDO $pdo,
+    string $parentEventEntityId,
+    string $prose
+): array {
+
+    $parentEventEntityId = trim($parentEventEntityId);
+
+    if ($parentEventEntityId === '') {
+        throw new InvalidArgumentException(
+            'parentEventEntityId must be non-empty'
+        );
+    }
+
+    $subevents = segment_prose_into_subevents($prose);
+
+    if ($subevents === []) {
+        return [
+            'status' => 'ok',
+            'parent_event_entity_id' => $parentEventEntityId,
+            'subevent_count' => 0,
+            'persisted_count' => 0,
+            'results' => [],
+        ];
+    }
+
+    $persisted = persist_segmented_subevents(
+        $pdo,
+        $parentEventEntityId,
+        $subevents
+    );
+
+    return [
+        'status' => 'ok',
+        'parent_event_entity_id' => $parentEventEntityId,
+        'subevent_count' => count($subevents),
+        'persisted_count' => count($persisted),
+        'results' => $persisted,
+    ];
+}
+
+
