@@ -222,6 +222,11 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
     $queryErrors = [];
     $classifiedReferences = [];
 
+    $intentionallyUnclassifiedReferences = [
+        'vw_figure_following_conditions.following_figure_classval_id' => true,
+        'vw_figure_following_conditions.predecessor_figure_classval_id' => true,
+    ];
+
         foreach ($references as [$tableName, $columnName, $expectedKind]) {
             $classifiedReferences[$tableName . '.' . $columnName] = true;
         }
@@ -245,7 +250,10 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $key = $row['TABLE_NAME'] . '.' . $row['COLUMN_NAME'];
 
-        if (isset($classifiedReferences[$key])) {
+        if (
+            isset($classifiedReferences[$key])
+            || isset($intentionallyUnclassifiedReferences[$key])
+        ) {
             continue;
         }
 
@@ -256,7 +264,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         $referenceCountSql = "
         SELECT
             COUNT(*) AS reference_count,
-            MIN({$quotedColumn}) AS invalid_value
+            MIN($quotedColumn) AS invalid_value
         FROM {$quotedSchema}.{$quotedTable}
         WHERE {$quotedColumn} IS NOT NULL
           AND {$quotedColumn} <> ''
