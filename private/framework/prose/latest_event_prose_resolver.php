@@ -96,10 +96,16 @@ function resolve_latest_event_prose(PDO $pdo, int $projectionId): array
     }
 
     /*
-    |--------------------------------------------------------------------------
-    | Published prose binding
-    |--------------------------------------------------------------------------
-    */
+|--------------------------------------------------------------------------
+| Published prose binding
+|--------------------------------------------------------------------------
+|
+| projection_order is not publication authority.
+|
+| Until prose projection role ontology is fully normalised, this resolver
+| refuses to choose between multiple published bindings.
+|
+*/
 
     $stmt = $pdo->prepare("
         SELECT
@@ -107,6 +113,7 @@ function resolve_latest_event_prose(PDO $pdo, int $projectionId): array
             pp.target_entity_id,
             pp.published_prose_draft_id,
             pp.projection_order,
+            pp.role_id,
             pd.id AS prose_draft_id,
             pd.entity_id AS prose_entity_id,
             pd.title,
@@ -116,39 +123,62 @@ function resolve_latest_event_prose(PDO $pdo, int $projectionId): array
         LEFT JOIN prose_drafts pd
             ON pd.id = pp.published_prose_draft_id
         WHERE pp.target_entity_id = :target_entity_id
-        ORDER BY pp.projection_order ASC, pp.id ASC
-        LIMIT 1
+        ORDER BY pp.id ASC
     ");
 
     $stmt->execute([
         ':target_entity_id' => $latestEvent['entity_id'],
     ]);
 
-    $publication = $stmt->fetch(PDO::FETCH_ASSOC);
+    $publications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!is_array($publication)) {
+    if ($publications === []) {
         return [
             'status' => 'latest_event_exists_no_prose',
             'projection' => $projection,
             'latest_event' => $latestEvent,
+            'publication_candidates' => [],
             'published_prose' => null,
             'next_action' => 'Latest event exists, but no prose projection is attached. Create or publish prose for this event.',
         ];
     }
 
-    if (
-        empty($publication['published_prose_draft_id']) ||
-        empty($publication['prose_draft_id'])
-    ) {
+    $published = array_values(array_filter(
+        $publications,
+        static fn (array $row): bool =>
+            !empty($row['published_prose_draft_id'])
+            && !empty($row['prose_draft_id'])
+    ));
+
+    if ($published === []) {
         return [
             'status' => 'publication_missing',
             'projection' => $projection,
             'latest_event' => $latestEvent,
-            'publication' => $publication,
+            'publication_candidates' => $publications,
             'published_prose' => null,
-            'next_action' => 'A prose projection exists, but it does not resolve to a published prose draft.',
+            'next_action' => 'A prose projection exists, but none resolves to a published prose draft.',
         ];
     }
+
+    // TODO:
+    // Once prose projection role ontology is canonicalised,
+    // replace broad ambiguity detection with role-constrained resolution.
+    // Multiple published bindings may be valid if exactly one represents
+    // canonical primary prose and the others represent export/commentary/variant roles.
+
+    if (count($published) > 1) {
+        return [
+            'status' => 'publication_ambiguous',
+            'projection' => $projection,
+            'latest_event' => $latestEvent,
+            'publication_candidates' => $published,
+            'published_prose' => null,
+            'next_action' => 'Multiple published prose bindings exist for this event. Add or enforce a canonical prose projection role before resolving latest-event prose.',
+        ];
+    }
+
+    $publication = $published[0];
 
     if (trim((string)($publication['prose_body'] ?? '')) === '') {
         return [
@@ -175,4 +205,5 @@ function resolve_latest_event_prose(PDO $pdo, int $projectionId): array
         ],
         'next_action' => null,
     ];
+
 }
