@@ -44,7 +44,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
      */
     $references = [
 
-        ['figure_realizations', 'realization_classval_id', 'CLASSVAL'],
+
 
         // domain entity references
         ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
@@ -115,6 +115,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['character_profile_attributes', 'value_classval_id', 'CLASSVAL'],
         ['choreography_hierarchy', 'child_group_classval_id', 'CLASSVAL'],
         ['dancer_choreography_status', 'status_classval_id', 'CLASSVAL'],
+        ['figure_realizations', 'realization_classval_id', 'CLASSVAL'],
         ['entity_linked_fact_qualifiers', 'value_classval_id', 'CLASSVAL'],
         ['expression_constraint_outputs', 'access_state_classval_id', 'CLASSVAL'],
         ['expression_constraint_outputs', 'constraint_effect_type_classval_id', 'CLASSVAL'],
