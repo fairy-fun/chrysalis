@@ -311,6 +311,29 @@ should be interpreted as choreography grouping/sequencing semantics operating ov
 
 The same reusable figure anchor may participate in multiple choreography group contexts without creating new ontology identity.
 
+Repeated figure references across choreography groups do not create new ontology identity.
+
+Multiple `segment_group_figures` rows may intentionally reference:
+
+* the same `figure_id`
+* at the same `sequence_index`
+
+when separate choreography groups simultaneously execute the same reusable figure anchor.
+
+Example:
+
+```text
+Group A   -> Contra Check
+Group B -> Contra Check
+```
+This represents choreography coordination semantics, not ontology multiplication.
+
+Therefore:
+```text
+group participation
+!=
+new figure identity
+```
 ## Figure Transition Doctrine
 
 `figure_transitions` does NOT represent choreography branching.
