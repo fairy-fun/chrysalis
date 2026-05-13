@@ -120,6 +120,7 @@ function run(PDO $pdo, array $in): array
     if (!is_numeric($danceId)) {
         respond(400, ['error' => 'dance_id must be numeric']);
     }
+
     $danceId = (int) $danceId;
 
     if ($chainLength < 1 || $chainLength > 25) {
@@ -137,13 +138,18 @@ function run(PDO $pdo, array $in): array
     $limit = max(1, min($limit, 200));
 
     try {
+
         $stmt = $pdo->prepare("
             SELECT sl.id
             FROM sxnzlfun_chrysalis.syllabus_level_classvals sl
             WHERE sl.code = :code
             LIMIT 1
         ");
-        $stmt->execute([':code' => trim($syllabusCode)]);
+
+        $stmt->execute([
+            ':code' => trim($syllabusCode),
+        ]);
+
         $syllabusLevelId = $stmt->fetchColumn();
 
         if (!$syllabusLevelId) {
@@ -154,11 +160,15 @@ function run(PDO $pdo, array $in): array
         $legalityCodeParams = [];
 
         foreach (array_values($allowedLegalityCodes) as $i => $code) {
+
             if (!is_string($code) || trim($code) === '') {
-                respond(400, ['error' => 'allowed_legality_codes must contain only non-empty strings']);
+                respond(400, [
+                    'error' => 'allowed_legality_codes must contain only non-empty strings',
+                ]);
             }
 
             $ph = ":leg_code_$i";
+
             $legalityCodePlaceholders[] = $ph;
             $legalityCodeParams[$ph] = trim($code);
         }
@@ -170,20 +180,27 @@ function run(PDO $pdo, array $in): array
         ";
 
         $stmt = $pdo->prepare($sqlResolveLegalities);
+
         foreach ($legalityCodeParams as $ph => $val) {
             $stmt->bindValue($ph, $val, PDO::PARAM_STR);
         }
+
         $stmt->execute();
 
         $legalityRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (!$legalityRows) {
-            respond(400, ['error' => 'No valid allowed_legality_codes found']);
+            respond(400, [
+                'error' => 'No valid allowed_legality_codes found',
+            ]);
         }
 
-        $transitionLegalityIds = array_values(array_column($legalityRows, 'id'));
+        $transitionLegalityIds = array_values(
+            array_column($legalityRows, 'id')
+        );
 
         $legalityIdPlaceholders = [];
+
         $params = [
             ':start_figure_classval_id' => trim($startFigureClassvalId),
             ':dance_id' => $danceId,
@@ -200,107 +217,157 @@ function run(PDO $pdo, array $in): array
 
         $sql = "
             WITH RECURSIVE
+
             filtered_transitions AS (
                 SELECT
-                    ft.predecessor_figure_entity_id,
-                    ft.successor_figure_entity_id,
+                    ft.predecessor_figure_id,
+                    ft.successor_figure_id,
                     ft.dance_id
                 FROM sxnzlfun_chrysalis.figure_transitions ft
                 WHERE ft.dance_id = :dance_id
                   AND ft.syllabus_level_id = :syllabus_level_id
                   AND ft.transition_legality_id IN (" . implode(', ', $legalityIdPlaceholders) . ")
             ),
+
             figure_chain AS (
+
                 SELECT
+                    v.predecessor_figure_id AS start_figure_id,
                     v.predecessor_figure_entity_id AS start_figure_entity_id,
                     v.predecessor_figure_classval_id AS start_figure_classval_id,
                     v.predecessor_figure AS start_figure,
+
+                    v.following_figure_id AS current_figure_id,
                     v.following_figure_entity_id AS current_figure_entity_id,
                     v.following_figure_classval_id AS current_figure_classval_id,
                     v.following_figure AS current_figure,
+
                     v.dance_id,
                     1 AS depth,
+
                     CONCAT(
                         ',',
-                        v.predecessor_figure_entity_id,
+                        v.predecessor_figure_id,
                         ',',
-                        v.following_figure_entity_id,
+                        v.following_figure_id,
                         ','
-                    ) AS visited_figure_entity_ids,
+                    ) AS visited_figure_ids,
+
                     CAST(v.formatted_output AS CHAR(10000)) AS steps_blob
+
                 FROM sxnzlfun_chrysalis.vw_figure_following_conditions v
+
                 INNER JOIN filtered_transitions ft
-                    ON ft.predecessor_figure_entity_id = v.predecessor_figure_entity_id
-                   AND ft.successor_figure_entity_id = v.following_figure_entity_id
+                    ON ft.predecessor_figure_id = v.predecessor_figure_id
+                   AND ft.successor_figure_id = v.following_figure_id
                    AND ft.dance_id = v.dance_id
+
                 WHERE v.predecessor_figure_classval_id = :start_figure_classval_id
 
                 UNION ALL
 
                 SELECT
+                    fc.start_figure_id,
                     fc.start_figure_entity_id,
                     fc.start_figure_classval_id,
                     fc.start_figure,
+
+                    v.following_figure_id AS current_figure_id,
                     v.following_figure_entity_id AS current_figure_entity_id,
                     v.following_figure_classval_id AS current_figure_classval_id,
                     v.following_figure AS current_figure,
+
                     v.dance_id,
                     fc.depth + 1 AS depth,
-                    CONCAT(fc.visited_figure_entity_ids, v.following_figure_entity_id, ',') AS visited_figure_entity_ids,
-                    CONCAT(fc.steps_blob, '¦¦STEP¦¦', v.formatted_output) AS steps_blob
+
+                    CONCAT(
+                        fc.visited_figure_ids,
+                        v.following_figure_id,
+                        ','
+                    ) AS visited_figure_ids,
+
+                    CONCAT(
+                        fc.steps_blob,
+                        '¦¦STEP¦¦',
+                        v.formatted_output
+                    ) AS steps_blob
+
                 FROM figure_chain fc
+
                 INNER JOIN sxnzlfun_chrysalis.vw_figure_following_conditions v
-                    ON v.predecessor_figure_entity_id = fc.current_figure_entity_id
+                    ON v.predecessor_figure_id = fc.current_figure_id
                    AND v.dance_id = fc.dance_id
+
                 INNER JOIN filtered_transitions ft
-                    ON ft.predecessor_figure_entity_id = v.predecessor_figure_entity_id
-                   AND ft.successor_figure_entity_id = v.following_figure_entity_id
+                    ON ft.predecessor_figure_id = v.predecessor_figure_id
+                   AND ft.successor_figure_id = v.following_figure_id
                    AND ft.dance_id = v.dance_id
+
                 WHERE fc.depth < :chain_length_limit
                   AND LOCATE(
-                        CONCAT(',', v.following_figure_entity_id, ','),
-                        fc.visited_figure_entity_ids
+                        CONCAT(',', v.following_figure_id, ','),
+                        fc.visited_figure_ids
                   ) = 0
             )
+
             SELECT
+                fc.start_figure_id,
                 fc.start_figure_entity_id,
                 fc.start_figure_classval_id,
                 fc.start_figure,
+
+                fc.current_figure_id AS end_figure_id,
                 fc.current_figure_entity_id AS end_figure_entity_id,
                 fc.current_figure_classval_id AS end_figure_classval_id,
                 fc.current_figure AS end_figure,
+
                 fc.dance_id,
                 fc.depth AS chain_length,
                 fc.steps_blob
+
             FROM figure_chain fc
+
             WHERE fc.depth = :chain_length_exact
+
             ORDER BY fc.start_figure, fc.current_figure
+
             LIMIT $limit
         ";
 
         $stmt = $pdo->prepare($sql);
 
         foreach ($params as $ph => $val) {
-            $stmt->bindValue($ph, $val, is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR);
+            $stmt->bindValue(
+                $ph,
+                $val,
+                is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR
+            );
         }
 
         $stmt->execute();
+
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $chains = [];
+
         foreach ($rows as $row) {
+
             $steps = array_values(array_filter(
                 explode('¦¦STEP¦¦', (string) $row['steps_blob']),
                 static fn(string $v): bool => $v !== ''
             ));
 
             $chains[] = [
+                'start_figure_id' => (int) $row['start_figure_id'],
                 'start_figure_entity_id' => (string) $row['start_figure_entity_id'],
                 'start_figure_classval_id' => (string) $row['start_figure_classval_id'],
                 'start_figure' => (string) $row['start_figure'],
+
+                'end_figure_id' => (int) $row['end_figure_id'],
                 'end_figure_entity_id' => (string) $row['end_figure_entity_id'],
                 'end_figure_classval_id' => (string) $row['end_figure_classval_id'],
                 'end_figure' => (string) $row['end_figure'],
+
                 'dance_id' => (int) $row['dance_id'],
                 'chain_length' => (int) $row['chain_length'],
                 'steps' => $steps,
@@ -311,7 +378,9 @@ function run(PDO $pdo, array $in): array
             'status' => 'ok',
             'chains' => $chains,
         ];
+
     } catch (Throwable $e) {
+
         respond(500, [
             'error' => 'Database failure',
             'message' => $e->getMessage(),
