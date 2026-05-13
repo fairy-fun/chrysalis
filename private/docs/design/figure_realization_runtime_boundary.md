@@ -276,6 +276,41 @@ NOT ontology decomposition.
 
 Therefore traversal branching semantics belong to choreography/runtime layers, not figure realization ontology.
 
+### Group Divergence Semantics
+
+Group divergence represents choreography/runtime structure, not ontology decomposition.
+
+Example:
+
+```text
+Group A:
+Open Reverse Turn
+
+Group B:
+Closed Promenade
+```
+
+This expresses:
+
+* choreography partitioning
+* simultaneous execution structure
+* runtime group coordination
+
+It does NOT express:
+
+* figure ontology branching
+* realization ontology branching
+* ontology decomposition
+
+Therefore:
+```text
+segment_group_figures
+```
+
+should be interpreted as choreography grouping/sequencing semantics operating over reusable figure anchors.
+
+The same reusable figure anchor may participate in multiple choreography group contexts without creating new ontology identity.
+
 ## Figure Transition Doctrine
 
 `figure_transitions` does NOT represent choreography branching.
