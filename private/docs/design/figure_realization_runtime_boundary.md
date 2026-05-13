@@ -334,6 +334,32 @@ group participation
 !=
 new figure identity
 ```
+
+### Group Identity Semantics
+
+Choreography groups represent role/execution partitions within choreography structure.
+
+Groups do NOT represent ontology subtype partitioning.
+
+Examples include:
+
+* leader/follower partitions
+* team partitions
+* simultaneous choreography roles
+* coordinated execution contexts
+
+Therefore:
+
+```text
+group context
+!=
+ontology specialization
+```
+
+`segment_group_figures` expresses choreography coordination semantics operating over reusable figure anchors.
+
+A figure does not become a new ontology entity merely because it appears in multiple choreography groups.
+
 ## Figure Transition Doctrine
 
 `figure_transitions` does NOT represent choreography branching.
