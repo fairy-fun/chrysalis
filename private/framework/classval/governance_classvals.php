@@ -7,7 +7,7 @@ require_once __DIR__
 
 function governance_classval_id(
     PDO $pdo,
-    string $classvalTypeId,
+    string $classvalTypeCode,
     string $code
 ): string {
 
@@ -17,16 +17,16 @@ function governance_classval_id(
         GovernanceDomains::CONTRADICTION_STATE,
     ];
 
-    if (!in_array($classvalTypeId, $allowedClassvalTypes, true)) {
+    if (!in_array($classvalTypeCode, $allowedClassvalTypes, true)) {
         throw new InvalidArgumentException(
             'Unsupported governance classval type: '
-            . $classvalTypeId
+            . $classvalTypeCode
         );
     }
 
-    return resolve_classval_id(
+    return resolve_classval_id_by_type_code(
         $pdo,
-        $classvalTypeId,
+        $classvalTypeCode,
         $code
     );
 }
