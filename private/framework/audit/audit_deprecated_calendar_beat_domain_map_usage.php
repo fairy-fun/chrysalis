@@ -11,6 +11,7 @@ function assert_deprecated_calendar_beat_domain_map_usage(): void
         '/private/docs/',
         '/migrations/',
         '/database/migrations/',
+        '/private/framework/ci/run_all_audits.php',
     ];
 
     $rii = new RecursiveIteratorIterator(
