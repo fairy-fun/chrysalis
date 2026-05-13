@@ -842,10 +842,11 @@ Routine identity is therefore composition-dependent, not merely label-dependent.
 
 This preserves the distinction between:
 
-layer	meaning
-segments	reusable choreography modules
-performance_routines	assembled choreography program identity
-performance occurrences	executions/performances of a routine
+| layer	                   | meaning                                 |
+|--------------------------|-----------------------------------------|
+| segments	                | reusable choreography modules           |
+| performance_routines	    | assembled choreography program identity |
+| performance occurrences	 | executions/performances of a routine    |
 
 A performance occurrence may vary in execution context without changing the underlying routine identity.
 
