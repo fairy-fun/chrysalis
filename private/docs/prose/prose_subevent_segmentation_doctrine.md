@@ -369,7 +369,7 @@ same chronology structure
 → same slot ordering
 → same client identities
 ```
-client_id is therefore derived from:
+`client_id` is therefore derived from:
 
 validated parent runtime chronology identity
 canonical chronological slot position
