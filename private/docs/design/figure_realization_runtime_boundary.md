@@ -913,24 +913,28 @@ figure_transitions.successor_figure_id
 =
 canonical traversal successor reference
 ```
-Entity-id fields currently present in choreography composition and traversal systems are transitional compatibility surfaces.
+Deprecated entity-id traversal mirrors have now been removed from the live schema.
 
-Examples include:
+Former transitional compatibility fields included:
+
 ```text
 segment_figures.figure_entity_id
 figure_transitions.predecessor_figure_entity_id
 figure_transitions.successor_figure_entity_id
 ```
-These fields must not be treated as authoritative choreography composition identity.
+These fields were migration-era compatibility surfaces and were never canonical choreography composition authority.
 
-Their role is limited to:
+Canonical choreography traversal and composition authority is exclusively:
+```text
+segment_figures.figure_id
+figure_transitions.predecessor_figure_id
+figure_transitions.successor_figure_id
+```
+Recursive traversal, legality graphs, choreography sequencing, and runtime composition systems must operate on numeric relational figure identity only.
 
-* entity/runtime addressing compatibility
-* migration overlap support
-* external entity-oriented integration surfaces
+figures.entity_id may still appear at API projection boundaries as an external compatibility alias, but must never be used as recursive traversal state or choreography graph authority.
 
-Canonical choreography composition and traversal authority remains relational numeric figure identity.
-
+Compatibility aliases are projection-layer concerns only.
 Therefore:
 ```text
 entity/runtime addressing
@@ -940,6 +944,9 @@ canonical choreography composition identity
 The choreography system composes reusable figure anchors through stable relational figure references.
 
 Runtime occurrence semantics belong to higher-level runtime/event systems rather than reusable choreography composition structures.
+### Runtime Boundary Rule
+
+No runtime code, recursive traversal, CI audit, legality graph, or choreography composition system may depend on deprecated `*_figure_entity_id` traversal columns.
 
 ## Canonical Authority
 
