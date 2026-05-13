@@ -31,58 +31,55 @@ function build_subevent_client_id(
     );
 }
 
-
 function persist_segmented_subevents(
     PDO $pdo,
     string $parentEventEntityId,
     array $subevents
 ): array {
 
-    $results = [];
+    $persisted = [];
 
-    foreach ($subevents as $subevent) {
+    foreach ($subevents as $index => $subevent) {
 
         $slot = (int)($subevent['slot'] ?? 0);
 
-        if ($slot < 1) {
-            throw new RuntimeException('Invalid subevent slot');
-        }
-
         $summary = trim((string)($subevent['summary'] ?? ''));
-
-        if ($summary === '') {
-            throw new RuntimeException('Subevent summary is required');
-        }
 
         $proseBody = trim((string)($subevent['prose_body'] ?? ''));
 
-        if ($proseBody === '') {
-            throw new RuntimeException('Subevent prose_body is required');
+        if ($slot < 1) {
+            throw new RuntimeException(
+                'Invalid subevent slot'
+            );
         }
 
-        $clientId = build_subevent_client_id(
-            $parentEventEntityId,
-            $slot
-        );
+        if ($summary === '') {
+            throw new RuntimeException(
+                'Subevent summary is required'
+            );
+        }
 
-        $result = create_calendar_subevent_core(
+        if ($proseBody === '') {
+            throw new RuntimeException(
+                'Subevent prose_body is required'
+            );
+        }
+
+        $persisted[] = create_calendar_subevent_core(
             $pdo,
             [
+                'client_id' => build_subevent_client_id(
+                    $parentEventEntityId,
+                    $slot
+                ),
                 'parent_event_entity_id' => $parentEventEntityId,
-                'client_id' => $clientId,
                 'event_label' => $summary,
                 'prose_body' => $proseBody,
             ]
         );
-
-        $results[] = [
-            'slot' => $slot,
-            'client_id' => $clientId,
-            'result' => $result,
-        ];
     }
 
-    return $results;
+    return $persisted;
 }
 
 function execute_calendar_batch_from_prose(
@@ -125,5 +122,3 @@ function execute_calendar_batch_from_prose(
         'results' => $persisted,
     ];
 }
-
-
