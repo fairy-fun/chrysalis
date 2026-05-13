@@ -20,6 +20,15 @@ function audit_classval_fk_integrity(
         ],
     ];
 
+    /*
+     * Projection/view-semantic tables are physically BASE TABLEs,
+     * but doctrinally projection surfaces. They do not own FK governance.
+     */
+    $projectionSemanticPrefixes = [
+        'v_',
+        'vw_',
+    ];
+
     $sql = "
         SELECT
             c.TABLE_NAME,
@@ -62,6 +71,12 @@ function audit_classval_fk_integrity(
         $column = (string) $row['COLUMN_NAME'];
 
         $columnKey = $table . '.' . $column;
+
+        foreach ($projectionSemanticPrefixes as $prefix) {
+            if (str_starts_with($table, $prefix)) {
+                continue 2;
+            }
+        }
 
         $referencedTable =
             $row['REFERENCED_TABLE_NAME'];
