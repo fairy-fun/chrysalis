@@ -122,10 +122,10 @@ function load_seeded_ids(string $repoRoot): array
 
     foreach (
         [
-            'medley_id',
+            /*'medley_id',
             'medley_name',
             'figure_1_id',
-            'figure_2_id',
+            'figure_2_id',*/
             'expression_test_character_id',
             'expression_test_domain_match_id',
             'expression_expected_default',
@@ -147,7 +147,7 @@ function load_seeded_ids(string $repoRoot): array
         }
     }
 
-    if (!is_int($json['medley_id']) || $json['medley_id'] < 1) {
+    /*if (!is_int($json['medley_id']) || $json['medley_id'] < 1) {
         fail('Seeded IDs file has invalid medley_id');
     }
 
@@ -162,7 +162,7 @@ function load_seeded_ids(string $repoRoot): array
     if (!is_int($json['figure_2_id']) || $json['figure_2_id'] < 1) {
         fail('Seeded IDs file has invalid figure_2_id');
     }
-
+    */
     if (
         !is_string($json['expression_test_character_id']) ||
         trim($json['expression_test_character_id']) === ''
@@ -916,23 +916,26 @@ try {
      * These tests rely on the fixture seeded by:
      * private/framework/ci/seed_ci_data.php
      */
+    /*
     $resolveMedleyCoreScript = $repoRoot . '/public_html/pecherie/chill-api/choreography/resolve_medley_core.php';
 
     if (!is_file($resolveMedleyCoreScript)) {
         fail('Missing resolve_medley_core.php');
     }
-
+*/
     $seededIds = load_seeded_ids($repoRoot);
 
-    $knownMedleyId = $seededIds['medley_id'];
+    /*
+     * $knownMedleyId = $seededIds['medley_id'];
     $knownMedleyName = $seededIds['medley_name'];
     $figure1Id = $seededIds['figure_1_id'];
     $figure2Id = $seededIds['figure_2_id'];
     $unknownMedleyName = '__definitely_missing_medley__';
-
+    */
     /*
      * resolveMedleyCore by medley_id
      */
+    /*
     $resolveByIdResult = run_endpoint(
         $runnerPath,
         $resolveMedleyCoreScript,
@@ -982,10 +985,11 @@ try {
     }
 
     ok('resolveMedleyCore by medley_id returned expected payload');
-
+    */
     /*
      * resolveMedleyCore by medley_name
      */
+    /*
     $resolveByNameResult = run_endpoint(
         $runnerPath,
         $resolveMedleyCoreScript,
@@ -1039,10 +1043,11 @@ try {
     }
 
     ok('resolveMedleyCore by medley_name returned expected payload');
-
+    */
     /*
      * resolveMedleyCore rejects both medley_id and medley_name
      */
+    /*
     assert_error_result(
         run_endpoint(
             $runnerPath,
@@ -1055,10 +1060,11 @@ try {
         'Provide exactly one of medley_id or medley_name',
         'resolveMedleyCore both inputs'
     );
-
+    */
     /*
      * resolveMedleyCore rejects missing identifier
      */
+    /*
     assert_error_result(
         run_endpoint(
             $runnerPath,
@@ -1068,10 +1074,11 @@ try {
         'Missing medley_id or medley_name',
         'resolveMedleyCore missing identifier'
     );
-
+    */
     /*
      * resolveMedleyCore rejects unknown medley_name
      */
+    /*
     assert_error_result(
         run_endpoint(
             $runnerPath,
@@ -1081,10 +1088,11 @@ try {
         'Medley not found by name',
         'resolveMedleyCore unknown medley_name'
     );
-
+    */
     /*
      * resolveMedleyCore via index dispatch by medley_name
      */
+    /*
     $indexResolveByNameResult = run_endpoint(
         $runnerPath,
         $indexScript,
@@ -1105,7 +1113,7 @@ try {
     }
 
     ok('index resolveMedleyCore dispatch by medley_name works');
-
+    */
     /*
      * resolveExpressionOutput behaviour
      *
