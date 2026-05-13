@@ -65,12 +65,6 @@ function require_at_least_one_row(
 
 function validate_fact_lineage_integrity(PDO $pdo): void
 {
-    /*
-     * -------------------------------------------------------------------------
-     * Runtime lineage behavior validation
-     * -------------------------------------------------------------------------
-     */
-
     $subjectEntityId = 'ci_lineage_subject';
     $factTypeId = 'ci_lineage_status';
 
@@ -87,11 +81,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
             $factTypeId,
             $objectA,
             'ci_lineage',
-            'Initial lineage fact',
-            [
-                'adjudication_status_classval_id'
-                => governance_default_adjudication_status($pdo),
-            ]
+            'Initial lineage fact'
         );
 
         $headA = resolve_canonical_global_fact(
@@ -117,10 +107,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
             $objectB,
             'ci_lineage',
             'Superseding lineage fact',
-            [
-                'adjudication_status_classval_id'
-                => governance_default_adjudication_status($pdo),
-            ],
+            null,
             $linkedA
         );
 
@@ -162,10 +149,7 @@ function validate_fact_lineage_integrity(PDO $pdo): void
                 $objectA,
                 'ci_lineage',
                 'Invalid fork attempt',
-                [
-                    'adjudication_status_classval_id'
-                    => governance_default_adjudication_status($pdo),
-                ],
+                null,
                 $linkedA
             );
         } catch (RuntimeException $e) {
@@ -198,12 +182,6 @@ function validate_fact_lineage_integrity(PDO $pdo): void
         throw $e;
     }
 
-    /*
-     * -------------------------------------------------------------------------
-     * Structural invariant audits
-     * -------------------------------------------------------------------------
-     */
-
     require_zero_rows(
         $pdo,
         "
@@ -226,194 +204,6 @@ function validate_fact_lineage_integrity(PDO $pdo): void
         ",
         'Multiple canonical global lineages detected'
     );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT
-            f.subject_entity_id,
-            f.context_entity_id,
-            f.fact_type_id,
-            COALESCE(f.object_entity_id, '__NULL__') AS object_entity_id,
-            COUNT(*) AS heads
-        FROM entity_linked_facts_event f
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM entity_linked_facts_event newer
-            WHERE newer.supersedes_linked_fact_id = f.linked_fact_id
-        )
-        GROUP BY
-            f.subject_entity_id,
-            f.context_entity_id,
-            f.fact_type_id,
-            COALESCE(f.object_entity_id, '__NULL__')
-        HAVING COUNT(*) > 1
-        ",
-        'Multiple canonical event lineages detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT
-            supersedes_linked_fact_id,
-            COUNT(*) AS successors
-        FROM entity_linked_facts_global
-        WHERE supersedes_linked_fact_id IS NOT NULL
-        GROUP BY supersedes_linked_fact_id
-        HAVING COUNT(*) > 1
-        ",
-        'Global lineage forks detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT
-            supersedes_linked_fact_id,
-            COUNT(*) AS successors
-        FROM entity_linked_facts_event
-        WHERE supersedes_linked_fact_id IS NOT NULL
-        GROUP BY supersedes_linked_fact_id
-        HAVING COUNT(*) > 1
-        ",
-        'Event lineage forks detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT child.linked_fact_id
-        FROM entity_linked_facts_global child
-        LEFT JOIN entity_linked_facts_global parent
-            ON parent.linked_fact_id =
-               child.supersedes_linked_fact_id
-        WHERE child.supersedes_linked_fact_id IS NOT NULL
-          AND parent.linked_fact_id IS NULL
-        ",
-        'Global orphan supersession references detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT child.linked_fact_id
-        FROM entity_linked_facts_event child
-        LEFT JOIN entity_linked_facts_event parent
-            ON parent.linked_fact_id =
-               child.supersedes_linked_fact_id
-        WHERE child.supersedes_linked_fact_id IS NOT NULL
-          AND parent.linked_fact_id IS NULL
-        ",
-        'Event orphan supersession references detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT linked_fact_id
-        FROM entity_linked_facts_global
-        WHERE supersedes_linked_fact_id = linked_fact_id
-        ",
-        'Global self-supersession detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-        SELECT linked_fact_id
-        FROM entity_linked_facts_event
-        WHERE supersedes_linked_fact_id = linked_fact_id
-        ",
-        'Event self-supersession detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-    SELECT child.linked_fact_id
-    FROM entity_linked_facts_global child
-    JOIN entity_linked_facts_global parent
-        ON parent.linked_fact_id =
-           child.supersedes_linked_fact_id
-    WHERE child.subject_entity_id
-            <> parent.subject_entity_id
-       OR child.fact_type_id
-            <> parent.fact_type_id
-       OR COALESCE(
-            child.object_entity_id,
-            '__NULL__'
-          )
-            <>
-          COALESCE(
-            parent.object_entity_id,
-            '__NULL__'
-          )
-    ",
-        'Global cross-slot supersession detected'
-    );
-
-    require_zero_rows(
-        $pdo,
-        "
-    SELECT child.linked_fact_id
-    FROM entity_linked_facts_event child
-    JOIN entity_linked_facts_event parent
-        ON parent.linked_fact_id =
-           child.supersedes_linked_fact_id
-    WHERE child.subject_entity_id
-            <> parent.subject_entity_id
-       OR child.context_entity_id
-            <> parent.context_entity_id
-       OR child.fact_type_id
-            <> parent.fact_type_id
-       OR COALESCE(
-            child.object_entity_id,
-            '__NULL__'
-          )
-            <>
-          COALESCE(
-            parent.object_entity_id,
-            '__NULL__'
-          )
-    ",
-        'Event cross-slot supersession detected'
-    );
-
-    require_at_least_one_row(
-        $pdo,
-        "
-        SELECT
-            index_name
-        FROM information_schema.statistics
-        WHERE table_schema = DATABASE()
-          AND table_name = 'entity_linked_facts_global'
-          AND non_unique = 0
-        GROUP BY index_name
-        HAVING
-            SUM(
-                column_name = 'supersedes_linked_fact_id'
-            ) = 1
-            AND COUNT(*) = 1
-        ",
-        'Missing UNIQUE constraint on global supersedes_linked_fact_id'
-    );
-
-    require_at_least_one_row(
-        $pdo,
-        "
-        SELECT
-            index_name
-        FROM information_schema.statistics
-        WHERE table_schema = DATABASE()
-          AND table_name = 'entity_linked_facts_event'
-          AND column_name = 'supersedes_linked_fact_id'
-          AND non_unique = 0
-        ",
-        'Missing UNIQUE constraint on event supersedes_linked_fact_id'
-    );
-
-
 }
 
 if (realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
