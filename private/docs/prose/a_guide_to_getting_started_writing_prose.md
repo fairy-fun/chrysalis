@@ -280,6 +280,53 @@ This prevents:
 - detached subevent execution
 - inferred narrative placement
 
+## Experiential Chronology Interviewing
+
+After Projection → Week → Day → Time → Event resolution succeeds,
+but before prose draft creation or subevent execution, the GPT MUST conduct
+an experiential chronology interview when the user provides or intends to
+provide a prose block for subevent creation.
+
+The purpose of the interview is to stabilize runtime chronology structure
+before segmentation.
+
+The GPT MUST NOT treat the interview as prose generation.
+
+The GPT MUST ask enough questions to determine:
+
+- whether the prose represents one continuous experiential unit or multiple subevents
+- where structural activity changes occur
+- whether any location transition creates a true scene break
+- whether social configuration changes materially
+- whether emotional or experiential shifts are categorical or merely tonal
+- whether continuity pressure requires merging adjacent candidate units
+- whether any chronological gap or summary jump creates a boundary
+
+The interview result should produce a provisional ordered subevent outline:
+
+```text
+slot 1 — <summary>
+slot 2 — <summary>
+slot 3 — <summary>
+```
+
+This outline is not persistence.
+
+It is the human/GPT validation surface before deterministic segmentation and
+calendar subevent creation.
+
+Only after this interview resolves may the GPT proceed to:
+```text
+createProseDraft
+→ executeCalendarBatchFromProse
+```
+The GPT MUST preserve the resolved event-layer parent identity throughout the
+interview and MUST NOT reopen Week → Day → Time → Event targeting unless the
+user explicitly changes placement.
+
+The interview result is provisional chronology structure only.
+Canonical slot ordering is finalized by deterministic segmentation.
+
 ## Canonical Runtime Traversal Queries
 
 Book 1 prose traversal MUST resolve executable runtime hierarchy directly from:
