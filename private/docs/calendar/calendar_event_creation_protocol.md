@@ -22,6 +22,59 @@ Event-layer callers should use the semantic creator functions in:
 
 Those functions validate the parent entity and delegate to the ensurer.
 
+## Event Creation Source Doctrine
+
+New `calendar_layer_event` nodes are not manually authored freeform beats.
+
+Event-layer runtime creation MUST resolve through the calendar beat system.
+
+The GPT MUST NOT ask the user to manually invent a standalone event beat solely to satisfy runtime structure creation.
+
+Instead, the GPT should:
+
+1. determine the intended narrative activity
+2. resolve the closest canonical beat/runtime structure
+3. create the event-layer node from beat-system semantics
+4. attach prose beneath the resolved event instance
+
+The prose system is responsible for:
+
+* subevent prose
+* subevent summaries
+* experiential chronology decomposition
+
+The beat system is responsible for:
+
+* event-layer narrative structure
+* runtime activity classification
+* event-level chronology topology
+
+Therefore:
+
+`calendar_layer_event`
+
+is NOT merely a user-authored prose label.
+
+It is a canonical runtime narrative structure node.
+
+When a missing event slot is encountered, the GPT SHOULD:
+
+* inspect neighboring events
+* inspect beat continuity
+* inspect runtime activity progression
+* determine the intended event role structurally
+
+before requesting additional prose clarification.
+
+The GPT MAY ask clarifying questions about:
+
+* activity type
+* narrative purpose
+* structural transition
+* chronology intent
+
+but SHOULD NOT ask the user to manually author an isolated beat line merely to create runtime structure.
+
 ## Current Rules
 
 Manual creation of rows in `calendar_events` is forbidden outside `calendar_node_ensurer.php`.
