@@ -6,36 +6,15 @@ require_once __DIR__ . '/prose_metadata_deriver.php';
 require_once __DIR__ . '/../calendar/calendar_subevent_service.php';
 
 /**
- * Deterministic prose subevent segmentation runtime.
+ * Deterministic prose → subevent segmentation runtime.
  *
- * Doctrine:
- * - segmentation must be replay-safe
- * - slot ordering is canonical
- * - client identity derives ONLY from parent chronology identity + slot
- * - segmentation stability matters more than fragmentation detail
- *
- * This implementation intentionally begins conservative:
- * - paragraph-group segmentation
- * - continuity pressure defaults toward merge
- * - deterministic ordering
- *
- * Future semantic segmentation layers may refine boundaries,
- * but must preserve deterministic replay guarantees.
+ * Owns:
+ * - segmentation
+ * - canonical slot assignment
+ * - replay-safe client_id generation
+ * - persistence glue into create_calendar_subevent_core()
  */
 
-/**
- * Segment prose into deterministic runtime subevents.
- *
- * Return shape:
- *
- * [
- *     [
- *         'slot' => 1,
- *         'summary' => '...',
- *         'prose_body' => '...',
- *     ],
- * ]
- */
 function segment_prose_into_subevents(
     string $prose
 ): array {
@@ -46,90 +25,54 @@ function segment_prose_into_subevents(
         return [];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Canonical first-pass segmentation
-    |--------------------------------------------------------------------------
-    |
-    | Current doctrine:
-    |
-    | - double line breaks are candidate structural boundaries
-    | - continuity pressure merges weak fragments
-    | - ordering is deterministic
-    |
-    */
-
-    $candidateBlocks = preg_split(
+    $blocks = preg_split(
         "/\n{2,}/",
         $normalized
     );
 
-    if (!is_array($candidateBlocks)) {
+    if (!is_array($blocks)) {
         return [];
     }
 
-    $candidateBlocks = array_values(
+    $blocks = array_values(
         array_filter(
             array_map(
-                static fn (string $v): string => trim($v),
-                $candidateBlocks
+                static fn (string $block): string => trim($block),
+                $blocks
             ),
-            static fn (string $v): bool => $v !== ''
+            static fn (string $block): bool => $block !== ''
         )
     );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Continuity pressure
-    |--------------------------------------------------------------------------
-    |
-    | Very small fragments are merged forward to preserve
-    | chronology identity stability.
-    |
-    */
+    $merged = [];
 
-    $mergedBlocks = [];
+    foreach ($blocks as $block) {
 
-    foreach ($candidateBlocks as $block) {
-
-        $wordCount = count(
-            preg_split('/\s+/', trim($block)) ?: []
-        );
-
-        $isWeakFragment = $wordCount < 40;
+        $words = preg_split('/\s+/', trim($block));
+        $wordCount = is_array($words) ? count($words) : 0;
 
         if (
-            $isWeakFragment &&
-            !empty($mergedBlocks)
+            $wordCount < 40 &&
+            !empty($merged)
         ) {
-            $lastIndex = count($mergedBlocks) - 1;
-
-            $mergedBlocks[$lastIndex] .= "\n\n" . $block;
-
+            $last = count($merged) - 1;
+            $merged[$last] .= "\n\n" . $block;
             continue;
         }
 
-        $mergedBlocks[] = $block;
+        $merged[] = $block;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Canonical slot generation
-    |--------------------------------------------------------------------------
-    */
-
     $subevents = [];
-
     $slot = 1;
 
-    foreach ($mergedBlocks as $block) {
+    foreach ($merged as $block) {
 
         $metadata = derive_prose_metadata($block);
 
-        $summary = $metadata['summary']
-            ?? ('Subevent ' . $slot);
-
-        $summary = trim($summary);
+        $summary = trim(
+            (string)($metadata['summary'] ?? '')
+        );
 
         if ($summary === '') {
             $summary = 'Subevent ' . $slot;
@@ -147,19 +90,6 @@ function segment_prose_into_subevents(
     return $subevents;
 }
 
-/**
- * Canonical replay-safe runtime identity.
- *
- * Identity derives ONLY from:
- * - parent chronology identity
- * - canonical slot ordering
- *
- * Never from:
- * - prose text
- * - hashes
- * - planner ids
- * - rendering state
- */
 function build_subevent_client_id(
     string $parentEventEntityId,
     int $slot
@@ -186,19 +116,19 @@ function build_subevent_client_id(
     );
 }
 
-/**
- * Persist deterministic segmented subevents.
- *
- * Persistence doctrine:
- * - slot ordering is precomputed
- * - persistence does not determine chronology
- * - client_id guarantees replay-safe idempotency
- */
 function persist_segmented_subevents(
     PDO $pdo,
     string $parentEventEntityId,
     array $subevents
 ): array {
+
+    $parentEventEntityId = trim($parentEventEntityId);
+
+    if ($parentEventEntityId === '') {
+        throw new InvalidArgumentException(
+            'parentEventEntityId must be non-empty'
+        );
+    }
 
     $results = [];
 
@@ -257,9 +187,6 @@ function persist_segmented_subevents(
     return $results;
 }
 
-/**
- * Full deterministic segmentation + persistence pipeline.
- */
 function segment_and_persist_prose_subevents(
     PDO $pdo,
     string $parentEventEntityId,
@@ -269,6 +196,13 @@ function segment_and_persist_prose_subevents(
     $subevents = segment_prose_into_subevents(
         $prose
     );
+
+    if ($subevents === []) {
+        return [
+            'subevents' => [],
+            'persisted' => [],
+        ];
+    }
 
     return [
         'subevents' => $subevents,
@@ -280,9 +214,6 @@ function segment_and_persist_prose_subevents(
     ];
 }
 
-/**
- * Normalize prose into deterministic replay-safe form.
- */
 function normalize_subevent_prose(
     string $prose
 ): string {
