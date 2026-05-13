@@ -28,6 +28,7 @@ require __DIR__ . '/../audit/audit_calendar_event_creation_paths.php';
 require __DIR__ . '/../audit/audit_deprecated_calendar_beat_domain_map_usage.php';
 require __DIR__ . '/../audit/audit_calendar_beat_classset_integrity.php';
 require __DIR__ . '/../audit/audit_projection_identity_contract.php';
+require __DIR__ . '/../audit/audit_fact_lineage_indexes.php';
 //require __DIR__ . '/validate_fact_supersession_requirements.php';
 
 
@@ -61,6 +62,7 @@ $audits = [
     'calendar beat classset integrity' => fn () => assert_calendar_beat_classset_integrity($pdo, $schemaName),
     // Enforces projection_id as canonical runtime projection identity.
     'projection identity contract' => fn () => assert_projection_identity_contract(),
+    'fact lineage indexes' => fn () => assert_fact_lineage_indexes($pdo, $schemaName),
     'deprecated calendar beat-domain usage' => fn () => assert_deprecated_calendar_beat_domain_map_usage(),
 ];
 
