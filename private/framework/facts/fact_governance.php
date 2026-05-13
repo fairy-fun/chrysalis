@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../classval/governance_domains.php';
 require_once __DIR__ . '/../classval/governance_codes.php';
 require_once __DIR__ . '/../classval/governance_classvals.php';
+require_once __DIR__ . '/../classvals/classval_resolver.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -127,7 +128,7 @@ function resolve_fact_governance(
         $governance ?? []
     );
 
-    assert_valid_fact_governance($resolved);
+    assert_valid_fact_governance($pdo, $resolved);
 
     return $resolved;
 }
@@ -138,7 +139,46 @@ function resolve_fact_governance(
 |--------------------------------------------------------------------------
 */
 
+function assert_governance_classval_membership(
+    PDO $pdo,
+    string $classvalId,
+    string $expectedTypeCode
+): void {
+    $stmt = $pdo->prepare(<<<SQL
+SELECT t.code AS type_code
+FROM classvals cv
+JOIN classval_type_classvals t
+  ON t.id = cv.classval_type_id
+WHERE cv.id = :id
+LIMIT 1
+SQL);
+
+    $stmt->execute([
+        'id' => $classvalId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row === false) {
+        throw new RuntimeException(
+            'Governance classval does not exist: '
+            . $classvalId
+        );
+    }
+
+    if ($row['type_code'] !== $expectedTypeCode) {
+        throw new RuntimeException(
+            'Governance classval ontology mismatch. '
+            . 'Expected '
+            . $expectedTypeCode
+            . ', received '
+            . $row['type_code']
+        );
+    }
+}
+
 function assert_valid_fact_governance(
+    PDO $pdo,
     array $governance
 ): void {
     $required = [
@@ -164,6 +204,24 @@ function assert_valid_fact_governance(
             );
         }
     }
+
+    assert_governance_classval_membership(
+        $pdo,
+        $governance['epistemic_origin_classval_id'],
+        GovernanceDomains::EPISTEMIC_ORIGIN
+    );
+
+    assert_governance_classval_membership(
+        $pdo,
+        $governance['adjudication_status_classval_id'],
+        GovernanceDomains::ADJUDICATION_STATUS
+    );
+
+    assert_governance_classval_membership(
+        $pdo,
+        $governance['contradiction_state_classval_id'],
+        GovernanceDomains::CONTRADICTION_STATE
+    );
 }
 
 function governance_accepted_adjudication_id(
