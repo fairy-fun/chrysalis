@@ -57,16 +57,20 @@ function canonicalize_classval_code(
 
         'adjudication_status' => match ($normalizedCode) {
 
-            'approved',
             'accepted',
+            'approved',
             'implicitly_retained'
             => 'implicitly_retained',
 
-            'pending_review'
-            => 'PENDING_REVIEW',
+            default
+            => $code,
+        },
 
-            'restored'
-            => 'RESTORED',
+        'epistemic_origin' => match ($normalizedCode) {
+
+            'asserted',
+            'manual_author_entry'
+            => 'manual_author_entry',
 
             default
             => $code,
@@ -76,42 +80,6 @@ function canonicalize_classval_code(
 
             'unassessed'
             => 'unassessed',
-
-            default
-            => $code,
-        },
-
-        'epistemic_origin' => match ($normalizedCode) {
-
-            'observed'
-            => 'observed',
-
-            'derived'
-            => 'derived',
-
-            'inferred'
-            => 'inferred',
-
-            'manual_author_entry'
-            => 'manual_author_entry',
-
-            'speculative'
-            => 'speculative',
-
-            'synthetic'
-            => 'synthetic',
-
-            'author_confirmed'
-            => 'AUTHOR_CONFIRMED',
-
-            'author_rejected'
-            => 'AUTHOR_REJECTED',
-
-            'legacy_imported'
-            => 'LEGACY_IMPORTED',
-
-            'legacy_inferred'
-            => 'LEGACY_INFERRED',
 
             default
             => $code,

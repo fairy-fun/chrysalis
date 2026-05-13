@@ -11,7 +11,7 @@ final class GovernanceCodes
     */
 
     public const EPISTEMIC_ASSERTED =
-        'manual_author_entry';
+        'ASSERTED';
 
     /*
     |--------------------------------------------------------------------------
@@ -20,7 +20,7 @@ final class GovernanceCodes
     */
 
     public const ADJUDICATION_ACCEPTED =
-        'implicitly_retained';
+        'ACCEPTED';
 
     /*
     |--------------------------------------------------------------------------
