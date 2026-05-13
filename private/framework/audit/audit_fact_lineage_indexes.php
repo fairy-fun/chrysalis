@@ -87,7 +87,7 @@ function assert_fact_lineage_indexes(
 
             if (
                 $columnName === 'linked_fact_id'
-                && strtoupper((string) $column['is_nullable']) !== 'NO'
+                && strtoupper((string) $column['IS_NULLABLE']) !== 'NO'
             ) {
                 $violations[] = [
                     'table_name' => $tableName,
@@ -145,12 +145,12 @@ function assert_fact_lineage_indexes(
                 $countStmt->execute([
                     ':schema_name' => $schemaName,
                     ':table_name' => $tableName,
-                    ':index_name' => $index['index_name'],
+                    ':index_name' => $index['INDEX_NAME'],
                 ]);
 
                 if (
-                    (int) $index['non_unique'] === 0
-                    && (int) $index['seq_in_index'] === 1
+                    (int) $index['NON_UNIQUE'] === 0
+                    && (int) $index['SEQ_IN_INDEX'] === 1
                     && (int) $countStmt->fetchColumn() === 1
                 ) {
                     $hasUniqueSingleColumnIndex = true;
