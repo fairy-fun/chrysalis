@@ -8,13 +8,17 @@ function audit_classval_fk_integrity(
 ): array {
 
     /*
-     * Discover ONLY base-table classval references.
+     * Intentional doctrinal exclusions.
      *
-     * Views/projections are intentionally excluded because:
-     *
-     * - they cannot own FKs
-     * - they inherit semantics from source tables
+     * These are NOT silently ignored. They are reported separately
+     * as deferred ontology reconciliation items.
      */
+    $deferredOntologyColumns = [
+        'figures.classval_id' => [
+            'reason' =>
+                'deferred: figure ontology has unresolved dance-specific semantic duplication',
+        ],
+    ];
 
     $sql = "
         SELECT
@@ -50,11 +54,14 @@ function audit_classval_fk_integrity(
     ]);
 
     $violations = [];
+    $deferred = [];
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 
         $table = (string) $row['TABLE_NAME'];
         $column = (string) $row['COLUMN_NAME'];
+
+        $columnKey = $table . '.' . $column;
 
         $referencedTable =
             $row['REFERENCED_TABLE_NAME'];
@@ -62,20 +69,29 @@ function audit_classval_fk_integrity(
         $referencedColumn =
             $row['REFERENCED_COLUMN_NAME'];
 
-        /*
-         * Required doctrine:
-         *
-         * *_classval_id
-         *     ->
-         * classvals(id)
-         */
-
         $isValid =
             $referencedTable === 'classvals'
             &&
             $referencedColumn === 'id';
 
         if ($isValid) {
+            continue;
+        }
+
+        if (isset($deferredOntologyColumns[$columnKey])) {
+            $deferred[] = [
+                'table_name' => $table,
+                'column_name' => $column,
+                'reason' =>
+                    $deferredOntologyColumns[$columnKey]['reason'],
+                'actual_referenced_table'
+                => $referencedTable,
+                'actual_referenced_column'
+                => $referencedColumn,
+                'expected_reference'
+                => 'classvals(id)',
+            ];
+
             continue;
         }
 
@@ -96,6 +112,8 @@ function audit_classval_fk_integrity(
         'schema_name' => $schemaName,
         'violation_count' => count($violations),
         'violations' => $violations,
+        'deferred_ontology_reconciliation_count' => count($deferred),
+        'deferred_ontology_reconciliation' => $deferred,
     ];
 }
 
