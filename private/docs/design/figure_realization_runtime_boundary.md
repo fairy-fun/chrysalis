@@ -710,6 +710,81 @@ Do not treat routines as classvals unless a future migration explicitly introduc
 
 Additional occurrence-layer structures should only be introduced if future runtime systems require identity beyond existing choreography routine/program structures.
 
+## Segment Reuse Doctrine
+
+`segments` represent reusable choreography composition units.
+
+A segment is not merely a runtime occurrence container.
+
+A segment represents reusable authored choreography structure composed from reusable figure anchors.
+
+Therefore:
+
+```text
+segment
+=
+reusable choreography module
+```
+A segment becomes choreography through the composition and sequencing of multiple reusable figure anchors.
+
+Examples include:
+
+reusable competition passages
+reusable medley components
+reusable thematic choreography sections
+reusable team choreography modules
+
+segment_figures defines the internal figure composition of a segment.
+
+The same segment may potentially participate in:
+
+multiple routines
+multiple performances
+multiple choreography assemblies
+future choreography revisions
+alternate program structures
+
+without creating new choreography ontology identity.
+
+Therefore:
+```text
+segment reuse
+!=
+new choreography identity
+```
+The current schema structure supports this interpretation.
+
+In particular:
+
+* `segments` does not presently contain direct routine ownership
+* `performance_routines` exists as a higher-level choreography/program structure
+* choreography assembly appears intentionally separated from choreography composition
+
+This establishes the boundary:
+
+| layer	   | meaning              |
+|----------|----------------------|
+| figures	 | reusable dance units |
+|segment_figures	|figure composition inside a segment|
+|segments	|reusable choreography composition modules|
+|performance_routines	|assembled performance/program structures|
+
+Therefore:
+```text
+performance_routines
+```
+should be interpreted as higher-level choreography assembly/program identity operating over reusable choreography modules.
+
+A routine may assemble and reuse segments without collapsing segment identity into routine-specific occurrence identity.
+
+This preserves:
+
+* choreography modularity
+* reusable composition structure
+* routine recombination
+* choreography library semantics
+* future choreography versioning
+* medley/program assembly flexibility
 
 ## Current Transitional State
 
