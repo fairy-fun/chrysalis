@@ -448,6 +448,72 @@ Current live usage indicates that numeric `figure_id` references remain the prim
 
 The entity reference columns should be treated as transitional compatibility surfaces until traversal identity migration is finalized.
 
+## Syllabus Semantics
+
+Syllabus structure is independent of choreography runtime sequencing.
+
+A syllabus does not primarily represent pedagogy.
+
+Instead, syllabus structure represents:
+
+* recognized figure inventory
+* figure availability within a dance system
+* reusable compositional figure structure
+* dance-system legality/context
+
+Therefore:
+
+```text
+syllabus
+!=
+runtime choreography
+``` 
+and:
+```text
+syllabus
+!=
+performed sequence execution
+``` 
+`syllabus_maps` should be interpreted as reusable figure composition/availability structure operating over reusable figure anchors.
+
+It does not represent choreography occurrence sequencing.
+
+| concept      | meaning                               |
+|--------------|---------------------------------------|
+| choreography | temporal execution structure          |
+| syllabus     | recognized figure structure/inventory |
+
+Current live syllabus mappings do not presently contain repeated atomic figure references within the same syllabus figure composition.
+
+The model should not assume that repetition semantics are prohibited unless explicitly enforced by future choreography or syllabus doctrine.
+
+### Syllabus Mapping Identity
+
+`syllabus_maps.atomic_figure_id` should reference reusable figure anchors.
+
+It should not reference choreography occurrence/runtime nodes.
+
+Syllabus mappings describe reusable figure composition and recognized figure structure within a dance system.
+
+They do not represent runtime choreography execution semantics.
+
+Therefore:
+
+```text
+syllabus composition
+!=
+runtime occurrence identity
+```
+The same reusable figure anchor may participate in:
+
+* syllabus composition
+* choreography sequencing
+* choreography grouping
+* legality transition graphs
+
+without creating new ontology identity.
+
+
 ---
 
 ## Runtime Occurrence Doctrine
