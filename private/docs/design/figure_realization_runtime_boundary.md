@@ -358,6 +358,14 @@ These are runtime/performance semantics.
 
 They are NOT realization ontology semantics.
 
+The distinction between reusable choreography structure and runtime execution
+may depend on dance-domain semantics.
+
+Ordered choreography reuse inside segments does not itself imply new ontology identity.
+
+Future occurrence/runtime layers should only be introduced if choreography execution
+requires independent execution-state identity beyond ordered segment composition.
+
 Future systems may introduce explicit occurrence layers such as:
 
 * choreography_occurrences
