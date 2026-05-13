@@ -233,15 +233,13 @@ function run(PDO $pdo, array $in): array
 
                 SELECT
                     v.predecessor_figure_id AS start_figure_id,
-                    v.predecessor_figure_entity_id AS start_figure_entity_id,
                     v.predecessor_figure_classval_id AS start_figure_classval_id,
                     v.predecessor_figure AS start_figure,
-
+                
                     v.following_figure_id AS current_figure_id,
-                    v.following_figure_entity_id AS current_figure_entity_id,
                     v.following_figure_classval_id AS current_figure_classval_id,
                     v.following_figure AS current_figure,
-
+                
                     v.dance_id,
                     1 AS depth,
 
@@ -267,15 +265,13 @@ function run(PDO $pdo, array $in): array
                 UNION ALL
 
                 SELECT
-                    fc.start_figure_id,
-                    fc.start_figure_entity_id,
-                    fc.start_figure_classval_id,
-                    fc.start_figure,
-
-                    v.following_figure_id AS current_figure_id,
-                    v.following_figure_entity_id AS current_figure_entity_id,
-                    v.following_figure_classval_id AS current_figure_classval_id,
-                    v.following_figure AS current_figure,
+                        fc.start_figure_id,
+                        fc.start_figure_classval_id,
+                        fc.start_figure,
+                    
+                        v.following_figure_id AS current_figure_id,
+                        v.following_figure_classval_id AS current_figure_classval_id,
+                        v.following_figure AS current_figure,
 
                     v.dance_id,
                     fc.depth + 1 AS depth,
@@ -312,12 +308,12 @@ function run(PDO $pdo, array $in): array
 
             SELECT
                 fc.start_figure_id,
-                fc.start_figure_entity_id,
+                sf.entity_id AS start_figure_entity_id,
                 fc.start_figure_classval_id,
                 fc.start_figure,
-
+            
                 fc.current_figure_id AS end_figure_id,
-                fc.current_figure_entity_id AS end_figure_entity_id,
+                ef.entity_id AS end_figure_entity_id,
                 fc.current_figure_classval_id AS end_figure_classval_id,
                 fc.current_figure AS end_figure,
 
@@ -326,6 +322,12 @@ function run(PDO $pdo, array $in): array
                 fc.steps_blob
 
             FROM figure_chain fc
+            
+            LEFT JOIN sxnzlfun_chrysalis.figures sf
+                    ON sf.id = fc.start_figure_id
+                
+                LEFT JOIN sxnzlfun_chrysalis.figures ef
+                    ON ef.id = fc.current_figure_id
 
             WHERE fc.depth = :chain_length_exact
 
