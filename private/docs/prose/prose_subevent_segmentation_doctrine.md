@@ -333,6 +333,77 @@ It is not merely:
 - a beat tag
 - an export fragment
 
+#### 11.5.5 Runtime Identity Stability
+
+Subevent chronology identity must remain stable across deterministic replay.
+
+The canonical runtime identity surface for replay-safe subevent generation is:
+
+```text
+client_id
+```
+
+`client_id` exists to preserve deterministic chronology identity independently of:
+
+* prose revisions
+* planner regeneration
+* insertion order
+* database row ids
+* mutable rendering changes
+
+The canonical runtime client identity format is:
+
+calendar_event:{parent_event_entity_id}:slot:{subevent_index}
+
+Example:
+```text
+calendar_event:322:slot:1
+calendar_event:322:slot:2
+calendar_event:322:slot:3
+```
+
+The runtime doctrine is:
+```text
+same chronology structure
+→ same segmentation
+→ same slot ordering
+→ same client identities
+```
+client_id is therefore derived from:
+
+validated parent runtime chronology identity
+canonical chronological slot position
+
+It MUST NOT be derived from:
+
+* prose text
+* beat text
+* summaries
+* prose hashes
+* planner ids
+* mutable chronology metadata
+
+`beat_hash` is diagnostic only and MUST NOT define runtime identity.
+
+Segmentation instability causes chronology identity instability.
+
+Therefore continuity pressure doctrine is also a runtime identity preservation mechanism, not merely a narrative heuristic.
+
+Over-fragmentation increases:
+
+* replay instability
+* chronology churn
+* identity mutation
+* deterministic execution drift
+
+Stable segmentation preserves:
+
+* replay fidelity
+* deterministic chronology reconstruction
+* canonical hierarchy traversal
+* runtime idempotency
+* query coherence
+
 ### 11.6 Runtime persistence doctrine
 
 Segmentation decisions become canonical runtime chronology once persisted.
