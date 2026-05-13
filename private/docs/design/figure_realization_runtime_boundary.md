@@ -552,6 +552,40 @@ or equivalent structures.
 
 Those systems represent performed usage.
 
+### Existing Choreography Runtime Structures
+
+The schema already contains explicit choreography/runtime composition structures, including:
+
+* choreography_relationships
+* choreography_hierarchy
+* choreography_entity_map
+* segments
+* performance_routines
+
+These systems operate above reusable figure ontology and reusable figure anchors.
+
+In particular:
+
+```text
+choreography_relationships
+```
+already represents entity-level choreography graph semantics, including:
+
+* choreography ordering
+* parent/child choreography structure
+* choreography relationship semantics
+* sequence coordination
+
+Therefore, choreography/runtime semantics are not absent from the schema.
+
+The primary ontology boundary remains:
+```text
+figure ontology
+!=
+choreography composition/runtime structure
+```
+Reusable figure anchors may participate in choreography graphs without creating new ontology identity.
+
 They do not replace realization ontology.
 
 ### Routine / Performance Boundary
