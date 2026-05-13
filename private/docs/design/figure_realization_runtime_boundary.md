@@ -153,6 +153,77 @@ play note C four times
 ```
 which does not create four ontology notes.
 
+### Repetition Identity
+
+Repeated choreography references do not create new ontology identity.
+
+Example:
+
+```text
+1. Contra Check
+2. Open Reverse Turn
+3. Contra Check
+```
+Both Contra Check references point to the same reusable figure realization anchor.
+
+The distinction between the two usages is choreography position/context
+(e.g. sequence ordering inside a segment or routine),
+not new figure ontology identity.
+
+Therefore:
+```text
+repeated usage
+!=
+new figure identity
+```
+Ontology identity changes only when the realization itself changes.
+
+Example:
+```text
+tango_contra_check
+!=
+vwaltz_contra_check
+```
+because those are distinct dance-context realizations.
+
+## Segment Sequencing Semantics
+
+`segment_figures` represents choreography sequencing over reusable figure anchors.
+
+Repeated figure usage inside a segment does NOT create:
+
+* new figure ontology
+* new figure realizations
+* new reusable figure anchors
+
+Example:
+
+```text
+Natural Fleckerl
+Natural Fleckerl
+Natural Fleckerl
+```
+
+is represented as:
+
+* multiple choreography sequence positions
+* referencing the same reusable figure anchor
+
+where:
+```text
+sequence_index
+```
+carries the repetition distinction.
+
+Therefore:
+```text
+segment sequencing
+!=
+ontology multiplication
+```
+segment_figures should be interpreted as choreography sequencing structure,
+not occurrence ontology identity.
+
 ## Branching Semantics
 
 Choreography branching operates on performed occurrences, not realization ontology.
@@ -179,6 +250,96 @@ This represents:
 NOT ontology decomposition.
 
 Therefore traversal branching semantics belong to choreography/runtime layers, not figure realization ontology.
+
+## Figure Transition Doctrine
+
+`figure_transitions` does NOT represent choreography branching.
+
+It represents a reusable directed legality graph between reusable figure anchors.
+
+Meaning:
+
+```text
+Figure A
+    -> Figure B
+```
+expresses:
+```text
+Figure B may legally follow Figure A
+```
+within a given dance/syllabus context.
+
+The transition edge is directional.
+
+Therefore:
+```text
+A -> B
+```
+does NOT imply:
+```text
+B -> A
+```
+unless explicitly represented separately.
+
+This structure simultaneously supports:
+
+* legal successor queries
+* legal predecessor queries
+
+by traversing the directed edge in opposite directions.
+
+Examples:
+```text
+legal followers of Figure A
+```
+are transitions where:
+```text
+predecessor_figure_id = Figure A
+```
+while:
+```text
+legal predecessors of Figure B
+```
+are transitions where:
+```text
+successor_figure_id = Figure B
+```
+These are reusable legality semantics.
+
+They are NOT choreography occurrence semantics.
+
+They do NOT represent:
+
+* performed temporal branching
+* choreography-instance divergence
+* simultaneous runtime execution
+* occurrence graph semantics
+
+Therefore:
+```text
+figure_transitions
+!=
+runtime choreography branching
+```
+Branching choreography remains a runtime/performance concern separate from realization ontology and legality graph structure.
+
+### Transitional Identity State
+
+`figure_transitions` currently contains both:
+
+* numeric figure references
+* figure entity references
+
+This appears to be transitional migration overlap between:
+
+* relational figure identity
+* entity-oriented traversal identity
+
+Current live usage indicates that numeric `figure_id` references remain the primary authoritative transition linkage.
+
+The entity reference columns should be treated as transitional compatibility surfaces until traversal identity migration is finalized.
+
+---
 
 ## Runtime Occurrence Doctrine
 
