@@ -162,3 +162,155 @@ SQL;
 
     return $rows[0] ?? null;
 }
+
+function resolve_canonical_global_fact_by_linked_fact_id(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $acceptedOnly = false,
+    bool $forUpdate = false
+): ?array {
+
+    if ($linkedFactId < 1) {
+        throw new InvalidArgumentException(
+            'linkedFactId must be positive'
+        );
+    }
+
+    if ($forUpdate && !$pdo->inTransaction()) {
+        throw new RuntimeException(
+            'FOR UPDATE canonical fact resolution requires an active transaction'
+        );
+    }
+
+    $acceptedClause = $acceptedOnly
+        ? 'AND lineage.adjudication_status_classval_id = :accepted'
+        : '';
+
+    $forUpdateClause = $forUpdate ? 'FOR UPDATE' : '';
+
+    $sql = <<<SQL
+WITH RECURSIVE lineage AS (
+    SELECT *
+    FROM entity_linked_facts_global
+    WHERE linked_fact_id = :linked_fact_id
+
+    UNION ALL
+
+    SELECT newer.*
+    FROM entity_linked_facts_global newer
+    JOIN lineage l
+      ON newer.supersedes_linked_fact_id =
+         l.linked_fact_id
+)
+SELECT lineage.*
+FROM lineage
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM entity_linked_facts_global newer
+    WHERE newer.supersedes_linked_fact_id =
+          lineage.linked_fact_id
+)
+{$acceptedClause}
+LIMIT 2
+{$forUpdateClause}
+SQL;
+
+    $stmt = $pdo->prepare($sql);
+
+    $params = [
+        'linked_fact_id' => $linkedFactId,
+    ];
+
+    if ($acceptedOnly) {
+        $params['accepted'] =
+            governance_accepted_adjudication_id($pdo);
+    }
+
+    $stmt->execute($params);
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (count($rows) > 1) {
+        throw new RuntimeException(
+            'Multiple canonical global lineage heads detected'
+        );
+    }
+
+    return $rows[0] ?? null;
+}
+
+function resolve_canonical_event_fact_by_linked_fact_id(
+    PDO $pdo,
+    int $linkedFactId,
+    bool $acceptedOnly = false,
+    bool $forUpdate = false
+): ?array {
+
+    if ($linkedFactId < 1) {
+        throw new InvalidArgumentException(
+            'linkedFactId must be positive'
+        );
+    }
+
+    if ($forUpdate && !$pdo->inTransaction()) {
+        throw new RuntimeException(
+            'FOR UPDATE canonical fact resolution requires an active transaction'
+        );
+    }
+
+    $acceptedClause = $acceptedOnly
+        ? 'AND lineage.adjudication_status_classval_id = :accepted'
+        : '';
+
+    $forUpdateClause = $forUpdate ? 'FOR UPDATE' : '';
+
+    $sql = <<<SQL
+WITH RECURSIVE lineage AS (
+    SELECT *
+    FROM entity_linked_facts_event
+    WHERE linked_fact_id = :linked_fact_id
+
+    UNION ALL
+
+    SELECT newer.*
+    FROM entity_linked_facts_event newer
+    JOIN lineage l
+      ON newer.supersedes_linked_fact_id =
+         l.linked_fact_id
+)
+SELECT lineage.*
+FROM lineage
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM entity_linked_facts_event newer
+    WHERE newer.supersedes_linked_fact_id =
+          lineage.linked_fact_id
+)
+{$acceptedClause}
+LIMIT 2
+{$forUpdateClause}
+SQL;
+
+    $stmt = $pdo->prepare($sql);
+
+    $params = [
+        'linked_fact_id' => $linkedFactId,
+    ];
+
+    if ($acceptedOnly) {
+        $params['accepted'] =
+            governance_accepted_adjudication_id($pdo);
+    }
+
+    $stmt->execute($params);
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (count($rows) > 1) {
+        throw new RuntimeException(
+            'Multiple canonical event lineage heads detected'
+        );
+    }
+
+    return $rows[0] ?? null;
+}
