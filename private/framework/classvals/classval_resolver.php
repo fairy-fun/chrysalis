@@ -6,7 +6,9 @@ function resolve_classval_type_id(
     PDO $pdo,
     string $typeCode
 ): string {
-    if (trim($typeCode) === '') {
+    $typeCode = trim($typeCode);
+
+    if ($typeCode === '') {
         throw new InvalidArgumentException(
             'typeCode is required'
         );
@@ -43,12 +45,93 @@ function resolve_classval_type_id(
     return $id;
 }
 
+function canonicalize_classval_code(
+    string $typeCode,
+    string $code
+): string {
+
+    $normalizedType = strtolower(trim($typeCode));
+    $normalizedCode = strtolower(trim($code));
+
+    return match ($normalizedType) {
+
+        'adjudication_status' => match ($normalizedCode) {
+
+            'approved',
+            'accepted',
+            'implicitly_retained'
+            => 'implicitly_retained',
+
+            'pending_review'
+            => 'PENDING_REVIEW',
+
+            'restored'
+            => 'RESTORED',
+
+            default
+            => $code,
+        },
+
+        'contradiction_state' => match ($normalizedCode) {
+
+            'unassessed'
+            => 'unassessed',
+
+            default
+            => $code,
+        },
+
+        'epistemic_origin' => match ($normalizedCode) {
+
+            'observed'
+            => 'observed',
+
+            'derived'
+            => 'derived',
+
+            'inferred'
+            => 'inferred',
+
+            'manual_author_entry'
+            => 'manual_author_entry',
+
+            'speculative'
+            => 'speculative',
+
+            'synthetic'
+            => 'synthetic',
+
+            'author_confirmed'
+            => 'AUTHOR_CONFIRMED',
+
+            'author_rejected'
+            => 'AUTHOR_REJECTED',
+
+            'legacy_imported'
+            => 'LEGACY_IMPORTED',
+
+            'legacy_inferred'
+            => 'LEGACY_INFERRED',
+
+            default
+            => $code,
+        },
+
+        default
+        => $code,
+    };
+}
+
 function resolve_classval_id(
     PDO $pdo,
     string $classvalTypeId,
     string $code
 ): string {
-    if (trim($classvalTypeId) === '' || trim($code) === '') {
+
+    $classvalTypeId = trim($classvalTypeId);
+    $code = trim($code);
+
+    if ($classvalTypeId === '' || $code === '') {
         throw new InvalidArgumentException(
             'classvalTypeId and code are required'
         );
@@ -56,7 +139,10 @@ function resolve_classval_id(
 
     static $cache = [];
 
-    $key = json_encode([$classvalTypeId, $code], JSON_THROW_ON_ERROR);
+    $key = json_encode(
+        [$classvalTypeId, $code],
+        JSON_THROW_ON_ERROR
+    );
 
     if (isset($cache[$key])) {
         return $cache[$key];
@@ -96,15 +182,18 @@ function resolve_classval_id_by_type_code(
     string $typeCode,
     string $code
 ): string {
-    if (trim($typeCode) === '' || trim($code) === '') {
-        throw new InvalidArgumentException(
-            'typeCode and code are required'
-        );
-    }
+
+    $canonicalCode = canonicalize_classval_code(
+        $typeCode,
+        $code
+    );
 
     return resolve_classval_id(
         $pdo,
-        resolve_classval_type_id($pdo, $typeCode),
-        $code
+        resolve_classval_type_id(
+            $pdo,
+            $typeCode
+        ),
+        $canonicalCode
     );
 }
