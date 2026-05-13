@@ -4,25 +4,26 @@ declare(strict_types=1);
 
 function governance_classval_id(
     PDO $pdo,
-    string $table,
+    string $classvalTypeId,
     string $code
 ): string {
 
-    $allowedTables = [
-        'epistemic_origin_classvals',
-        'adjudication_status_classvals',
-        'contradiction_state_classvals',
+    $allowedClassvalTypes = [
+        GovernanceDomains::EPISTEMIC_ORIGIN,
+        GovernanceDomains::ADJUDICATION_STATUS,
+        GovernanceDomains::CONTRADICTION_STATE,
     ];
 
-    if (!in_array($table, $allowedTables, true)) {
+    if (!in_array($classvalTypeId, $allowedClassvalTypes, true)) {
         throw new InvalidArgumentException(
-            'Unsupported governance classval table: ' . $table
+            'Unsupported governance classval type: '
+            . $classvalTypeId
         );
     }
 
     static $cache = [];
 
-    $key = $table . ':' . $code;
+    $key = $classvalTypeId . ':' . $code;
 
     if (isset($cache[$key])) {
         return $cache[$key];
@@ -30,12 +31,14 @@ function governance_classval_id(
 
     $stmt = $pdo->prepare("
         SELECT id
-        FROM {$table}
-        WHERE code = :code
+        FROM classvals
+        WHERE classval_type_id = :classval_type_id
+          AND code = :code
         LIMIT 1
     ");
 
     $stmt->execute([
+        ':classval_type_id' => $classvalTypeId,
         ':code' => $code,
     ]);
 
@@ -44,7 +47,7 @@ function governance_classval_id(
     if (!is_string($id) || trim($id) === '') {
         throw new RuntimeException(
             'Missing governance classval: '
-            . $table . ' / ' . $code
+            . $classvalTypeId . ' / ' . $code
         );
     }
 
