@@ -222,8 +222,33 @@ segment sequencing
 ontology multiplication
 ```
 segment_figures should be interpreted as choreography sequencing structure,
-not occurrence ontology identity.
 
+
+### Sequence Index Semantics
+
+`sequence_index` represents choreography temporal order within its container.
+
+It does not represent ontology decomposition order.
+
+For repeated figure usage:
+
+```text
+Natural Fleckerl
+Natural Fleckerl
+Natural Fleckerl
+```
+the repeated rows may reference the same reusable figure anchor, while sequence_index distinguishes their ordered choreographic placement.
+
+Therefore:
+
+sequence_index
+=
+ordered choreography position
+```text
+sequence_index
+!=
+ontology identity
+```
 ## Branching Semantics
 
 Choreography branching operates on performed occurrences, not realization ontology.
@@ -379,6 +404,48 @@ Those systems represent performed usage.
 
 They do not replace realization ontology.
 
+### Routine / Performance Boundary
+
+The live schema currently contains `performance_routines`, not separate `routines` or `performances` tables.
+
+`performance_routines` is not classval identity.
+
+Its primary identity is:
+
+```text
+performance_routines.routine_id
+```
+Classval references on this table, such as:
+```text
+choreography_type_id
+status_classval_id
+```
+represent ontology/type/status classification, not routine identity.
+
+Therefore, choreography routine identity is runtime/entity-oriented, while classvals remain classification atoms.
+
+This supports the broader boundary:
+```text
+figure_concepts / figure_realizations
+= ontology identity
+
+figures
+= reusable figure anchor identity
+
+segment_figures / segment_group_figures
+= choreography sequencing over reusable figure anchors
+
+performance_routines
+= higher-level choreography routine/program identity
+
+classvals
+= type/status/classification atoms
+```
+Do not treat routines as classvals unless a future migration explicitly introduces a routine ontology registry.
+
+Additional occurrence-layer structures should only be introduced if future runtime systems require identity beyond existing choreography routine/program structures.
+
+
 ## Current Transitional State
 
 The current schema still contains legacy overlap between:
@@ -400,6 +467,8 @@ remain temporarily for compatibility.
 These are legacy compatibility surfaces.
 
 They must not be treated as final ontology authority.
+
+
 
 ## Canonical Authority
 
