@@ -5,7 +5,7 @@ function fw_load_workflow_registry(string $directory): array
 {
     $registry = [];
 
-    $files = glob($directory . '/*.php');
+    $files = glob($directory . '/workflow_*.php');
 
     foreach ($files as $file) {
 
