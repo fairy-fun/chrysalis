@@ -63,6 +63,7 @@ return [
             'type' => 'input',
             'prompt' => 'Which projection should the prose be added to?',
             'expected_input' => 'projection_id',
+            'next' => 'validate_projection_binding',
         ],
 
         'terminal_calendar_event_not_found' => [
