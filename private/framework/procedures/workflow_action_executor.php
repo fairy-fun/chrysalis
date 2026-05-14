@@ -10,6 +10,8 @@ function fw_execute_workflow_action_state(
     array $context = []
 ): array {
 
+
+
     $action = $state['action'] ?? null;
 
     if (!$action) {
@@ -20,6 +22,39 @@ function fw_execute_workflow_action_state(
 
     $driver = $action['driver'] ?? null;
     $operation = $action['operation'] ?? null;
+
+    if (isset($state['assert'])) {
+
+        $assert = $state['assert'];
+
+        $left = null;
+
+        if ($assert['left'] === '$row.layer_id') {
+            $left = $context['row']['layer_id'] ?? null;
+        }
+
+        $passes =
+            ($assert['operator'] === 'equals')
+            && ($left === $assert['right']);
+
+        if (!$passes) {
+            return fw_run_workflow_state(
+                $pdo,
+                $workflow['workflow_id'],
+                $state['failure_state'],
+                $input,
+                $context
+            );
+        }
+
+        return fw_run_workflow_state(
+            $pdo,
+            $workflow['workflow_id'],
+            $state['next'],
+            $input,
+            $context
+        );
+    }
 
     if (
         $driver === 'db'
