@@ -35,6 +35,10 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     $sourceDocument = $body['source_document'] ?? null;
     $clientId = $body['client_id'] ?? null;
 
+    $subeventIndex = isset($body['subevent_index'])
+        ? (int)$body['subevent_index']
+        : null;
+
     /*
     |--------------------------------------------------------------------------
     | Early idempotency
@@ -142,6 +146,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
     $payload = [
         'summary' => $eventLabel ?: 'Subevent',
+        'subevent_index' => $subeventIndex,
         'prose_body' => $proseBody ?: null,
         'event_type_id' => $eventTypeId ?: $parent['event_type_id'],
         'domain_id' => $domainId ?: $parent['domain_id'],
