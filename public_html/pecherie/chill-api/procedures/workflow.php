@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../../../private/base_endpoint.php';
 require_once __DIR__ . '/../../../../private/framework/procedures/workflow_registry.php';
-require_once __DIR__ . '/../../../../private/framework/procedures/workflow_action_runner.php';
+require_once __DIR__
+    . '/../../../../private/framework/procedures/workflow_action_executor.php';
 require_once __DIR__ . '/../../../../private/framework/procedures/workflow_state_engine.php';
 
 try {
