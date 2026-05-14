@@ -18,6 +18,9 @@ require_once __DIR__ . '/directives/directive_service.php';
 
 require_once __DIR__ . '/procedures/workflow_registry.php';
 
+require_once __DIR__ . '/procedures/workflow_action_executor.php';
+require_once __DIR__ . '/procedures/workflow_state_engine.php';
+
 $GLOBALS['fw_workflow_registry'] =
     fw_load_workflow_registry(
         __DIR__ . '/procedures'
