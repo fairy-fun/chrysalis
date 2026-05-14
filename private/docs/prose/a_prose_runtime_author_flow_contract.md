@@ -167,7 +167,7 @@ resolve existing event
 → submit via Postman
 → verify prose draft / projection publication state
 → emit NEXT CHAT START PACK
-
+```
 ---
 
 ## segment prose
@@ -194,6 +194,32 @@ Do not ask authoring questions.
 Route first to export resolution contract / prose export resolver documentation.
 
 Do not infer export identity from newest draft or projection type.
+
+## Author Flow Document Handoff Rule
+
+When author intent resolves to a bounded second-tier workflow, the originating chat MUST NOT attempt to execute the whole workflow from the overview document.
+
+Instead, it MUST prompt the operator to start the next chat with the matching author-flow document.
+
+For the intent:
+
+```text
+add prose to existing event
+```
+the originating chat MUST emit:
+
+NEXT CHAT START PACK
+
+Author intent:
+add prose to existing event
+
+Next required document:
+private/docs/prose/author_flow/add_prose_to_existing_event.md
+
+First instruction for next chat:
+Read private/docs/prose/author_flow/add_prose_to_existing_event.md first, then guide me through adding prose to the resolved existing event.
+
+If runtime state is already resolved, include it in the same handoff block.
 
 ### Canonical Workflow Shape
 author intent
