@@ -5,7 +5,17 @@ function fw_load_workflow_registry(string $directory): array
 {
     $registry = [];
 
-    $files = glob($directory . '/workflow_*_definition.php');
+    //$files = glob($directory . '/workflow_*_definition.php');
+
+    $pattern = $directory . '/workflow_*_definition.php';
+
+    $files = glob($pattern);
+
+    if ($files === false || count($files) === 0) {
+        throw new RuntimeException(
+            'No workflow definition files found. Pattern: ' . $pattern
+        );
+    }
 
     foreach ($files as $file) {
 
