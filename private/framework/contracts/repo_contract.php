@@ -289,5 +289,11 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+
+        'getLatestEventProse' => [
+            'handler' => 'public_html/pecherie/chill-api/prose/get_latest_event_prose.php',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
     ],
 ];
