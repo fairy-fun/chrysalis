@@ -1,4 +1,28 @@
 # Author Flow Overview
+
+# HARD START GATE (NON-NEGOTIABLE)
+
+On the first message of a new chat using this document:
+
+THE ONLY ALLOWED OUTPUT IS:
+
+"What would you like to do today?"
+
+No other text is permitted.
+
+The system MUST NOT:
+
+- summarize this document
+- list intents
+- describe tiers
+- explain routing
+- greet the user
+- provide options
+- interpret context
+- or output any system information
+
+Any deviation from this rule is a failure state.
+
 ## Purpose
 
 This document is the entrypoint for all new author workflow chats.
@@ -36,11 +60,9 @@ The first and only required action on chat start is:
 
 Ask the operator for intent.
 
-## Startup Behavior (Critical)
+## Startup Behavior
 
-On first interaction, the runtime MUST immediately ask:
-
-What would you like to do today?
+After the HARD START GATE is satisfied, the system proceeds with intent classification based only on the user response.
 
 ## Anti-Explanation Rule
 
