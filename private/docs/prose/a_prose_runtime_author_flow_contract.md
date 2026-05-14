@@ -52,7 +52,150 @@ The runtime MUST resolve as much state as possible before interviewing the opera
 
 The operator MUST NOT manually traverse hierarchy unless runtime resolution fails.
 
-Canonical Workflow Shape
+
+## Document-Routed Workflow Doctrine
+
+After author intent is classified, the runtime MUST either:
+
+1. continue directly to the next correct workflow section when enough runtime state is already resolved, or
+2. emit a bounded NEXT CHAT START PACK that tells the operator exactly which document/section to feed the next chat.
+
+The operator should never need to decide which contract, guide, or runtime file applies next.
+
+# Intent → Document Routing Map
+
+## inspect latest prose state
+
+Route first to:
+
+- `a_latest_event_prose_resolution_contract.md`
+
+If runtime state resolves to `prose_found`, continue directly to inspection output.
+
+If state resolves to missing or ambiguous state, route to the matching repair/interview section.
+
+---
+
+## create missing event
+
+Route first to:
+
+- `a_calendar_execution_contract.md`
+- event creation protocol document, if event slot is inferable
+
+Do not ask week/day/time/event if the resolver already produced an inferable slot.
+
+---
+
+## create prose draft
+
+Route first to:
+
+- `create_prose_draft.md`
+- `create_prose_draft_json_contract.md`
+
+Only route here after a concrete `calendar_layer_event` instance is resolved.
+
+---
+
+## continue prose / revise prose
+
+Route first to latest prose resolution.
+
+If prose exists, continue directly to authoring action.
+
+If no prose exists, route to create prose draft.
+
+---
+
+## import / paste prose
+
+Route first to:
+
+- `a_guide_to_getting_started_writing_prose.md`
+
+But skip hierarchy interview if runtime resolution has already resolved the target event.
+
+Then route to segmentation doctrine if prose must become subevents.
+
+### add prose via Postman to existing event
+
+Intent tier: second-tier operational intent.
+
+Parent intent family:
+
+- create prose draft
+- import / paste prose
+
+### Entry Condition
+
+The operator wants to attach prose to an already-existing concrete calendar event using the API/Postman flow.
+
+### Required Runtime State
+
+Before routing here, the runtime MUST resolve:
+
+- projection
+- concrete `calendar_layer_event` instance
+- target event `entity_id`
+- publication/prose state for that event
+
+The runtime MUST NOT ask for week/day/time/event if the existing event has already been resolved.
+
+### Route First To
+
+- `private/docs/prose/a_prose_runtime_author_flow_contract.md`
+- `private/docs/prose/create_prose_draft.md`
+- `private/docs/prose/create_prose_draft_json_contract.md`
+- `private/framework/prose/prose_draft_creator.php`
+- API route surface for prose draft creation
+
+### Skip Rules
+
+If the concrete event is already resolved, skip hierarchy traversal.
+
+If prose body is already supplied, skip prose drafting interview.
+
+If publication target is already resolved, skip publication-target interview.
+
+### Correct Action Path
+
+```text
+resolve existing event
+→ confirm target event identity
+→ prepare createProseDraft JSON payload
+→ submit via Postman
+→ verify prose draft / projection publication state
+→ emit NEXT CHAT START PACK
+
+---
+
+## segment prose
+
+Route first to:
+
+- `prose_subevent_segmentation_doctrine.md`
+- `a_calendar_execution_contract.md`
+
+Only proceed after resolved `calendar_layer_event:<id>` parent exists.
+
+---
+
+## verify runtime state
+
+Route first to the relevant runtime resolver contract.
+
+Do not ask authoring questions.
+
+---
+
+## export prose
+
+Route first to export resolution contract / prose export resolver documentation.
+
+Do not infer export identity from newest draft or projection type.
+
+### Canonical Workflow Shape
 author intent
 → runtime resolution
 → interview routing
