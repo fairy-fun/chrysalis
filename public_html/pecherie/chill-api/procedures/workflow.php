@@ -29,6 +29,11 @@ try {
 
     $registry = $GLOBALS['fw_workflow_registry'] ?? [];
 
+    json_response([
+        'requested_workflow_id' => $workflowId,
+        'loaded_workflows' => array_keys($registry),
+    ]);
+
     if (!isset($registry[$workflowId])) {
         throw new RuntimeException(
             'Unknown workflow_id.'
