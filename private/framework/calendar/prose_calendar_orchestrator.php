@@ -72,6 +72,7 @@ function persist_segmented_subevents(
                     $parentEventEntityId,
                     $slot
                 ),
+                'subevent_index' => $slot,
                 'parent_event_entity_id' => $parentEventEntityId,
                 'event_label' => $summary,
                 'prose_body' => $proseBody,
