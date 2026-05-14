@@ -166,10 +166,6 @@ function insert_calendar_node(
     int $sequenceIndex,
     array $payload
 ): array {
-    $layerId = trim($layerId);
-
-    assert_calendar_node_payload_invariants($layerId, $payload);
-
     $started = !$pdo->inTransaction();
 
     if ($started) {
@@ -196,7 +192,6 @@ function insert_calendar_node(
                 parent_event_id,
                 layer_id,
                 sequence_index,
-                subevent_index,
                 event_id,
                 summary,
                 prose_body,
@@ -209,7 +204,8 @@ function insert_calendar_node(
                 class_type_id,
                 notes,
                 source_document,
-                client_id
+                client_id,
+                subevent_index
             ) VALUES (
                 :entity_id,
                 :projection_id,
@@ -217,7 +213,6 @@ function insert_calendar_node(
                 :parent,
                 :layer,
                 :seq,
-                :subevent_index,
                 :event_id,
                 :summary,
                 :prose_body,
@@ -230,7 +225,8 @@ function insert_calendar_node(
                 :class_type_id,
                 :notes,
                 :source_document,
-                :client_id
+                :client_id,
+                :subevent_index
             )
         ");
 
@@ -239,9 +235,8 @@ function insert_calendar_node(
             ':projection_id' => $projectionFields['projection_id'],
             ':projection_entity_id' => $projectionFields['projection_entity_id'],
             ':parent' => $parentEventId,
-            ':layer' => $layerId,
+            ':layer' => trim($layerId),
             ':seq' => $sequenceIndex,
-            ':subevent_index' => $payload['subevent_index'] ?? null,
             ':event_id' => $eventId,
             ':summary' => $payload['summary'] ?? null,
             ':prose_body' => $payload['prose_body'] ?? null,
@@ -255,6 +250,7 @@ function insert_calendar_node(
             ':notes' => $payload['notes'] ?? null,
             ':source_document' => $payload['source_document'] ?? null,
             ':client_id' => $payload['client_id'] ?? null,
+            ':subevent_index' => $payload['subevent_index'] ?? null,
         ]);
 
         $id = (int)$pdo->lastInsertId();
@@ -450,7 +446,6 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
         ],
         'calendar_layer_subevent' => [
             'summary',
-            'subevent_index',
             'prose_body',
             'event_type_id',
             'location_id',
@@ -459,6 +454,7 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
             'notes',
             'source_document',
             'client_id',
+            'subevent_index',
         ],
     ];
 
