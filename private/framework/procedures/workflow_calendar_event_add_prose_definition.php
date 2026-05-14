@@ -66,6 +66,37 @@ return [
             'next' => 'validate_projection_binding',
         ],
 
+        'validate_projection_binding' => [
+            'type' => 'action',
+
+            'assert' => [
+                'left' => '$input.projection_id',
+                'operator' => 'equals',
+                'right' => '$row.projection_id',
+            ],
+
+            'failure_state' => 'terminal_projection_mismatch',
+
+            'next' => 'await_prose_text',
+        ],
+
+        'await_prose_text' => [
+            'type' => 'input',
+            'prompt' => 'Enter the prose text.',
+            'expected_input' => 'prose',
+            'next' => 'terminal_ready_for_persistence',
+        ],
+
+        'terminal_projection_mismatch' => [
+            'type' => 'terminal',
+            'message' => 'Projection does not match calendar_event projection.',
+        ],
+
+        'terminal_ready_for_persistence' => [
+            'type' => 'terminal',
+            'message' => 'Workflow validated and ready for prose persistence.',
+        ],
+
         'terminal_calendar_event_not_found' => [
             'type' => 'terminal',
             'message' => 'No calendar_event found for that entity_id.',
