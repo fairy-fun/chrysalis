@@ -10,32 +10,19 @@ function fw_execute_workflow_action_state(
     array $context = []
 ): array {
 
-
-
-    $action = $state['action'] ?? null;
-
-    if (!$action) {
-        throw new RuntimeException(
-            "Missing action definition for state: {$stateName}"
-        );
-    }
-
-    $driver = $action['driver'] ?? null;
-    $operation = $action['operation'] ?? null;
-
     if (isset($state['assert'])) {
 
         $assert = $state['assert'];
 
         $left = null;
 
-        if ($assert['left'] === '$row.layer_id') {
+        if (($assert['left'] ?? null) === '$row.layer_id') {
             $left = $context['row']['layer_id'] ?? null;
         }
 
         $passes =
-            ($assert['operator'] === 'equals')
-            && ($left === $assert['right']);
+            (($assert['operator'] ?? null) === 'equals')
+            && ($left === ($assert['right'] ?? null));
 
         if (!$passes) {
             return fw_run_workflow_state(
@@ -56,6 +43,17 @@ function fw_execute_workflow_action_state(
         );
     }
 
+    $action = $state['action'] ?? null;
+
+    if (!$action) {
+        throw new RuntimeException(
+            "Missing action definition for state: {$stateName}"
+        );
+    }
+
+    $driver = $action['driver'] ?? null;
+    $operation = $action['operation'] ?? null;
+
     if (
         $driver === 'db'
         && $operation === 'select_one'
@@ -66,38 +64,30 @@ function fw_execute_workflow_action_state(
         $bindings = [];
 
         foreach (($action['bindings'] ?? []) as $key => $value) {
-
             if ($value === '$input.entity_id') {
                 $bindings[$key] = $input['entity_id'] ?? null;
             }
         }
 
         $stmt = $pdo->prepare($sql);
-
         $stmt->execute($bindings);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$row) {
-
-            $failureState =
-                $state['failure_state'] ?? null;
-
             return fw_run_workflow_state(
                 $pdo,
                 $workflow['workflow_id'],
-                $failureState,
+                $state['failure_state'],
                 $input,
                 $context
             );
         }
 
-        $nextState = $state['next'] ?? null;
-
         return fw_run_workflow_state(
             $pdo,
             $workflow['workflow_id'],
-            $nextState,
+            $state['next'],
             $input,
             array_merge(
                 $context,
@@ -107,6 +97,6 @@ function fw_execute_workflow_action_state(
     }
 
     throw new RuntimeException(
-        "Unsupported action driver/operation combination."
+        'Unsupported action driver/operation combination.'
     );
 }
