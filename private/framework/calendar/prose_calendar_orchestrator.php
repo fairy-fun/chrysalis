@@ -25,7 +25,7 @@ function build_subevent_client_id(
     }
 
     return sprintf(
-        'calendar_event:%s:slot:%d',
+        '%s:slot:%d',
         $parentEventEntityId,
         $slot
     );
