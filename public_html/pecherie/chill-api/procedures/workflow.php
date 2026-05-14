@@ -12,32 +12,21 @@ try {
     $request = $ctx['input'];
 
     if (!is_array($request)) {
-        throw new RuntimeException(
-            'Invalid JSON request body.'
-        );
+        throw new RuntimeException('Invalid JSON request body.');
     }
 
     $workflowId = $request['workflow_id'] ?? null;
 
     if (!is_string($workflowId) || trim($workflowId) === '') {
-        throw new RuntimeException(
-            'Missing workflow_id.'
-        );
+        throw new RuntimeException('Missing workflow_id.');
     }
 
     $workflowId = trim($workflowId);
 
     $registry = $GLOBALS['fw_workflow_registry'] ?? [];
 
-    json_response([
-        'requested_workflow_id' => $workflowId,
-        'loaded_workflows' => array_keys($registry),
-    ]);
-
     if (!isset($registry[$workflowId])) {
-        throw new RuntimeException(
-            'Unknown workflow_id.'
-        );
+        throw new RuntimeException('Unknown workflow_id.');
     }
 
     $workflow = $registry[$workflowId];
@@ -45,9 +34,7 @@ try {
     $stateName = $request['state'] ?? ($workflow['initial_state'] ?? null);
 
     if (!is_string($stateName) || trim($stateName) === '') {
-        throw new RuntimeException(
-            'Missing state.'
-        );
+        throw new RuntimeException('Missing state.');
     }
 
     $stateName = trim($stateName);
@@ -55,17 +42,13 @@ try {
     $input = $request['input'] ?? [];
 
     if (!is_array($input)) {
-        throw new RuntimeException(
-            'input must be an object.'
-        );
+        throw new RuntimeException('input must be an object.');
     }
 
     $context = $request['context'] ?? [];
 
     if (!is_array($context)) {
-        throw new RuntimeException(
-            'context must be an object.'
-        );
+        throw new RuntimeException('context must be an object.');
     }
 
     $response = fw_run_workflow_state(
