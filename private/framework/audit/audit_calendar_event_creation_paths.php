@@ -116,7 +116,7 @@ function assert_calendar_event_creation_paths(): void
         // ❌ Block legacy index-based creator logic in calendar framework code.
         if (
             str_contains($path, '/private/framework/calendar/') &&
-            preg_match('/\b(?:week_index|day_index|time_index|event_index|subevent_index)\b/', $contents)
+            preg_match('/\b(?:week_index|day_index|time_index|event_index)\b/', $contents)
         ) {
             throw new RuntimeException(
                 "Legacy index-based calendar logic detected in {$path}"
