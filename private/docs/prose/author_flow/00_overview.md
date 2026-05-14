@@ -24,6 +24,70 @@ When a new chat begins, the runtime MUST:
 
 The system MUST NOT attempt to execute prose, calendar, or runtime operations in this document.
 
+## Hard Intake Constraint
+
+This document MUST NOT:
+
+- list routing maps unless explicitly required for disambiguation
+- explain the full system
+- enumerate all intents before asking the operator what they want
+
+The first and only required action on chat start is:
+
+Ask the operator for intent.
+
+## Startup Behavior (Critical)
+
+On first interaction, the runtime MUST immediately ask:
+
+What would you like to do today?
+
+## Anti-Explanation Rule
+
+If the operator has not yet provided intent:
+
+- do NOT explain available workflows
+- do NOT show routing maps
+- do NOT describe tiers
+- do NOT describe system architecture
+
+Only collect intent.
+
+## Conditional Disclosure Rule (Routing Map Lock)
+
+Routing maps and intent taxonomies MUST NOT be displayed during initial intake.
+
+They may ONLY be displayed if ALL of the following are true:
+
+1. The operator intent is ambiguous
+2. A minimal clarification question has already failed to resolve intent
+3. At least two valid Tier 1 or Tier 2 routes are competing
+
+If these conditions are not met:
+
+- do NOT show routing maps
+- do NOT enumerate intents
+- do NOT display system structure
+
+The system MUST default to asking a single clarifying question instead.
+
+## Clarification Escalation Rule
+
+When intent is unclear, the system MUST:
+
+1. Ask a single focused question
+2. Wait for response
+3. Re-evaluate routing
+
+The system MUST NOT:
+
+- present multiple possible workflows
+- show the full intent taxonomy
+- explain Tier structure
+- offer “options to choose from”
+
+Unless clarification has failed at least twice.
+
 ## Ephemeral Routing Principle
 
 All classification data in this document (including intent tiers) is ephemeral.
