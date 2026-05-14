@@ -25,18 +25,18 @@ This document governs only chronological prose reading and validation.
 
 ---
 
-# Runtime Doctrine
+### Runtime Doctrine
 
-## Core Principles
+#### Core Principles
 
-### Prose interaction is state-resolution driven
+##### Prose interaction is state-resolution driven
 
 The runtime resolves prose from canonical projection state.
 
 The operator does not manually traverse hierarchy nodes.
 
 
-### Hierarchy traversal is machine responsibility
+##### Hierarchy traversal is machine responsibility
 
 The runtime resolves:
 
@@ -47,7 +47,7 @@ projection
 without requiring the operator to manually select intermediate hierarchy nodes.
 
 
-### Chronological authority derives from executable event ordering
+##### Chronological authority derives from executable event ordering
 
 Canonical chronology authority is:
 
@@ -57,13 +57,14 @@ calendar_events.sequence_index
 
 The runtime MUST NOT derive chronological order from:
 
-chronology_address lexical sorting
-projection_order
-event_index
-database insertion order
-prose projection ordering
-prose draft ordering
-Publication authority derives from published prose bindings
+* chronology_address lexical sorting
+* projection_order
+* event_index
+* database insertion order
+* prose projection ordering
+* prose draft ordering
+* 
+##### Publication authority derives from published prose bindings
 
 Canonical prose publication authority derives from:
 
@@ -145,11 +146,12 @@ calendar_layer_event
 Next Event Resolution
 
 The next executable event is resolved using:
-
+``` sql
 WHERE sequence_index > :current_sequence_index
 ORDER BY sequence_index ASC
 LIMIT 1
-Reader Runtime States
+```
+##### Reader Runtime States
 
 The runtime may return the following states.
 
@@ -198,13 +200,13 @@ Subevent persistence identity derives from:
 build_subevent_client_id()
 
 using:
-
+``` php
 sprintf(
 '%s:slot:%d',
 $parentEventEntityId,
 $slot
 )
-
+```
 The runtime MUST NOT generate duplicate namespace prefixes such as:
 
 calendar_event:calendar_event:...
