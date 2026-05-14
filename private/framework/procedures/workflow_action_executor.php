@@ -83,12 +83,13 @@ function fw_execute_workflow_action_state(
             $failureState =
                 $state['failure_state'] ?? null;
 
-            return [
-                'workflow_id' => $workflow['workflow_id'],
-                'state' => $failureState,
-                'type' => 'terminal',
-                'message' => 'Validation failed.',
-            ];
+            return fw_run_workflow_state(
+                $pdo,
+                $workflow['workflow_id'],
+                $failureState,
+                $input,
+                $context
+            );
         }
 
         $nextState = $state['next'] ?? null;
