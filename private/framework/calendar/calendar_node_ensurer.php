@@ -39,6 +39,8 @@ function ensure_calendar_node(
 
     $payload = filter_calendar_node_payload($layerId, $payload);
 
+    assert_calendar_node_payload_invariants($layerId, $payload);
+
     while (true) {
         $candidateIndex = $sequenceIndex ?? get_next_sequence_index(
             $pdo,
@@ -164,6 +166,10 @@ function insert_calendar_node(
     int $sequenceIndex,
     array $payload
 ): array {
+    $layerId = trim($layerId);
+
+    assert_calendar_node_payload_invariants($layerId, $payload);
+
     $started = !$pdo->inTransaction();
 
     if ($started) {
@@ -190,6 +196,7 @@ function insert_calendar_node(
                 parent_event_id,
                 layer_id,
                 sequence_index,
+                subevent_index,
                 event_id,
                 summary,
                 prose_body,
@@ -210,6 +217,7 @@ function insert_calendar_node(
                 :parent,
                 :layer,
                 :seq,
+                :subevent_index,
                 :event_id,
                 :summary,
                 :prose_body,
@@ -231,8 +239,9 @@ function insert_calendar_node(
             ':projection_id' => $projectionFields['projection_id'],
             ':projection_entity_id' => $projectionFields['projection_entity_id'],
             ':parent' => $parentEventId,
-            ':layer' => trim($layerId),
+            ':layer' => $layerId,
             ':seq' => $sequenceIndex,
+            ':subevent_index' => $payload['subevent_index'] ?? null,
             ':event_id' => $eventId,
             ':summary' => $payload['summary'] ?? null,
             ':prose_body' => $payload['prose_body'] ?? null,
@@ -333,7 +342,6 @@ function build_calendar_projection_compatibility_fields(
         ),
     ];
 }
-
 
 function calendar_entity_type_for_layer(string $layerId): string
 {
@@ -442,6 +450,7 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
         ],
         'calendar_layer_subevent' => [
             'summary',
+            'subevent_index',
             'prose_body',
             'event_type_id',
             'location_id',
@@ -458,6 +467,32 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
     }
 
     return array_intersect_key($payload, array_flip($allowed[$layerId]));
+}
+
+function assert_calendar_node_payload_invariants(
+    string $layerId,
+    array $payload
+): void {
+    $layerId = trim($layerId);
+
+    if ($layerId !== 'calendar_layer_subevent') {
+        return;
+    }
+
+    $subeventIndex = $payload['subevent_index'] ?? null;
+
+    if (
+        $subeventIndex === null
+        || filter_var(
+            $subeventIndex,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]]
+        ) === false
+    ) {
+        throw new RuntimeException(
+            'Subevent nodes require subevent_index >= 1'
+        );
+    }
 }
 
 function get_next_sequence_index(
