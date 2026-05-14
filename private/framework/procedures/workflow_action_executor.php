@@ -28,9 +28,15 @@ function fw_execute_workflow_action_state(
             $left = $input['projection_id'] ?? null;
         }
 
+        $right = $assert['right'] ?? null;
+
+        if ($right === '$row.projection_id') {
+            $right = $context['row']['projection_id'] ?? null;
+        }
+
         $passes =
             (($assert['operator'] ?? null) === 'equals')
-            && ($left === ($assert['right'] ?? null));
+            && ($left === $right);
 
         if (!$passes) {
             return fw_run_workflow_state(
