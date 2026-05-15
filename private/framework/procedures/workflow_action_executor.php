@@ -14,25 +14,17 @@ function fw_execute_workflow_action_state(
 
         $assert = $state['assert'];
 
-        $left = null;
+        $left = fw_resolve_workflow_value(
+            $assert['left'] ?? null,
+            $input,
+            $context
+        );
 
-        if (($assert['left'] ?? null) === '$row.layer_id') {
-            $left = $context['row']['layer_id'] ?? null;
-        }
-
-        if (($assert['left'] ?? null) === '$row.projection_id') {
-            $left = $context['row']['projection_id'] ?? null;
-        }
-
-        if (($assert['left'] ?? null) === '$input.projection_id') {
-            $left = $input['projection_id'] ?? null;
-        }
-
-        $right = $assert['right'] ?? null;
-
-        if ($right === '$row.projection_id') {
-            $right = $context['row']['projection_id'] ?? null;
-        }
+        $right = fw_resolve_workflow_value(
+            $assert['right'] ?? null,
+            $input,
+            $context
+        );
 
         $passes =
             (($assert['operator'] ?? null) === 'equals')
@@ -78,9 +70,12 @@ function fw_execute_workflow_action_state(
         $bindings = [];
 
         foreach (($action['bindings'] ?? []) as $key => $value) {
-            if ($value === '$input.entity_id') {
-                $bindings[$key] = $input['entity_id'] ?? null;
-            }
+
+            $bindings[$key] = fw_resolve_workflow_value(
+                $value,
+                $input,
+                $context
+            );
         }
 
         $stmt = $pdo->prepare($sql);
