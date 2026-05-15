@@ -14,22 +14,11 @@ function fw_execute_workflow_action_state(
 
         $assert = $state['assert'];
 
-        $left = fw_resolve_workflow_value(
-            $assert['left'] ?? null,
+        $passes = fw_evaluate_workflow_assertion(
+            $assert,
             $input,
             $context
         );
-
-        $right = fw_resolve_workflow_value(
-            $assert['right'] ?? null,
-            $input,
-            $context
-        );
-
-        $passes =
-            (($assert['operator'] ?? null) === 'equals')
-            && ($left === $right);
-
         if (!$passes) {
             return fw_run_workflow_state(
                 $pdo,
