@@ -19,6 +19,7 @@ function fw_execute_workflow_action_state(
             $input,
             $context
         );
+
         if (!$passes) {
             return fw_run_workflow_state(
                 $pdo,
@@ -72,11 +73,21 @@ function fw_execute_workflow_action_state(
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$row) {
+        $success = $row !== false;
+
+        $nextState = fw_resolve_workflow_transition(
+            $state,
+            $success,
+            $input,
+            $context
+        );
+
+        if (!$success) {
+
             return fw_run_workflow_state(
                 $pdo,
                 $workflow['workflow_id'],
-                $state['failure_state'],
+                $nextState,
                 $input,
                 $context
             );
@@ -85,7 +96,7 @@ function fw_execute_workflow_action_state(
         return fw_run_workflow_state(
             $pdo,
             $workflow['workflow_id'],
-            $state['next'],
+            $nextState,
             $input,
             array_merge(
                 $context,
