@@ -38,6 +38,8 @@ require_once __DIR__ . '/procedures/workflow_state_dispatcher.php';
 
 require_once __DIR__ . '/procedures/workflow_state_engine.php';
 
+require_once __DIR__ . '/procedures/workflow_chat_start_handler.php';
+
 $GLOBALS['fw_workflow_registry'] =
     fw_load_workflow_registry(
         __DIR__ . '/procedures'
