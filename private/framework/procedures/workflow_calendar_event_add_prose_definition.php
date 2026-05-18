@@ -118,7 +118,49 @@ return [
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'terminal_ready_for_persistence',
+                'next' => 'persist_prose_draft',
+            ],
+        ],
+
+        'persist_prose_draft' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'prose',
+                'operation' => 'create_draft',
+
+                'payload' => [
+
+                    // Replace with your actual entity allocation strategy.
+                    'entity_id' => 'prose:' . uniqid(),
+
+                    'title' => 'Workflow prose draft',
+
+                    'prose_body' => '$input.prose',
+
+                    'draft_status_id' => 'prose_status_draft',
+
+                    'projection' => [
+
+                        // We will likely replace this once projection
+                        // classval semantics stabilize.
+                        'projection_classval_id' => 'projection_type_timeline_view',
+
+                        'projection_type_id' => 'projection_type_timeline_view',
+
+                        'target_entity_id' => '$context.calendar_event.entity_id',
+
+                        'role_id' => 'prose_projection_role_primary',
+
+                        'projection_order' => 1,
+                    ],
+                ],
+            ],
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'terminal_prose_created',
+                'failure_state' => 'terminal_prose_persist_failed',
             ],
         ],
 
@@ -127,9 +169,14 @@ return [
             'message' => 'Projection does not match calendar_event projection.',
         ],
 
-        'terminal_ready_for_persistence' => [
+        'terminal_prose_created' => [
             'type' => 'terminal',
-            'message' => 'Workflow validated and ready for prose persistence.',
+            'message' => 'Prose draft created successfully.',
+        ],
+
+        'terminal_prose_persist_failed' => [
+            'type' => 'terminal',
+            'message' => 'Failed to persist prose draft.',
         ],
 
         'terminal_missing_entity_id' => [

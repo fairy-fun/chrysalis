@@ -31,6 +31,12 @@ function fw_execute_workflow_driver_operation(
 
         ],
 
+        'prose' => [
+
+            'create_draft' => 'fw_execute_workflow_prose_create_draft',
+
+        ],
+
     ];
 
     $handler = $map[$driver][$operation] ?? null;

@@ -22,6 +22,8 @@ require_once __DIR__ . '/procedures/workflow_boolean_transition_driver.php';
 require_once __DIR__ . '/procedures/workflow_match_transition_driver.php';
 
 require_once __DIR__ . '/procedures/workflow_driver_dispatcher.php';
+require_once __DIR__ . '/procedures/workflow_prose_driver.php';
+
 require_once __DIR__ . '/procedures/workflow_transition_resolver.php';
 
 
