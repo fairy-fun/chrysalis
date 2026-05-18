@@ -241,6 +241,10 @@ switch ($operation) {
         require __DIR__ . '/dreams/get_dream_annotations.php';
         break;
 
+    case 'startWorkflowChat':
+        require __DIR__ . '/prose/start_workflow_chat.php';
+        break;
+
     case 'resolveProseExportText':
         require __DIR__ . '/prose/resolve_prose_export_text.php';
         break;
