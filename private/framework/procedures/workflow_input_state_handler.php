@@ -10,13 +10,26 @@ function fw_handle_workflow_input_state(
     array $context = []
 ): array {
 
+    $transition = $state['transition']
+        ?? [
+            'driver' => 'boolean',
+            'next' => $state['next'] ?? null,
+        ];
+
     return [
         'workflow_id' => $workflow['workflow_id'],
         'state' => $stateName,
         'type' => 'input',
         'prompt' => $state['prompt'],
         'expected_input' => $state['expected_input'],
-        'next' => $state['next'] ?? null,
+
+        'next' => fw_resolve_workflow_transition(
+            $transition,
+            true,
+            $input,
+            $context
+        ),
+
         'context' => $context,
     ];
 }
