@@ -44,6 +44,7 @@ return [
                         projection_id
                     FROM calendar_events
                     WHERE entity_id = :entity_id
+                    LIMIT 1
                 ',
 
                 'bindings' => [

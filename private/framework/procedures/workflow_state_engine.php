@@ -259,7 +259,12 @@ function fw_workflow_execute_action(
     }
 
     if (($action['driver'] ?? null) === 'db') {
-        return fw_workflow_execute_db_action($pdo, $action, $input, $context);
+        return fw_execute_workflow_db_select_one(
+            $pdo,
+            $action,
+            $input,
+            $context
+        );
     }
 
     return fw_execute_workflow_driver_operation(
@@ -431,4 +436,23 @@ function fw_read_workflow_path(
     }
 
     return $current;
+}
+
+function fw_resume_workflow(
+    PDO $pdo,
+    string $workflowId,
+    string $stateName,
+    array $input = [],
+    array $context = [],
+    array $snapshots = []
+): array {
+
+    return fw_run_workflow_state(
+        $pdo,
+        $workflowId,
+        $stateName,
+        $input,
+        $context,
+        $snapshots
+    );
 }
