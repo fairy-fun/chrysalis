@@ -20,20 +20,17 @@ function fw_execute_workflow_action_state(
             $context
         );
 
-        if (!$passes) {
-            return fw_run_workflow_state(
-                $pdo,
-                $workflow['workflow_id'],
-                $state['failure_state'],
-                $input,
-                $context
-            );
-        }
+        $nextState = fw_resolve_workflow_transition(
+            $state,
+            $passes,
+            $input,
+            $context
+        );
 
         return fw_run_workflow_state(
             $pdo,
             $workflow['workflow_id'],
-            $state['next'],
+            $nextState,
             $input,
             $context
         );
