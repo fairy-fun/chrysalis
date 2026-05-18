@@ -14,6 +14,7 @@ function fw_dispatch_workflow_transition(
 
     $drivers = [
         'boolean' => 'fw_resolve_boolean_workflow_transition',
+        'match' => 'fw_resolve_match_workflow_transition',
     ];
 
     if (!isset($drivers[$driver])) {
