@@ -10,7 +10,7 @@ This procedure maps directly onto the runtime workflow input state:
 
 ```text
 await_calendar_event_entity_id
-
+```
 This procedure exists ONLY to satisfy the workflow requirement that a target event identifier be explicitly supplied.
 
 Runtime State Mapping
@@ -51,7 +51,7 @@ obtain explicit target-event intent
 continue clarification until intent is unambiguous
 emit workflow-compatible input
 stop immediately
-Canonical User Prompt
+## Canonical User Prompt
 
 Canonical prompt:
 
@@ -145,3 +145,43 @@ await_prose_text
 persist_prose_draft
 
 This procedure terminates before those states execute.
+
+## Incoming User Input Handling
+
+When the user supplies a value, it MUST be treated as a *target-event reference*, not necessarily a canonical entity_id.
+
+Examples of valid non-canonical inputs:
+- calendar_event:7
+- "last meeting with design team"
+- 2026/W20/D1/T03/E02
+- cal_evt_01JV...
+
+The operator MUST NOT assume all inputs are already normalized.
+
+---
+
+## Resolution Boundary
+
+This procedure does NOT resolve event references.
+
+If the user provides ANY target-event reference:
+- pass it forward unchanged
+- do not validate existence
+- do not interpret layer or projection state
+
+Normalization is handled by:
+private/docs/prose/author_flow/resolve_target_event.md
+
+---
+
+## Updated Success Output Contract
+
+If the user supplies a reference, emit:
+
+input:
+  raw_target_event_reference: <user_supplied_value>
+
+If and only if the user supplies a known canonical entity_id format:
+input:
+  entity_id: <canonical_id>
+  source: user_supplied
