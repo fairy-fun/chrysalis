@@ -47,3 +47,20 @@ function fw_execute_workflow_db_select_one(
             : $context,
     ];
 }
+
+function fw_db_query_one(string $sql, array $params = []): ?array
+{
+    global $pdo; // assumes existing PDO bootstrap in framework
+
+    $stmt = $pdo->prepare($sql);
+
+    if (!$stmt) {
+        throw new RuntimeException("Failed to prepare SQL statement.");
+    }
+
+    $stmt->execute($params);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ?: null;
+}
