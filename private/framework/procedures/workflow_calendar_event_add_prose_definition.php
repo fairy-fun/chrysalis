@@ -43,29 +43,16 @@ return [
 
             'transition' => [
                 'driver' => 'match',
-                'value' => '$context.calendar_event.projection_id',
+
+                'value' => '$context.calendar_event.layer_id',
 
                 'cases' => [
-                    '' => 'await_prose_text',
+                    'calendar_layer_event' => 'await_projection_binding',
+                    'calendar_layer_note' => 'await_prose_text',
+                    'calendar_layer_annotation' => 'await_prose_text',
                 ],
 
-                'default' => 'enforce_calendar_event_layer',
-            ],
-        ],
-
-        'enforce_calendar_event_layer' => [
-            'type' => 'action',
-
-            'assert' => [
-                'left' => '$context.calendar_event.layer_id',
-                'operator' => 'equals',
-                'right' => 'calendar_layer_event',
-            ],
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'await_projection_binding',
-                'failure_state' => 'terminal_wrong_layer',
+                'default' => 'terminal_wrong_layer',
             ],
         ],
 
@@ -116,7 +103,7 @@ return [
 
         'terminal_wrong_layer' => [
             'type' => 'terminal',
-            'message' => 'Entity exists but is not calendar_layer_event.',
+            'message' => 'Entity exists but is not a supported prose layer.',
         ],
     ],
 ];
