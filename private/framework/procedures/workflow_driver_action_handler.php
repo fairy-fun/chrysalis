@@ -32,7 +32,7 @@ function fw_handle_workflow_driver_action(
         $state,
         $success,
         $input,
-        $context
+        $result['context'] ?? $context
     );
 
     return fw_run_workflow_state(
