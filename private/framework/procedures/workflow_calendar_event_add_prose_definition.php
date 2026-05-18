@@ -56,8 +56,80 @@ return [
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'route_calendar_event_layer',
+                'next' => 'inspect_calendar_event_prose',
                 'failure_state' => 'terminal_calendar_event_not_found',
+            ],
+        ],
+
+        'inspect_calendar_event_prose' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'db',
+                'operation' => 'select_one',
+                'store' => 'calendar_event_prose',
+
+                'sql' => '
+                    SELECT
+                        prose_body,
+                        notes
+                    FROM calendar_events
+                    WHERE entity_id = :entity_id
+                    AND (
+                        prose_body IS NOT NULL
+                        OR notes IS NOT NULL
+                    )
+                    LIMIT 1
+                ',
+
+                'bindings' => [
+                    'entity_id' => '$context.calendar_event.entity_id',
+                ],
+            ],
+
+            'success_if' => 'row_exists',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'terminal_calendar_event_already_has_prose',
+                'failure_state' => 'inspect_calendar_subevent_prose',
+            ],
+        ],
+
+        'inspect_calendar_subevent_prose' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'db',
+                'operation' => 'select_one',
+                'store' => 'calendar_subevent_prose',
+
+                'sql' => '
+                    SELECT
+                        id,
+                        entity_id,
+                        prose_body,
+                        notes
+                    FROM calendar_events
+                    WHERE parent_event_id = :event_id
+                    AND (
+                        prose_body IS NOT NULL
+                        OR notes IS NOT NULL
+                    )
+                    LIMIT 1
+                ',
+
+                'bindings' => [
+                    'event_id' => '$context.calendar_event.id',
+                ],
+            ],
+
+            'success_if' => 'row_exists',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'terminal_calendar_subevent_has_prose',
+                'failure_state' => 'route_calendar_event_layer',
             ],
         ],
 
@@ -132,7 +204,6 @@ return [
 
                 'payload' => [
 
-                    // Replace with your actual entity allocation strategy.
                     'entity_id' => 'prose:' . uniqid(),
 
                     'title' => 'Workflow prose draft',
@@ -143,8 +214,6 @@ return [
 
                     'projection' => [
 
-                        // We will likely replace this once projection
-                        // classval semantics stabilize.
                         'projection_classval_id' => 'projection_type_timeline_view',
 
                         'projection_type_id' => 'projection_type_timeline_view',
@@ -188,6 +257,16 @@ return [
         'terminal_calendar_event_not_found' => [
             'type' => 'terminal',
             'message' => 'No calendar_event found for that entity_id.',
+        ],
+
+        'terminal_calendar_event_already_has_prose' => [
+            'type' => 'terminal',
+            'message' => 'This calendar event already has prose attached.',
+        ],
+
+        'terminal_calendar_subevent_has_prose' => [
+            'type' => 'terminal',
+            'message' => 'A subevent under this calendar event already has prose attached.',
         ],
 
         'terminal_wrong_layer' => [
