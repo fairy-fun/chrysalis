@@ -27,44 +27,12 @@ function fw_run_workflow_state(
 
     $state = $workflow['states'][$stateName];
 
-    $type = $state['type'] ?? null;
-
-    if ($type === 'input') {
-
-        return [
-            'workflow_id' => $workflowId,
-            'state' => $stateName,
-            'type' => 'input',
-            'prompt' => $state['prompt'],
-            'expected_input' => $state['expected_input'],
-            'next' => $state['next'] ?? null,
-            'context' => $context,
-        ];
-    }
-
-    if ($type === 'terminal') {
-
-        return [
-            'workflow_id' => $workflowId,
-            'state' => $stateName,
-            'type' => 'terminal',
-            'message' => $state['message'] ?? null,
-        ];
-    }
-
-    if ($type === 'action') {
-
-        return fw_execute_workflow_action_state(
-            $pdo,
-            $workflow,
-            $stateName,
-            $state,
-            $input,
-            $context
-        );
-    }
-
-    throw new RuntimeException(
-        "Unsupported state type: {$type}"
+    return fw_dispatch_workflow_state(
+        $pdo,
+        $workflow,
+        $stateName,
+        $state,
+        $input,
+        $context
     );
 }
