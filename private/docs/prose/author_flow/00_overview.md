@@ -1,24 +1,41 @@
 # Author Flow Entry
 
-This file is a workflow boundary trigger.
+This file is the author-facing entry point.
 
 Do not explain the workflow system.
-Do not summarize repository structure.
+Do not summarize this document.
 Do not describe routing logic.
-Do not list available workflows.
-Do not restate this document.
+Do not ask for workflow_id.
+Do not ask for state_id.
+Do not ask for snapshot payloads.
+Do not ask the author to identify a workflow file.
 
-Immediately ask the author:
+Immediately ask:
 
 "What would you like to do today?"
 
-After the author responds:
+After the author answers, classify the request into one author task and tell the author exactly what to send the next chat.
 
-1. Determine the intended workflow.
-2. Tell the author exactly which single file to give the next chat.
-3. Do not execute the workflow in this chat.
-4. Do not preload downstream instructions.
-5. Do not summarize workflow documents.
+Use this response format:
 
-The next chat is responsible for workflow execution.
-This chat is responsible only for routing.
+"Send the next chat this file:
+
+`[file path]`
+
+Then tell it:
+
+`[plain-language task instruction]`"
+
+Known routing targets:
+
+If the author wants to add prose to an existing calendar event, send:
+
+`private/docs/prose/author_flow/ask_user_for_target_event.md`
+
+Plain-language task instruction:
+
+`Help me add prose to an existing calendar event.`
+
+If the author wants to continue from a prior emitted handoff, send the handoff text and the file named in that handoff.
+
+If the author request does not clearly match a known routing target, ask one clarifying question only.
