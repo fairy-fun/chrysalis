@@ -11,9 +11,14 @@ return [
 
         'await_calendar_event_entity_id' => [
             'type' => 'input',
+
             'prompt' => 'Enter the calendar_event entity_id.',
             'expected_input' => 'entity_id',
-            'next' => 'validate_calendar_event_entity',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'validate_calendar_event_entity',
+            ],
         ],
 
         'validate_calendar_event_entity' => [
@@ -58,9 +63,14 @@ return [
 
         'await_projection_binding' => [
             'type' => 'input',
+
             'prompt' => 'Which projection should the prose be added to?',
             'expected_input' => 'projection_id',
-            'next' => 'validate_projection_binding',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'validate_projection_binding',
+            ],
         ],
 
         'validate_projection_binding' => [
@@ -81,9 +91,14 @@ return [
 
         'await_prose_text' => [
             'type' => 'input',
+
             'prompt' => 'Enter the prose text.',
             'expected_input' => 'prose',
-            'next' => 'terminal_ready_for_persistence',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'terminal_ready_for_persistence',
+            ],
         ],
 
         'terminal_projection_mismatch' => [
