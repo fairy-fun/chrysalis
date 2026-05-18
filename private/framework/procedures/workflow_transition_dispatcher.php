@@ -8,7 +8,9 @@ function fw_dispatch_workflow_transition(
     array $context = []
 ): ?string {
 
-    $driver = $transition['driver'] ?? 'boolean';
+    $definition = $transition['transition'] ?? $transition;
+
+    $driver = $definition['driver'] ?? 'boolean';
 
     $drivers = [
         'boolean' => 'fw_resolve_boolean_workflow_transition',
@@ -21,6 +23,12 @@ function fw_dispatch_workflow_transition(
     }
 
     $function = $drivers[$driver];
+
+    if (!function_exists($function)) {
+        throw new RuntimeException(
+            "Workflow transition driver function not loaded: {$function}"
+        );
+    }
 
     return $function(
         $transition,
