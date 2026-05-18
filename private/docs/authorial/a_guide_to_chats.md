@@ -1,34 +1,13 @@
-# Starting a Workflow From a New NL Chat
+# A Guide To Chats
 
-Send a request through:
+To start a workflow in a new natural-language chat, simply describe what you want naturally.
 
-public_html/pecherie/chill-api/index.php
+### Tier 2
 
-Body:
+#### Add prose to an existing event
 
-```json
-{
-  "operation": "startWorkflowChat",
-  "message": "I want to add prose to a calendar event."
-}
-```
+To add prose to an existing calendar event whose entity ID you already know, tell the chat:
 
-The runtime will:
-
-resolve the workflow from the NL message
-enter the workflow entry state
-continue recursively
-return awaiting_input if more input is required
-
-Example expected result:
-```json
-{
-"status": "ok",
-"result": {
-"status": "awaiting_input",
-"workflow_id": "calendar_event_add_prose",
-"state_id": "await_calendar_event_entity_id",
-"expected_input": "entity_id"
-  }
-}
+```text
+I want to add prose to an existing calendar event.
 ```
