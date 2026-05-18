@@ -2,145 +2,189 @@
 
 ## Purpose
 
-This folder defines bounded operator action windows for prose-authoring workflows.
+This folder defines bounded operator procedures for prose-authoring workflows.
 
 Each document represents:
-- one resumable operational task
-- one bounded continuity window
-- one deterministic handoff boundary
 
-The operator chat is NOT authoritative memory.
+- one bounded operational action
+- one resumable continuity window
+- one deterministic stop condition
+- one durable handoff boundary
 
-Authoritative state exists in:
+Operator memory is NOT authoritative.
+
+Authoritative continuity exists in:
+
+- workflow runtime state
 - repository documents
-- workflow definitions
 - database state
-- projection linkage
-- emitted handoff summaries
+- projections
+- emitted handoff outputs
 
-The operator must reconstruct state from durable artifacts.
-
----
-
-## Operator Routing Goal
-
-The operator should ask the minimum question required to determine the next valid bounded action.
-
-The operator must NOT:
-- request unnecessary historical context
-- request identifiers that can be resolved automatically
-- continue indefinitely without emitting handoff state
+The operator must reconstruct execution state from durable artifacts.
 
 ---
 
-## Primary Routing Question
+## Startup Behavior
 
-The operator should begin with:
+Begin every new operator session with:
 
-"What are we trying to do right now?"
+```text
+What are we trying to do right now?
 
-Then classify the answer into one of the following operational intents.
+The purpose of this overview layer is ONLY to classify intent and route into the correct bounded operator procedure.
 
----
+The overview layer MUST NOT:
 
-## Routing Table
+execute workflow actions
+infer unresolved runtime state
+inspect latest events automatically
+continue into downstream workflow execution
+merge multiple procedures into one session
+improvise orchestration behavior outside documented procedures
+Routing Execution Rule
 
-### User wants to add prose to an existing event
+After selecting a procedure:
+
+stop operating from this overview document
+execute ONLY the selected operator procedure
+obey that procedure’s operational boundary
+obey that procedure’s deterministic stop condition
+emit required handoff output
+terminate cleanly
+
+Do not automatically continue into downstream procedures.
+
+A new procedure requires a new routing decision.
+
+Routing Table
+
+Classify the user request into one operational intent.
+
+Then route into exactly one bounded operator procedure.
+
+User wants to attach prose to an event
 
 Route to:
 
-`add_prose_to_existing_event.md`
+ask_user_for_target_event.md
 
-Use when:
-- calendar event already exists
-- prose is missing, incomplete, or continuing
+Purpose:
 
----
+obtain explicit target-event intent
+emit stable event-identification handoff
+stop cleanly
 
-### User wants to create a new event before writing prose
+This procedure exists ONLY for target-event input collection.
 
-Route to:
+It does NOT:
 
-`create_missing_event.md`
+infer latest event
+validate event existence
+inspect projections
+collect prose text
 
-Use when:
-- no valid event exists
-- prose target event cannot be resolved
+Runtime alignment:
 
----
-
-### User wants to continue existing prose
-
-Route to:
-
-`continue_existing_prose.md`
-
-Use when:
-- prose already exists
-- continuation rather than replacement is intended
-
----
-
-### User wants to revise existing prose
+await_calendar_event_entity_id
+User wants latest-event inference
 
 Route to:
 
-`revise_existing_prose.md`
+resolve_latest_target_event.md
 
-Use when:
-- prose exists
-- editing or restructuring is requested
+Purpose:
 
----
+inspect durable calendar state
+identify latest valid target event
+emit resolved event handoff
+stop cleanly
 
-### User wants to import external prose
+This procedure is separate from asking the user for a target event.
+
+Do not combine these procedures.
+
+User already has a target event reference that must be validated
 
 Route to:
 
-`import_external_prose.md`
+resolve_target_event.md
 
-Use when:
-- prose already exists outside runtime
-- pasted or imported material must be attached
+Purpose:
 
----
+validate event existence
+hydrate canonical runtime event state
+emit validated event context
+stop cleanly
 
-## Resolution Rules
+Runtime alignment:
 
-Before asking for explicit identifiers, the operator should attempt:
+validate_calendar_event_entity
+User wants to continue prose authoring after event validation
 
-1. latest event resolution
-2. latest prose resolution
-3. projection inspection
-4. existing draft inspection
+Route to the operator procedure matching the current runtime workflow state.
 
-Only ask the user for missing information if runtime resolution fails.
+Examples:
 
----
+await_projection_binding
+await_prose_text
+persist_prose_draft
 
-## Bounded Operation Rule
+Only one runtime continuity window may execute per operator session.
 
-An operator session should complete exactly one bounded operational task.
+Runtime Alignment Rule
 
-After task completion:
-- emit handoff state
-- identify next valid actions
-- stop cleanly
+Operator procedures should map directly onto runtime workflow states whenever possible.
 
-Do not chain indefinite operations into a single session.
+The operator layer is not an alternative orchestration system.
 
----
+The runtime workflow definition remains authoritative.
 
-## Memory Exhaustion Doctrine
+Operator procedures exist ONLY to:
+
+collect missing runtime inputs
+inspect durable runtime state
+emit resumable handoff outputs
+terminate deterministically
+Bounded Operation Rule
+
+Each operator session should complete exactly one bounded operational procedure.
+
+After procedure completion:
+
+emit durable handoff output
+identify the next valid procedure if necessary
+stop cleanly
+
+Do not continue indefinitely across multiple procedures.
+
+Canonical Handoff Examples
+Target Event Input
+input:
+  entity_id: cal_evt_01JV...
+Validated Event Context
+calendar_event:
+  entity_id: cal_evt_01JV...
+  projection_id: projection_...
+  layer_id: calendar_layer_event
+Workflow Runtime State
+workflow:
+  workflow_id: calendar_event_add_prose
+  current_state: await_prose_text
+Memory Exhaustion Doctrine
 
 Operator memory is disposable.
 
 Continuity must survive:
-- chat termination
-- operator replacement
-- context exhaustion
+
+chat exhaustion
+operator replacement
+context truncation
+session termination
 
 Therefore:
-- durable state is authoritative
-- handoff emission is mandatory
-- every action document must terminate cleanly
+
+durable runtime state is authoritative
+emitted handoffs are mandatory
+every procedure must terminate cleanly
+no procedure may rely on conversational continuity
