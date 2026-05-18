@@ -23,6 +23,7 @@ return [
             'action' => [
                 'driver' => 'db',
                 'operation' => 'select_one',
+                'store' => 'calendar_event',
 
                 'sql' => '
                     SELECT
@@ -49,7 +50,7 @@ return [
             'type' => 'action',
 
             'assert' => [
-                'left' => '$row.layer_id',
+                'left' => '$context.calendar_event.layer_id',
                 'operator' => 'equals',
                 'right' => 'calendar_layer_event',
             ],
@@ -72,7 +73,7 @@ return [
             'assert' => [
                 'left' => '$input.projection_id',
                 'operator' => 'equals',
-                'right' => '$row.projection_id',
+                'right' => '$context.calendar_event.projection_id',
             ],
 
             'failure_state' => 'terminal_projection_mismatch',
