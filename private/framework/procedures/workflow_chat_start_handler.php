@@ -4,34 +4,32 @@ declare(strict_types=1);
 function fw_start_workflow_from_chat(
     PDO $pdo,
     string $workflowId,
-    string $entryState,
     string $userMessage,
     array $context = [],
     array $snapshots = []
 ): array {
 
     $workflowId = trim($workflowId);
-    $entryState = trim($entryState);
     $userMessage = trim($userMessage);
 
     if ($workflowId === '') {
-
-        throw new RuntimeException(
-            'Workflow id is required.'
-        );
+        throw new RuntimeException('Workflow id is required.');
     }
 
-    if ($entryState === '') {
+    $definition = fw_get_workflow_definition($workflowId);
 
+    $entryState = $definition['entry_state'] ?? null;
+
+    if (!is_string($entryState) || trim($entryState) === '') {
         throw new RuntimeException(
-            'Workflow entry state is required.'
+            'Workflow definition missing entry_state.'
         );
     }
 
     return fw_resume_workflow(
         $pdo,
         $workflowId,
-        $entryState,
+        trim($entryState),
         [
             'user_message' => $userMessage,
         ],

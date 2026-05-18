@@ -38,3 +38,38 @@ function fw_load_workflow_registry(string $directory): array
 
     return $registry;
 }
+
+function fw_get_workflow_definition(
+    string $workflowId
+): array {
+
+    static $registry = null;
+
+    if ($registry === null) {
+
+        $registry = fw_load_workflow_registry(
+            __DIR__
+        );
+    }
+
+    $workflowId = trim($workflowId);
+
+    if ($workflowId === '') {
+
+        throw new RuntimeException(
+            'Workflow id is required.'
+        );
+    }
+
+    $definition = $registry[$workflowId] ?? null;
+
+    if (!is_array($definition)) {
+
+        throw new RuntimeException(
+            'Workflow definition not found: ' .
+            $workflowId
+        );
+    }
+
+    return $definition;
+}
