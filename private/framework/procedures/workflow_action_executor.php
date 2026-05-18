@@ -52,25 +52,14 @@ function fw_execute_workflow_action_state(
         && $operation === 'select_one'
     ) {
 
-        $sql = $action['sql'];
+        $result = fw_execute_workflow_db_select_one(
+            $pdo,
+            $action,
+            $input,
+            $context
+        );
 
-        $bindings = [];
-
-        foreach (($action['bindings'] ?? []) as $key => $value) {
-
-            $bindings[$key] = fw_resolve_workflow_value(
-                $value,
-                $input,
-                $context
-            );
-        }
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($bindings);
-
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        $success = $row !== false;
+        $success = $result['success'];
 
         $nextState = fw_resolve_workflow_transition(
             $state,
@@ -97,7 +86,7 @@ function fw_execute_workflow_action_state(
             $input,
             array_merge(
                 $context,
-                ['row' => $row]
+                ['row' => $result['row']]
             )
         );
     }
