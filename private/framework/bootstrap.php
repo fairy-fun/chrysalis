@@ -18,6 +18,10 @@ require_once __DIR__ . '/directives/directive_service.php';
 
 require_once __DIR__ . '/procedures/workflow_registry.php';
 
+require_once __DIR__ . '/procedures/workflow_input_state_handler.php';
+require_once __DIR__ . '/procedures/workflow_terminal_state_handler.php';
+require_once __DIR__ . '/procedures/workflow_state_dispatcher.php';
+
 require_once __DIR__ . '/procedures/workflow_driver_dispatcher.php';
 require_once __DIR__ . '/procedures/workflow_action_executor.php';
 require_once __DIR__ . '/procedures/workflow_state_engine.php';
