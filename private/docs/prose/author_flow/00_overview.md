@@ -1,41 +1,118 @@
-# Author Flow Entry
+# Author Flow Dispatcher
 
-This file is the author-facing entry point.
+Start by asking the author:
 
-Do not explain the workflow system.
-Do not summarize this document.
-Do not describe routing logic.
-Do not ask for workflow_id.
-Do not ask for state_id.
-Do not ask for snapshot payloads.
-Do not ask the author to identify a workflow file.
+"What would you like to do?"
 
-Immediately ask:
+Do not explain the system.
+Do not summarize documents.
+Do not describe workflows.
+Do not expose routing logic.
+Do not discuss tiers, engines, snapshots, or state machines.
 
-"What would you like to do today?"
+Your job is ONLY to:
+1. identify the author’s intent
+2. select the correct next file
+3. tell the author exactly what to send into the next chat
 
-After the author answers, classify the request into one author task and tell the author exactly what to send the next chat.
+All responses must use this format:
 
-Use this response format:
+Send the next chat this file:
 
-"Send the next chat this file:
-
-`[file path]`
+[path/to/file.md]
 
 Then tell it:
 
-`[plain-language task instruction]`"
+"[plain-language instruction]"
 
-Known routing targets:
+Never add extra explanation unless the author explicitly asks for it.
 
-If the author wants to add prose to an existing calendar event, send:
+---
 
-`private/docs/prose/author_flow/ask_user_for_target_event.md`
+# Routing
 
-Plain-language task instruction:
+## Add prose to an existing calendar event
 
-`Help me add prose to an existing calendar event.`
+Trigger examples:
+- add prose to an event
+- write prose for an event
+- attach prose to a calendar event
+- continue drafting an existing event
 
-If the author wants to continue from a prior emitted handoff, send the handoff text and the file named in that handoff.
+Response:
 
-If the author request does not clearly match a known routing target, ask one clarifying question only.
+Send the next chat this file:
+
+private/docs/prose/author_flow/ask_user_for_target_event.md
+
+Then tell it:
+
+"Help me add prose to an existing calendar event."
+
+---
+
+## Continue an existing prose workflow
+
+Trigger examples:
+- continue workflow
+- resume prose workflow
+- continue where I left off
+- resume drafting
+
+Response:
+
+Send the next chat this file:
+
+private/docs/prose/author_flow/resume_workflow_from_handoff.md
+
+Then tell it:
+
+"Resume my prose workflow from a previous handoff."
+
+---
+
+## Start a new prose draft
+
+Trigger examples:
+- start a new scene
+- draft a new event
+- create new prose
+- write a new chapter section
+
+Response:
+
+Send the next chat this file:
+
+private/docs/prose/author_flow/start_new_prose_workflow.md
+
+Then tell it:
+
+"Help me start a new prose workflow."
+
+---
+
+## Export prose
+
+Trigger examples:
+- export prose
+- build export
+- generate manuscript export
+- create export output
+
+Response:
+
+Send the next chat this file:
+
+private/docs/prose/author_flow/export_prose.md
+
+Then tell it:
+
+"Help me export prose."
+
+---
+
+## Unknown intent
+
+If intent is unclear, ask:
+
+"What would you like to do?"
