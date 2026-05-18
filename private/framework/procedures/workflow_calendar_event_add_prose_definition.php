@@ -5,7 +5,7 @@ return [
     'tier' => 2,
     'intent' => 'Add prose to an existing calendar_event',
 
-    'initial_state' => 'await_calendar_event_entity_id',
+    'entry_state' => 'await_calendar_event_entity_id',
 
     'states' => [
 
