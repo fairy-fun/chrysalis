@@ -1,6 +1,17 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * IMPORTANT:
+ * This resolver is intentionally NOT aware of:
+ * - entities
+ * - persistence contracts
+ * - database schema
+ * - projections
+ *
+ * It must remain a pure structural accessor only.
+ */
+
 function fw_resolve_workflow_value(
     mixed $value,
     array $input = [],
