@@ -11,3 +11,9 @@ To add prose to an existing calendar event whose entity ID you already know, tel
 ```text
 I want to add prose to an existing calendar event.
 ```
+
+The runtime will ask for the calendar event entity ID.
+
+Reply with the entity ID.
+
+___

@@ -8,6 +8,7 @@ function fw_resolve_workflow_id_from_chat_message(
     $message = strtolower(trim($userMessage));
 
     $routes = [
+        'i want to add prose to an existing calendar event' => 'calendar_event_add_prose',
         'add prose to a calendar event' => 'calendar_event_add_prose',
         'add prose to existing calendar event' => 'calendar_event_add_prose',
         'add prose to an existing calendar event' => 'calendar_event_add_prose',

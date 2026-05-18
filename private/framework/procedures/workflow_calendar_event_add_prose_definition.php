@@ -12,7 +12,7 @@ return [
         'await_calendar_event_entity_id' => [
             'type' => 'input',
 
-            'prompt' => 'Enter the calendar_event entity_id.',
+            'prompt' => 'What is the existing calendar event entity ID?',
             'expected_input' => 'entity_id',
 
             'transition' => [

@@ -11,13 +11,16 @@ function fw_match_chat_workflow(
 
     $map = [
 
+        'i want to add prose to an existing calendar event'
+        => 'calendar_event_add_prose',
+
+        'add prose to an existing calendar event'
+        => 'calendar_event_add_prose',
+
         'add prose to a calendar event'
         => 'calendar_event_add_prose',
 
         'calendar event prose'
-        => 'calendar_event_add_prose',
-
-        'add prose'
         => 'calendar_event_add_prose',
     ];
 
