@@ -1,6 +1,5 @@
 <?php
 
-
 return [
     'workflow_id' => 'calendar_event_add_prose',
     'tier' => 2,
@@ -41,9 +40,12 @@ return [
             ],
 
             'success_if' => 'row_exists',
-            'failure_state' => 'terminal_calendar_event_not_found',
 
-            'next' => 'enforce_calendar_event_layer',
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'enforce_calendar_event_layer',
+                'failure_state' => 'terminal_calendar_event_not_found',
+            ],
         ],
 
         'enforce_calendar_event_layer' => [
@@ -55,9 +57,11 @@ return [
                 'right' => 'calendar_layer_event',
             ],
 
-            'failure_state' => 'terminal_wrong_layer',
-
-            'next' => 'await_projection_binding',
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'await_projection_binding',
+                'failure_state' => 'terminal_wrong_layer',
+            ],
         ],
 
         'await_projection_binding' => [
@@ -76,9 +80,11 @@ return [
                 'right' => '$context.calendar_event.projection_id',
             ],
 
-            'failure_state' => 'terminal_projection_mismatch',
-
-            'next' => 'await_prose_text',
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'await_prose_text',
+                'failure_state' => 'terminal_projection_mismatch',
+            ],
         ],
 
         'await_prose_text' => [
