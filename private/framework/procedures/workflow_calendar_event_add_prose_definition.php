@@ -16,8 +16,15 @@ return [
             'expected_input' => 'entity_id',
 
             'transition' => [
-                'driver' => 'boolean',
-                'next' => 'validate_calendar_event_entity',
+                'driver' => 'match',
+
+                'value' => '$input.entity_id',
+
+                'cases' => [
+                    '' => 'terminal_missing_entity_id',
+                ],
+
+                'default' => 'validate_calendar_event_entity',
             ],
         ],
 
@@ -53,8 +60,7 @@ return [
 
                 'cases' => [
                     'calendar_layer_event' => 'await_projection_binding',
-                    'calendar_layer_note' => 'await_prose_text',
-                    'calendar_layer_annotation' => 'await_prose_text',
+                    'calendar_layer_subevent' => 'await_prose_text',
                 ],
 
                 'default' => 'terminal_wrong_layer',
@@ -109,6 +115,11 @@ return [
         'terminal_ready_for_persistence' => [
             'type' => 'terminal',
             'message' => 'Workflow validated and ready for prose persistence.',
+        ],
+
+        'terminal_missing_entity_id' => [
+            'type' => 'terminal',
+            'message' => 'A calendar_event entity_id is required.',
         ],
 
         'terminal_calendar_event_not_found' => [
