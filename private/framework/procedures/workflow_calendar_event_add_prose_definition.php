@@ -42,9 +42,14 @@ return [
             'success_if' => 'row_exists',
 
             'transition' => [
-                'driver' => 'boolean',
-                'next' => 'enforce_calendar_event_layer',
-                'failure_state' => 'terminal_calendar_event_not_found',
+                'driver' => 'match',
+                'value' => '$context.calendar_event.projection_id',
+
+                'cases' => [
+                    '' => 'await_prose_text',
+                ],
+
+                'default' => 'enforce_calendar_event_layer',
             ],
         ],
 
