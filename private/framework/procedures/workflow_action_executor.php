@@ -12,10 +12,8 @@ function fw_execute_workflow_action_state(
 
     if (isset($state['assert'])) {
 
-        $assert = $state['assert'];
-
         $passes = fw_evaluate_workflow_assertion(
-            $assert,
+            $state['assert'],
             $input,
             $context
         );
@@ -44,54 +42,27 @@ function fw_execute_workflow_action_state(
         );
     }
 
-    $driver = $action['driver'] ?? null;
-    $operation = $action['operation'] ?? null;
+    $result = fw_execute_workflow_driver_operation(
+        $pdo,
+        $action,
+        $input,
+        $context
+    );
 
-    if (
-        $driver === 'db'
-        && $operation === 'select_one'
-    ) {
+    $success = $result['success'] ?? false;
 
-        $result = fw_execute_workflow_db_select_one(
-            $pdo,
-            $action,
-            $input,
-            $context
-        );
+    $nextState = fw_resolve_workflow_transition(
+        $state,
+        $success,
+        $input,
+        $context
+    );
 
-        $success = $result['success'];
-
-        $nextState = fw_resolve_workflow_transition(
-            $state,
-            $success,
-            $input,
-            $context
-        );
-
-        if (!$success) {
-
-            return fw_run_workflow_state(
-                $pdo,
-                $workflow['workflow_id'],
-                $nextState,
-                $input,
-                $context
-            );
-        }
-
-        return fw_run_workflow_state(
-            $pdo,
-            $workflow['workflow_id'],
-            $nextState,
-            $input,
-            array_merge(
-                $context,
-                ['row' => $result['row']]
-            )
-        );
-    }
-
-    throw new RuntimeException(
-        'Unsupported action driver/operation combination.'
+    return fw_run_workflow_state(
+        $pdo,
+        $workflow['workflow_id'],
+        $nextState,
+        $input,
+        $result['context'] ?? $context
     );
 }

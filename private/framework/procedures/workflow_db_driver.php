@@ -37,6 +37,13 @@ function fw_execute_workflow_db_select_one(
 
     return [
         'success' => $row !== false,
-        'row' => $row !== false ? $row : null,
+
+        'context' => $row !== false
+            ? fw_write_workflow_context(
+                $context,
+                $action['store'] ?? 'row',
+                $row
+            )
+            : $context,
     ];
 }
