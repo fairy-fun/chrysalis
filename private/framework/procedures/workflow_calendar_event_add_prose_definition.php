@@ -54,6 +54,21 @@ return [
             'success_if' => 'row_exists',
 
             'transition' => [
+                'driver' => 'boolean',
+                'next' => 'route_calendar_event_layer',
+                'failure_state' => 'terminal_calendar_event_not_found',
+            ],
+        ],
+
+        'route_calendar_event_layer' => [
+            'type' => 'action',
+
+            'assert' => [
+                'left' => '$context.calendar_event.layer_id',
+                'operator' => 'is_not_null',
+            ],
+
+            'transition' => [
                 'driver' => 'match',
 
                 'value' => '$context.calendar_event.layer_id',
