@@ -39,114 +39,21 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         // 3. Resolve projection type
         $projectionType = fetch_calendar_projection_type($pdo, $projectionId);
 
-        $materializeChronology = $pdo->prepare("
-            UPDATE calendar_events child
-            INNER JOIN calendar_events parent
-                ON parent.id = child.parent_event_id
-            SET
-                child.real_date_start_id =
-                    COALESCE(
-                        child.real_date_start_id,
-                        parent.real_date_start_id
-                    ),
+        // 4. Materialize chronology before projection rows are read.
+        materialize_calendar_chronology(
+            $pdo,
+            $projectionId
+        );
 
-                child.real_date_end_id =
-                    COALESCE(
-                        child.real_date_end_id,
-                        parent.real_date_end_id
-                    ),
 
-                child.week_index =
-                    COALESCE(
-                        child.week_index,
-                        parent.week_index
-                    ),
-
-                child.day_index =
-                    COALESCE(
-                        child.day_index,
-                        parent.day_index
-                    ),
-
-                child.time_index =
-                    COALESCE(
-                        child.time_index,
-                        parent.time_index
-                    ),
-
-                child.event_index =
-                    COALESCE(
-                        child.event_index,
-                        parent.event_index
-                    ),
-
-                child.chronology_address =
-                    COALESCE(
-                        child.chronology_address,
-                        CONCAT(
-                            parent.week_index,
-                            '.',
-                            parent.day_index,
-                            '.',
-                            parent.time_index,
-                            '.',
-                            parent.event_index,
-                            '.',
-                            child.subevent_index
-                        )
-                    )
-
-            WHERE child.layer_id = 'calendar_layer_subevent'
-              AND parent.layer_id = 'calendar_layer_event'
-              AND child.projection_id = :projection_id
-              AND parent.projection_id = :projection_id
-        ");
-
-        $materializeChronology->execute([
-            ':projection_id' => $projectionId,
-        ]);
-
-        $validateChronology = $pdo->prepare("
-            SELECT COUNT(*) AS missing_chronology_subevents
-            FROM calendar_events child
-            INNER JOIN calendar_events parent
-                ON parent.id = child.parent_event_id
-            WHERE child.layer_id = 'calendar_layer_subevent'
-              AND parent.layer_id = 'calendar_layer_event'
-              AND child.projection_id = :projection_id
-              AND parent.projection_id = :projection_id
-              AND parent.real_date_start_id IS NOT NULL
-              AND (
-                    child.real_date_start_id IS NULL
-                 OR child.chronology_address IS NULL
-                 OR child.week_index IS NULL
-                 OR child.day_index IS NULL
-                 OR child.time_index IS NULL
-                 OR child.event_index IS NULL
-              )
-        ");
-
-        $validateChronology->execute([
-            ':projection_id' => $projectionId,
-        ]);
-
-        $missingChronologySubevents =
-            (int)$validateChronology->fetchColumn();
-
-        if ($missingChronologySubevents > 0) {
-            throw new RuntimeException(
-                'Chronology materialization incomplete for projection build.'
-            );
-        }
-
-        // 4. Fetch source events
+        // 5. Fetch source events
         $events = fetch_projection_source_events(
             $pdo,
             $projectionId,
             $projectionType
         );
 
-        // 5. Insert projection rows
+        // 6. Insert projection rows
         $insert = $pdo->prepare("
             INSERT INTO calendar_event_projections (
                 build_id,
