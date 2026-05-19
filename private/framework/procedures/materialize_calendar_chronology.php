@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+/*
+ * Calendar source-table repair procedure.
+ *
+ * This file intentionally does not create calendar_events rows.
+ * Row creation remains owned by ensure_calendar_node.
+ */
+
 function materialize_calendar_chronology(PDO $pdo, int $projectionId): void
 {
     if ($projectionId < 1) {
