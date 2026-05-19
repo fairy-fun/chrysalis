@@ -29,6 +29,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     $domainId = $body['domain_id'] ?? null;
     $classTypeId = $body['class_type_id'] ?? null;
     $beatTypeId = $body['beat_type_id'] ?? null;
+    $beatHash = $body['beat_hash'] ?? null;
 
     $notes = $body['notes'] ?? null;
     $proseBody = $body['prose_body'] ?? null;
@@ -151,6 +152,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
         'event_type_id' => $eventTypeId ?: $parent['event_type_id'],
         'domain_id' => $domainId ?: $parent['domain_id'],
         'class_type_id' => $classTypeId ?: $parent['class_type_id'],
+        'beat_hash' => $beatHash ?: null,
         'location_id' => $locationId ?: $parent['location_id'],
         'notes' => $notes ?: null,
         'source_document' => $sourceDocument ?: null,

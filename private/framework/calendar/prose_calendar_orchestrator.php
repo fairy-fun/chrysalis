@@ -113,6 +113,8 @@ function persist_segmented_subevents(
                 'parent_event_entity_id' => $parentEventEntityId,
                 'subevent_index' => $slot,
                 'event_label' => $summary,
+                'beat_type_id' => $subevent['beat_type_id'] ?? null,
+                'beat_hash' => $subevent['beat_hash'] ?? null,
                 'prose_body' => $proseBody,
             ]
         );
@@ -138,7 +140,10 @@ function execute_calendar_batch_from_prose(
      */
     $parentEventId = resolve_parent_event_id($pdo, $parentEventEntityId);
 
-    $subevents = segment_prose_into_subevents($prose);
+    $subevents = segment_prose_into_subevents(
+    $pdo,
+    $prose
+);
 
     if ($subevents === []) {
         return [

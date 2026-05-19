@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/prose_metadata_deriver.php';
+require_once __DIR__ . '/prose_calendar_beat_deriver.php';
 
 function segment_prose_into_subevents(
+    PDO $pdo,
     string $prose
 ): array {
 
@@ -53,9 +55,20 @@ function segment_prose_into_subevents(
 
         $metadata = derive_prose_metadata($block);
 
-        $summary = trim(
-            (string)($metadata['summary'] ?? '')
+        $beat = derive_calendar_beat(
+            $pdo,
+            $block
         );
+
+        $summary = trim(
+            (string)($beat['label'] ?? '')
+        );
+
+        if ($summary === '') {
+            $summary = trim(
+                (string)($metadata['summary'] ?? '')
+            );
+        }
 
         if ($summary === '') {
             $summary = 'Subevent ' . $slot;
@@ -64,6 +77,8 @@ function segment_prose_into_subevents(
         $subevents[] = [
             'slot' => $slot,
             'summary' => $summary,
+            'beat_type_id' => $beat['beat_type_id'] ?? null,
+            'beat_hash' => $beat['beat_hash'] ?? null,
             'prose_body' => $block,
         ];
 
