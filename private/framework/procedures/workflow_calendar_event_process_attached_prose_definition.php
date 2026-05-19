@@ -140,6 +140,10 @@ return [
 
             'response' => [
                 'idempotent' => true,
+                'artifact' => [
+                    'parent_event_entity_id' => '$context.calendar_event.entity_id',
+                    'subevents' => [],
+                ],
             ],
         ],
 
@@ -148,6 +152,12 @@ return [
 
             'message' =>
                 'Calendar prose successfully processed into subevents.',
+
+            'response' => [
+                'artifact' => '$context.process_attached_prose.artifact',
+                'workflow' => 'calendar_event_process_attached_prose',
+                'tier' => 3,
+            ],
         ],
 
         'terminal_missing_entity_id' => [
