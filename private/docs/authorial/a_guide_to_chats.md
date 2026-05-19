@@ -21,3 +21,8 @@ The runtime will ask for the calendar event entity ID.
 Reply with the entity ID.
 
 ___
+
+### Tier 3
+
+#### Segment prose attached to an event into subevents
+
