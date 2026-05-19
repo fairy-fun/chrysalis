@@ -269,7 +269,38 @@ function insert_calendar_node(
             ':id' => $id,
         ]);
 
-        remove_entity_row_if_unused($pdo, $temporaryEntityId);
+        try {
+
+            remove_entity_row_if_unused($pdo, $temporaryEntityId);
+
+        } catch (PDOException $e) {
+
+            $info = $e->errorInfo ?? [];
+
+            $isDeletePrivilegeError =
+                (string)($info[0] ?? '') === '42000'
+                && (int)($info[1] ?? 0) === 1142;
+
+            if (!$isDeletePrivilegeError) {
+                throw $e;
+            }
+
+            throw new RuntimeException(
+                json_encode([
+                    'status' => 'author_cleanup_required',
+                    'reason' => 'Workflow user lacks DELETE permission on entities.',
+                    'cleanup_sql' => sprintf(
+                        "DELETE e
+FROM sxnzlfun_chrysalis.entities e
+LEFT JOIN sxnzlfun_chrysalis.calendar_events ce
+  ON ce.entity_id = e.id
+WHERE e.id = '%s'
+  AND ce.id IS NULL;",
+                        addslashes($temporaryEntityId)
+                    ),
+                ], JSON_UNESCAPED_SLASHES)
+            );
+        }
 
         if ($started) {
             $pdo->commit();
