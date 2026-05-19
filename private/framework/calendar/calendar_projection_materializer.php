@@ -265,6 +265,11 @@ function fetch_projection_source_events(
         $projectionType
     );
 
+    $projectionEntityId = calendar_projection_entity_id(
+        $pdo,
+        $projectionId
+    );
+
     $stmt = $pdo->prepare("
         SELECT DISTINCT
     e.id,
@@ -279,14 +284,12 @@ function fetch_projection_source_events(
 FROM calendar_events e
 INNER JOIN calendar_event_projection_membership m
     ON m.calendar_event_id = e.id
-INNER JOIN calendar_projections p
-    ON p.entity_id = m.projection_entity_id
-WHERE p.id = :projection_id
+WHERE m.projection_entity_id = :projection_entity_id
         {$orderBy}
     ");
 
     $stmt->execute([
-        'projection_id' => $projectionId,
+        'projection_entity_id' => $projectionEntityId,
     ]);
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
