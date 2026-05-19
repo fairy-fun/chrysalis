@@ -34,8 +34,11 @@ function fw_execute_workflow_driver_operation(
         'prose' => [
 
             'create_draft' => 'fw_execute_workflow_prose_create_draft',
-
             'segment_subevents' => 'fw_execute_workflow_prose_segment_subevents',
+        ],
+
+        'calendar' => [
+            'process_attached_prose' => 'fw_execute_workflow_calendar_event_process_attached_prose',
         ],
 
     ];
