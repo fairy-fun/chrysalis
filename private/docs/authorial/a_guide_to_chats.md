@@ -24,5 +24,17 @@ ___
 
 ### Tier 3
 
-#### Segment prose attached to an event into subevents
+#### Process attached prose into calendar subevents
 
+To process prose already attached to a calendar event into subevents, tell the chat:
+
+```text
+I want to process attached prose into calendar subevents.
+
+or
+
+Call startWorkflowChat with message: I want to process attached prose into calendar subevents.
+
+The runtime will ask for the calendar event entity ID.
+
+Reply with the entity ID.
