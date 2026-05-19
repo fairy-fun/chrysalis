@@ -112,12 +112,12 @@ function derive_calendar_beat(PDO $pdo, string $proseBody, array $context = []):
     usort(
         $scores,
         static function (array $a, array $b): int {
-            if ($a['score'] !== $b['score']) {
-                return $b['score'] <=> $a['score'];
-            }
-
             if ($a['priority'] !== $b['priority']) {
                 return $b['priority'] <=> $a['priority'];
+            }
+
+            if ($a['score'] !== $b['score']) {
+                return $b['score'] <=> $a['score'];
             }
 
             return strcmp($a['beat_type_id'], $b['beat_type_id']);
