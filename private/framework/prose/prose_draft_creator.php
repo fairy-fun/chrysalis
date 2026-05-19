@@ -650,11 +650,18 @@ function create_prose_draft(PDO $pdo, array $body): array
     $calendarResult = null;
 
     if (str_starts_with($targetEntityId, 'calendar_event:')) {
-        $calendarResult = execute_calendar_batch_from_prose(
-            $pdo,
-            $targetEntityId,
-            $proseBody
-        );
+
+        $calendarResult = [
+            'status' => 'ready',
+            'next_workflow' => [
+                'intent' => 'process calendar prose',
+                'message' =>
+                    'Process prose attached to ' .
+                    $targetEntityId,
+                'target_entity_id' => $targetEntityId,
+                'prose_entity_id' => $entityId,
+            ],
+        ];
     }
 
     return [
