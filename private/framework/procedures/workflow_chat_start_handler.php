@@ -12,6 +12,14 @@ function fw_resolve_workflow_id_from_chat_message(
         'add prose to a calendar event' => 'calendar_event_add_prose',
         'add prose to existing calendar event' => 'calendar_event_add_prose',
         'add prose to an existing calendar event' => 'calendar_event_add_prose',
+        'i want to process attached prose into calendar subevents'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose into calendar subevents'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose'
+        => 'calendar_event_process_attached_prose',
     ];
 
     foreach ($routes as $phrase => $workflowId) {

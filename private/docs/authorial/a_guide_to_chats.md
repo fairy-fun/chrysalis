@@ -35,6 +35,6 @@ or
 
 Call startWorkflowChat with message: I want to process attached prose into calendar subevents.
 ```
-The runtime will ask for the calendar event entity ID.
+The runtime will ask for the calendar event entity ID, such as calendar_event:7
 
 Reply with the entity ID.
