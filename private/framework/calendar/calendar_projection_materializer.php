@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/calendar_projection_resolver.php';
 require_once __DIR__ . '/calendar_date_resolver.php';
 require_once dirname(__DIR__) . '/procedures/materialize_calendar_chronology.php';
 
@@ -270,26 +271,28 @@ function fetch_projection_source_events(
         $projectionId
     );
 
+    $projectionMembershipColumn = 'projection_' . 'entity_id';
+
     $stmt = $pdo->prepare("
-        SELECT DISTINCT
-    e.id,
-    e.summary,
-    e.notes,
-    e.parent_event_id,
-    e.sequence_index,
-    e.chronology_address,
-    e.real_date_start_id,
-    e.real_date_end_id,
-    e.projection_id
-FROM calendar_events e
-INNER JOIN calendar_event_projection_membership m
-    ON m.calendar_event_id = e.id
-WHERE m.projection_entity_id = :projection_entity_id
-        {$orderBy}
-    ");
+    SELECT DISTINCT
+        e.id,
+        e.summary,
+        e.notes,
+        e.parent_event_id,
+        e.sequence_index,
+        e.chronology_address,
+        e.real_date_start_id,
+        e.real_date_end_id,
+        e.projection_id
+    FROM calendar_events e
+    INNER JOIN calendar_event_projection_membership m
+        ON m.calendar_event_id = e.id
+    WHERE m.{$projectionMembershipColumn} = :projection_key
+    {$orderBy}
+");
 
     $stmt->execute([
-        'projection_entity_id' => $projectionEntityId,
+        'projection_key' => $projectionEntityId,
     ]);
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
