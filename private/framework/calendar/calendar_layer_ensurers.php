@@ -143,23 +143,23 @@ function resolve_calendar_node_for_layer_wrapper(
 
     if (is_int($identity) || ctype_digit((string)$identity)) {
 
-        $projectionId = (int)$identity;
+        $calendarEventId = (int)$identity;
 
-        if ($projectionId > 0) {
+        if ($calendarEventId > 0) {
 
             $stmt = $pdo->prepare("
-                SELECT
-                    ce.*,
-                    e.entity_type_id
-                FROM sxnzlfun_chrysalis.calendar_events ce
-                INNER JOIN sxnzlfun_chrysalis.entities e
-                    ON e.id = ce.entity_id
-                WHERE ce.projection_id = :projection_id
-                LIMIT 1
-            ");
+            SELECT
+                ce.*,
+                e.entity_type_id
+            FROM sxnzlfun_chrysalis.calendar_events ce
+            INNER JOIN sxnzlfun_chrysalis.entities e
+                ON e.id = ce.entity_id
+            WHERE ce.id = :id
+            LIMIT 1
+        ");
 
             $stmt->execute([
-                ':projection_id' => $projectionId,
+                ':id' => $calendarEventId,
             ]);
 
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
