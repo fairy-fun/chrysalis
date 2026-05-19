@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../calendar/prose_calendar_orchestrator.php';
+
 require_once __DIR__ . '/prose_projection_writer.php';
 require_once __DIR__ . '/prose_metadata_deriver.php';
 
