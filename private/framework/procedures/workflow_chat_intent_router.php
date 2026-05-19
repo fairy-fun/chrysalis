@@ -34,6 +34,15 @@ function fw_match_chat_workflow(
 
         'process attached prose'
         => 'calendar_event_process_attached_prose',
+
+        'process prose attached to'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose for'
+        => 'calendar_event_process_attached_prose',
+
+        'process prose for'
+        => 'calendar_event_process_attached_prose',
     ];
 
     foreach ($map as $phrase => $workflowId) {
