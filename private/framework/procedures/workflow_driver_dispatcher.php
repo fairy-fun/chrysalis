@@ -35,6 +35,7 @@ function fw_execute_workflow_driver_operation(
 
             'create_draft' => 'fw_execute_workflow_prose_create_draft',
 
+            'segment_subevents' => 'fw_execute_workflow_prose_segment_subevents',
         ],
 
     ];
