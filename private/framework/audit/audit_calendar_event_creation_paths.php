@@ -14,6 +14,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_node_ensurer.php'
     );
 
+    $allowedChronologyMaterializerFile = realpath(
+        $repoRoot . '/private/framework/procedures/materialize_calendar_chronology.php'
+    );
+
     $allowedProjectionMaterializerFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
     );
@@ -54,7 +58,7 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ calendar_events writes must stay inside the node ensurer boundary.
+        // ❌ calendar_events writes must stay inside approved source-table boundaries.
         // This deliberately protects calendar_events only, not derived tables such as
         // calendar_event_projections.
         if (
@@ -62,6 +66,7 @@ function assert_calendar_event_creation_paths(): void
         ) {
             if (
                 $path !== $allowedInsertFile &&
+                $path !== $allowedChronologyMaterializerFile &&
                 !str_contains($contents, 'ensure_calendar_node')
             ) {
                 throw new RuntimeException(
