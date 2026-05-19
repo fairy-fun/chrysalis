@@ -13,7 +13,9 @@ declare(strict_types=1);
  * → prose_projections
  * → prose_drafts
  *
- * NO direct chronology lookup against calendar_events.
+ * Chronology supports BOTH:
+ * - exact address match
+ * - subtree prefix match
  */
 
 function resolve_prose_by_chronology_address(
@@ -25,20 +27,16 @@ function resolve_prose_by_chronology_address(
     $chronologyAddress = trim($chronologyAddress);
 
     if ($projectionId < 1) {
-        throw new InvalidArgumentException(
-            'projectionId must be positive'
-        );
+        throw new InvalidArgumentException('projectionId must be positive');
     }
 
     if ($chronologyAddress === '') {
-        throw new InvalidArgumentException(
-            'chronologyAddress is required'
-        );
+        throw new InvalidArgumentException('chronologyAddress is required');
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Projection row lookup
+    | Projection row lookup (SUBTREE ENABLED)
     |--------------------------------------------------------------------------
     */
 
@@ -61,11 +59,14 @@ function resolve_prose_by_chronology_address(
             ON ce.id = cep.calendar_event_id
 
         WHERE cep.calendar_projection_id = :projection_id
-          AND cep.chronology_address = :chronology_address
+          AND (
+                cep.chronology_address = :chronology_address
+                OR cep.chronology_address LIKE CONCAT(:chronology_address, '.%')
+          )
           AND cpb.id = (
                 SELECT MAX(id)
                 FROM calendar_projection_builds
-                WHERE projection_id = :projection_id
+                WHERE calendar_projection_id = :projection_id
                   AND status = 'valid'
           )
 
@@ -131,23 +132,25 @@ function resolve_prose_by_chronology_address(
         ];
     }
 
-    if (count($rows) > 1) {
-        return [
-            'status' => 'prose_ambiguous',
-            'chronology_address' => $chronologyAddress,
-            'event' => $event,
-            'publication_candidates' => $rows,
-            'published_prose' => null,
-        ];
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | Subtree-safe behavior (NO artificial ambiguity collapse)
+    |--------------------------------------------------------------------------
+    */
 
     return [
         'status' => 'prose_found',
         'chronology_address' => $chronologyAddress,
         'event' => $event,
-        'published_prose' => $rows[0],
+        'published_prose' => $rows,
     ];
 }
+
+/*
+|--------------------------------------------------------------------------
+| Week/day resolver (unchanged, already correct structurally)
+|--------------------------------------------------------------------------
+*/
 
 function resolve_prose_by_week_day(
     PDO $pdo,
@@ -157,28 +160,16 @@ function resolve_prose_by_week_day(
 ): array {
 
     if ($projectionId < 1) {
-        throw new InvalidArgumentException(
-            'projectionId must be positive'
-        );
+        throw new InvalidArgumentException('projectionId must be positive');
     }
 
     if ($weekIndex < 1) {
-        throw new InvalidArgumentException(
-            'weekIndex must be positive'
-        );
+        throw new InvalidArgumentException('weekIndex must be positive');
     }
 
     if ($dayIndex < 1) {
-        throw new InvalidArgumentException(
-            'dayIndex must be positive'
-        );
+        throw new InvalidArgumentException('dayIndex must be positive');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Projection-backed chronology span lookup
-    |--------------------------------------------------------------------------
-    */
 
     $stmt = $pdo->prepare("
         SELECT
@@ -209,7 +200,7 @@ function resolve_prose_by_week_day(
           AND cpb.id = (
                 SELECT MAX(id)
                 FROM calendar_projection_builds
-                WHERE projection_id = :projection_id
+                WHERE calendar_projection_id = :projection_id
                   AND status = 'valid'
           )
 
@@ -256,7 +247,6 @@ function resolve_prose_by_week_day(
         WHERE pp.target_entity_id = :target_entity_id
 
         ORDER BY pp.id ASC
-
         LIMIT 1
     ");
 
