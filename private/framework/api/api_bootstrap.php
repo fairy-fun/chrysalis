@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 function respond(int $statusCode, array $payload): never
 {
