@@ -2,56 +2,32 @@
 
 declare(strict_types=1);
 
-/**
- * Resolve canonical prose attachment state for a calendar event graph.
- *
- * Authority:
- *
- * prose_projections.target_entity_id
- * → prose_projections.published_prose_draft_id
- * → prose_drafts.prose_body
- *
- * calendar_events.prose_body is intentionally not used as authority.
- *
- * Semantic rule:
- *
- * prose exists for NL/API answering only when a prose projection resolves
- * to a published, non-empty prose draft. Empty published drafts are not
- * treated as answerable prose.
- *
- * Tooling/debugging rule:
- *
- * prose projection presence is reported separately from answerable prose.
- *
- * Live hierarchy model:
- *
- * calendar_events.parent_event_id
- */
+require_once __DIR__ . '/prose_surface_envelope.php';
+
 function resolve_event_graph_prose(
     PDO $pdo,
     int|string $eventIdentity
 ): array {
 
-    $event = resolve_calendar_event_for_prose_graph(
-        $pdo,
-        $eventIdentity
-    );
+    $event = resolve_calendar_event_for_prose_graph($pdo, $eventIdentity);
 
     if ($event === null) {
-        return [
-            'status' => 'event_not_found',
-            'entity_id' => is_string($eventIdentity) ? $eventIdentity : null,
-            'event_id' => is_int($eventIdentity) ? $eventIdentity : null,
-            'prose_state' => 'none',
-            'has_any_prose_projection' => false,
-            'has_direct_prose' => false,
-            'has_child_event_prose' => false,
-            'prose_targets' => [],
-            'prose_projection_targets' => [],
-            'prose_projection_count' => 0,
-            'direct_prose' => [],
-            'child_event_prose' => [],
-        ];
+        return build_tier4_envelope(
+            mode: 'graph',
+            status: 'event_not_found',
+            address: (string)$eventIdentity,
+            projectionId: null,
+            nodes: [],
+            meta: [
+                'prose_state' => 'none',
+                'has_any_prose_projection' => false,
+                'has_direct_prose' => false,
+                'has_child_event_prose' => false,
+                'prose_targets' => [],
+                'prose_projection_targets' => [],
+                'prose_projection_count' => 0,
+            ]
+        );
     }
 
     $stmt = $pdo->prepare("
@@ -61,23 +37,30 @@ function resolve_event_graph_prose(
             e.parent_event_id,
             e.layer_id,
             e.summary,
+
             pp.id AS prose_projection_id,
             pp.target_entity_id AS prose_target_entity_id,
             pp.published_prose_draft_id,
             pp.role_id,
             pp.projection_order,
+
             pd.id AS prose_draft_id,
             pd.entity_id AS prose_entity_id,
             pd.title,
             pd.summary AS prose_summary,
             pd.prose_body
+
         FROM calendar_events e
+
         LEFT JOIN prose_projections pp
             ON pp.target_entity_id = e.entity_id
+
         LEFT JOIN prose_drafts pd
             ON pd.id = pp.published_prose_draft_id
+
         WHERE e.id = :event_id
            OR e.parent_event_id = :event_id
+
         ORDER BY
             CASE
                 WHEN e.id = :event_id THEN 0
@@ -95,11 +78,12 @@ function resolve_event_graph_prose(
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $directProse = [];
-    $childEventProse = [];
+    $nodes = [];
     $proseTargets = [];
     $proseProjectionTargets = [];
     $proseProjectionCount = 0;
+    $hasDirectProse = false;
+    $hasChildEventProse = false;
 
     foreach ($rows as $row) {
         if (empty($row['prose_projection_id'])) {
@@ -117,15 +101,27 @@ function resolve_event_graph_prose(
             continue;
         }
 
-        $entry = [
-            'event' => [
+        $graphRole = ((int)$row['id'] === (int)$event['id'])
+            ? 'direct'
+            : 'child';
+
+        if ($graphRole === 'direct') {
+            $hasDirectProse = true;
+        } else {
+            $hasChildEventProse = true;
+        }
+
+        $proseTargets[] = (string)$row['prose_target_entity_id'];
+
+        $nodes[] = build_tier4_node(
+            event: [
                 'id' => (int)$row['id'],
                 'entity_id' => (string)$row['entity_id'],
                 'parent_event_id' => $row['parent_event_id'],
                 'layer_id' => (string)$row['layer_id'],
                 'summary' => $row['summary'],
             ],
-            'published_prose' => [
+            publishedProse: [
                 'prose_projection_id' => (int)$row['prose_projection_id'],
                 'prose_target_entity_id' => (string)$row['prose_target_entity_id'],
                 'published_prose_draft_id' => (int)$row['published_prose_draft_id'],
@@ -137,20 +133,11 @@ function resolve_event_graph_prose(
                 'role_id' => $row['role_id'],
                 'projection_order' => $row['projection_order'],
             ],
-        ];
-
-        $proseTargets[] = (string)$row['prose_target_entity_id'];
-
-        if ((int)$row['id'] === (int)$event['id']) {
-            $directProse[] = $entry;
-        } else {
-            $childEventProse[] = $entry;
-        }
+            meta: [
+                'graph_role' => $graphRole,
+            ]
+        );
     }
-
-    $hasDirectProse = $directProse !== [];
-    $hasChildEventProse = $childEventProse !== [];
-    $hasAnyProseProjection = $proseProjectionCount > 0;
 
     if ($hasDirectProse && $hasChildEventProse) {
         $proseState = 'mixed';
@@ -162,21 +149,25 @@ function resolve_event_graph_prose(
         $proseState = 'none';
     }
 
-    return [
-        'status' => 'ok',
-        'event' => $event,
-        'entity_id' => $event['entity_id'],
-        'event_id' => (int)$event['id'],
-        'prose_state' => $proseState,
-        'has_any_prose_projection' => $hasAnyProseProjection,
-        'has_direct_prose' => $hasDirectProse,
-        'has_child_event_prose' => $hasChildEventProse,
-        'prose_targets' => array_values(array_unique($proseTargets)),
-        'prose_projection_targets' => array_values(array_unique($proseProjectionTargets)),
-        'prose_projection_count' => $proseProjectionCount,
-        'direct_prose' => $directProse,
-        'child_event_prose' => $childEventProse,
-    ];
+    return build_tier4_envelope(
+        mode: 'graph',
+        status: 'ok',
+        address: (string)$event['entity_id'],
+        projectionId: null,
+        nodes: $nodes,
+        meta: [
+            'event' => $event,
+            'entity_id' => $event['entity_id'],
+            'event_id' => (int)$event['id'],
+            'prose_state' => $proseState,
+            'has_any_prose_projection' => $proseProjectionCount > 0,
+            'has_direct_prose' => $hasDirectProse,
+            'has_child_event_prose' => $hasChildEventProse,
+            'prose_targets' => array_values(array_unique($proseTargets)),
+            'prose_projection_targets' => array_values(array_unique($proseProjectionTargets)),
+            'prose_projection_count' => $proseProjectionCount,
+        ]
+    );
 }
 
 function resolve_calendar_event_for_prose_graph(

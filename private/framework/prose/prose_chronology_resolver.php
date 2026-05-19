@@ -2,16 +2,10 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/prose_surface_envelope.php';
+
 /**
  * Projection-backed chronology prose resolver.
- *
- * Canonical read path:
- *
- * calendar_event_projections
- * → calendar_projection_builds
- * → calendar_events
- * → prose_projections
- * → prose_drafts
  *
  * Chronology supports BOTH:
  * - exact address match
@@ -33,12 +27,6 @@ function resolve_prose_by_chronology_address(
     if ($chronologyAddress === '') {
         throw new InvalidArgumentException('chronologyAddress is required');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Projection row lookup (SUBTREE ENABLED)
-    |--------------------------------------------------------------------------
-    */
 
     $stmt = $pdo->prepare("
         SELECT
@@ -70,8 +58,7 @@ function resolve_prose_by_chronology_address(
                   AND status = 'valid'
           )
 
-        ORDER BY cep.id DESC
-        LIMIT 1
+        ORDER BY cep.chronology_address ASC, cep.id ASC
     ");
 
     $stmt->execute([
@@ -79,24 +66,23 @@ function resolve_prose_by_chronology_address(
         ':chronology_address' => $chronologyAddress,
     ]);
 
-    $event = $stmt->fetch(PDO::FETCH_ASSOC);
+    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!is_array($event)) {
-        return [
-            'status' => 'chronology_not_found',
-            'chronology_address' => $chronologyAddress,
-            'event' => null,
-            'published_prose' => null,
-        ];
+    if ($events === []) {
+        return build_tier4_envelope(
+            mode: 'chronology',
+            status: 'chronology_not_found',
+            address: $chronologyAddress,
+            projectionId: $projectionId,
+            nodes: [],
+            meta: [
+                'is_subtree' => true,
+                'prose_projection_count' => 0,
+            ]
+        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Published prose lookup
-    |--------------------------------------------------------------------------
-    */
-
-    $stmt = $pdo->prepare("
+    $proseStmt = $pdo->prepare("
         SELECT
             pp.id AS prose_projection_id,
             pp.role_id,
@@ -117,38 +103,42 @@ function resolve_prose_by_chronology_address(
         ORDER BY pp.id ASC
     ");
 
-    $stmt->execute([
-        ':target_entity_id' => $event['entity_id'],
-    ]);
+    $nodes = [];
+    $proseProjectionCount = 0;
 
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($events as $event) {
+        $proseStmt->execute([
+            ':target_entity_id' => $event['entity_id'],
+        ]);
 
-    if ($rows === []) {
-        return [
-            'status' => 'prose_missing',
-            'chronology_address' => $chronologyAddress,
-            'event' => $event,
-            'published_prose' => null,
-        ];
+        $publishedProse = $proseStmt->fetchAll(PDO::FETCH_ASSOC);
+        $proseProjectionCount += count($publishedProse);
+
+        $nodes[] = build_tier4_node(
+            event: $event,
+            publishedProse: $publishedProse !== [] ? $publishedProse : null,
+            meta: [
+                'chronology_address' => $event['chronology_address'],
+            ]
+        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Subtree-safe behavior (NO artificial ambiguity collapse)
-    |--------------------------------------------------------------------------
-    */
-
-    return [
-        'status' => 'prose_found',
-        'chronology_address' => $chronologyAddress,
-        'event' => $event,
-        'published_prose' => $rows,
-    ];
+    return build_tier4_envelope(
+        mode: 'chronology',
+        status: $proseProjectionCount > 0 ? 'prose_found' : 'prose_missing',
+        address: $chronologyAddress,
+        projectionId: $projectionId,
+        nodes: $nodes,
+        meta: [
+            'is_subtree' => true,
+            'prose_projection_count' => $proseProjectionCount,
+        ]
+    );
 }
 
 /*
 |--------------------------------------------------------------------------
-| Week/day resolver (unchanged, already correct structurally)
+| Week/day resolver
 |--------------------------------------------------------------------------
 */
 
@@ -219,15 +209,19 @@ function resolve_prose_by_week_day(
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if ($events === []) {
-        return [
-            'status' => 'no_events_found',
-            'week_index' => $weekIndex,
-            'day_index' => $dayIndex,
-            'entries' => [],
-        ];
+        return build_tier4_envelope(
+            mode: 'temporal',
+            status: 'no_events_found',
+            address: 'week:' . $weekIndex . '/day:' . $dayIndex,
+            projectionId: $projectionId,
+            nodes: [],
+            meta: [
+                'week_index' => $weekIndex,
+                'day_index' => $dayIndex,
+                'prose_projection_count' => 0,
+            ]
+        );
     }
-
-    $entries = [];
 
     $proseStmt = $pdo->prepare("
         SELECT
@@ -250,24 +244,40 @@ function resolve_prose_by_week_day(
         LIMIT 1
     ");
 
-    foreach ($events as $event) {
+    $nodes = [];
+    $proseProjectionCount = 0;
 
+    foreach ($events as $event) {
         $proseStmt->execute([
             ':target_entity_id' => $event['entity_id'],
         ]);
 
         $prose = $proseStmt->fetch(PDO::FETCH_ASSOC);
+        $publishedProse = is_array($prose) ? $prose : null;
 
-        $entries[] = [
-            'event' => $event,
-            'published_prose' => $prose ?: null,
-        ];
+        if ($publishedProse !== null) {
+            $proseProjectionCount++;
+        }
+
+        $nodes[] = build_tier4_node(
+            event: $event,
+            publishedProse: $publishedProse,
+            meta: [
+                'chronology_address' => $event['chronology_address'],
+            ]
+        );
     }
 
-    return [
-        'status' => 'ok',
-        'week_index' => $weekIndex,
-        'day_index' => $dayIndex,
-        'entries' => $entries,
-    ];
+    return build_tier4_envelope(
+        mode: 'temporal',
+        status: 'ok',
+        address: 'week:' . $weekIndex . '/day:' . $dayIndex,
+        projectionId: $projectionId,
+        nodes: $nodes,
+        meta: [
+            'week_index' => $weekIndex,
+            'day_index' => $dayIndex,
+            'prose_projection_count' => $proseProjectionCount,
+        ]
+    );
 }

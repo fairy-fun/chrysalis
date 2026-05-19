@@ -3,81 +3,56 @@
 declare(strict_types=1);
 
 /**
- * Tier 4 Surface Envelope Normaliser
+ * Tier 4 canonical surface envelope.
  *
- * This ensures ALL prose resolvers return a consistent contract shape.
+ * Normalizes chronology, graph, temporal, and projection resolver outputs
+ * without flattening resolver semantics.
  */
 
-function wrap_surface_response(
-    string $surfaceType,
+function build_tier4_envelope(
+    string $mode,
     string $status,
     string $address,
-    array $entries = [],
+    ?int $projectionId,
+    array $nodes,
     array $meta = []
 ): array {
 
     return [
-        'surface_type' => $surfaceType,
         'status' => $status,
-        'address' => $address,
-        'entries' => $entries,
-        'meta' => (object) $meta,
+
+        'resolution' => [
+            'mode' => $mode,
+            'address' => $address,
+            'cardinality' => derive_tier4_cardinality($nodes),
+        ],
+
+        'source' => [
+            'projection_id' => $projectionId,
+        ],
+
+        'nodes' => array_values($nodes),
+
+        'meta' => array_merge([
+            'node_count' => count($nodes),
+        ], $meta),
     ];
 }
 
-/**
- * Normalise chronology resolver output
- */
-function wrap_chronology_surface(
-    string $status,
-    string $address,
-    array $entries,
+function build_tier4_node(
+    array $event,
+    array|null $publishedProse = null,
     array $meta = []
 ): array {
 
-    return wrap_surface_response(
-        'chronology',
-        $status,
-        $address,
-        $entries,
-        $meta
-    );
+    return array_merge([
+        'node_type' => 'calendar_event',
+        'event' => $event,
+        'published_prose' => $publishedProse,
+    ], $meta);
 }
 
-/**
- * Normalise graph resolver output
- */
-function wrap_graph_surface(
-    string $status,
-    string $address,
-    array $entries,
-    array $meta = []
-): array {
-
-    return wrap_surface_response(
-        'graph',
-        $status,
-        $address,
-        $entries,
-        $meta
-    );
-}
-
-/**
- * Mixed surface (future-proofing: cross-projection merges)
- */
-function wrap_mixed_surface(
-    string $status,
-    string $address,
-    array $entries,
-    array $meta = []
-): array {
-
-    return wrap_surface_response(
-        'mixed',
-        $status,
-        $address,
-        $entries,
-        $meta
-    );
+function derive_tier4_cardinality(array $nodes): string
+{
+    return count($nodes) === 1 ? 'scalar' : 'multi';
 }
