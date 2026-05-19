@@ -184,70 +184,6 @@ function insert_calendar_node(
             $projectionId
         );
 
-        if (
-            $layerId === 'calendar_layer_subevent'
-            && $parentEventId !== null
-        ) {
-            $stmt = $pdo->prepare("
-        SELECT
-            real_date_start_id,
-            real_date_end_id,
-            week_index,
-            day_index,
-            time_index,
-            event_index
-        FROM sxnzlfun_chrysalis.calendar_events
-        WHERE id = :id
-          AND layer_id = 'calendar_layer_event'
-        LIMIT 1
-    ");
-
-            $stmt->execute([
-                ':id' => $parentEventId,
-            ]);
-
-            $parent = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (is_array($parent)) {
-                $payload['real_date_start_id'] = $parent['real_date_start_id'] ?? null;
-                $payload['real_date_end_id'] = $parent['real_date_end_id'] ?? null;
-                $payload['week_index'] = $parent['week_index'] ?? null;
-                $payload['day_index'] = $parent['day_index'] ?? null;
-                $payload['time_index'] = $parent['time_index'] ?? null;
-                $payload['event_index'] = $parent['event_index'] ?? null;
-
-                $parts = [
-                    $payload['week_index'] ?? null,
-                    $payload['day_index'] ?? null,
-                    $payload['time_index'] ?? null,
-                    $payload['event_index'] ?? null,
-                    $payload['subevent_index'] ?? null,
-                ];
-
-                $valid = true;
-
-                foreach ($parts as $part) {
-                    if (
-                        filter_var(
-                            $part,
-                            FILTER_VALIDATE_INT,
-                            ['options' => ['min_range' => 1]]
-                        ) === false
-                    ) {
-                        $valid = false;
-                        break;
-                    }
-                }
-
-                if ($valid) {
-                    $payload['chronology_address'] = implode(
-                        '.',
-                        array_map('intval', $parts)
-                    );
-                }
-            }
-        }
-
         $stmt = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
                 entity_id,
@@ -261,11 +197,6 @@ function insert_calendar_node(
                 prose_body,
                 real_date_start_id,
                 real_date_end_id,
-                week_index,
-                day_index,
-                time_index,
-                event_index,
-                chronology_address,
                 time_label_id,
                 event_type_id,
                 location_id,
@@ -289,11 +220,6 @@ function insert_calendar_node(
                 :prose_body,
                 :real_date_start_id,
                 :real_date_end_id,
-                :week_index,
-                :day_index,
-                :time_index,
-                :event_index,
-                :chronology_address,
                 :time_label_id,
                 :event_type_id,
                 :location_id,
@@ -320,11 +246,6 @@ function insert_calendar_node(
             ':prose_body' => $payload['prose_body'] ?? null,
             ':real_date_start_id' => $payload['real_date_start_id'] ?? null,
             ':real_date_end_id' => $payload['real_date_end_id'] ?? null,
-            ':week_index' => $payload['week_index'] ?? null,
-            ':day_index' => $payload['day_index'] ?? null,
-            ':time_index' => $payload['time_index'] ?? null,
-            ':event_index' => $payload['event_index'] ?? null,
-            ':chronology_address' => $payload['chronology_address'] ?? null,
             ':time_label_id' => $payload['time_label_id'] ?? null,
             ':event_type_id' => $payload['event_type_id'] ?? null,
             ':location_id' => $payload['location_id'] ?? null,
@@ -355,7 +276,6 @@ function insert_calendar_node(
         ]);
 
         try {
-
             try {
                 remove_entity_row_if_unused($pdo, $temporaryEntityId);
             } catch (PDOException $e) {
@@ -368,21 +288,8 @@ function insert_calendar_node(
                 if (!$isDeletePrivilegeError) {
                     throw $e;
                 }
-
-                // Non-fatal under workflow DB permissions:
-                // pending calendar entity rows are safe to leave temporarily.
-                // Author cleanup SQL:
-                //
-                // DELETE e
-                // FROM sxnzlfun_chrysalis.entities e
-                // LEFT JOIN sxnzlfun_chrysalis.calendar_events ce
-                //   ON ce.entity_id = e.id
-                // WHERE e.id LIKE '__pending_calendar_event__:%'
-                //   AND ce.id IS NULL;
             }
-
         } catch (PDOException $e) {
-
             $info = $e->errorInfo ?? [];
 
             $isDeletePrivilegeError =
@@ -598,11 +505,6 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
             'subevent_index',
             'real_date_start_id',
             'real_date_end_id',
-            'week_index',
-            'day_index',
-            'time_index',
-            'event_index',
-            'chronology_address',
         ],
     ];
 
