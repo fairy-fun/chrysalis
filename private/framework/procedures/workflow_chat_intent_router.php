@@ -25,6 +25,15 @@ function fw_match_chat_workflow(
 
         'process calendar prose'
         => 'calendar_event_process_attached_prose',
+
+        'i want to process attached prose into calendar subevents'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose into calendar subevents'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose'
+        => 'calendar_event_process_attached_prose',
     ];
 
     foreach ($map as $phrase => $workflowId) {
