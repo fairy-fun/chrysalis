@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../../../private/framework/bootstrap.php';
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 
     respond(405, [
+        'status' => 'error',
         'error' => 'Method not allowed',
     ]);
 }
@@ -19,6 +20,7 @@ requireAuth();
 $body = getJsonBody();
 
 $userMessage = $body['message'] ?? null;
+$sessionId = $body['session_id'] ?? null;
 
 if (!is_string($userMessage) || trim($userMessage) === '') {
 
@@ -28,23 +30,30 @@ if (!is_string($userMessage) || trim($userMessage) === '') {
     ]);
 }
 
+if ($sessionId !== null && !is_string($sessionId)) {
+
+    respond(400, [
+        'status' => 'error',
+        'error' => 'session_id must be a string when provided',
+    ]);
+}
+
 $pdo = makePdo('write');
 
 try {
 
-    $result = fw_start_workflow_from_chat(
+    $result = fw_start_chat_request(
         $pdo,
-        trim($userMessage)
+        trim($userMessage),
+        is_string($sessionId) ? trim($sessionId) : null
     );
 
-    respond(200, [
-        'status' => 'ok',
-        'result' => $result,
-    ]);
+    respond(200, $result);
 
 } catch (Throwable $e) {
 
     debugRespond(500, [
-        'error' => 'Failed to start workflow from chat',
+        'status' => 'error',
+        'error' => 'Failed to start or continue workflow chat',
     ], $e);
 }

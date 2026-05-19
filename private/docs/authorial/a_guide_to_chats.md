@@ -9,7 +9,7 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 To add prose to an existing calendar event whose entity ID you already know, tell the chat:
 
 ```text
-I want to add prose to an existing calendar event.
+Call startWorkflowChat with message: I want to add prose to an existing calendar event.
 ```
 
 The runtime will ask for the calendar event entity ID.
