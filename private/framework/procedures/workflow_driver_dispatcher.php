@@ -39,6 +39,7 @@ function fw_execute_workflow_driver_operation(
 
         'calendar' => [
             'process_attached_prose' => 'fw_execute_workflow_calendar_event_process_attached_prose',
+            'display_day_prose' => 'fw_execute_workflow_calendar_display_day_prose',
         ],
 
     ];
