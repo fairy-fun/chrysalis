@@ -1,101 +1,203 @@
-# Chrysalis Calendar Structural Graph Repair Notes
+# Chrysalis Calendar Structural Refactor Notes
 
-**Date:** 2026-05-19
+## Confirmed Architectural Direction
 
-## Core Discovery
+The old polymorphic model:
 
-- The authoritative structural hierarchy in `calendar_events` was partially deleted.
-- Chronology metadata survived on leaf event rows.
-- Projection builds contained orphan projection rows referencing missing `calendar_events` rows.
-- Projection-backed chronology architecture remains correct and should not be reverted.
+- `calendar_events`
+    - week rows
+    - day rows
+    - time rows
+    - event rows
+    - subevent rows
 
-## Authoritative Model
+was identified as structurally incorrect.
 
-- `calendar_events` = authoritative structural graph
-- `calendar_event_projections` = canonical projection read model
-- Chronology fields are materialized/derived state
-- Chronology synthesis boundary remains inside:
-    - `private/framework/procedures/materialize_calendar_chronology.php`
-- Projection integration remains inside:
-    - `private/framework/calendar/calendar_projection_materializer.php`
+Weeks, days, and times are not narrative events.
 
-## Correct Structural Ontology
+They are chronology containers.
 
-- `week` = chronology container
-- `day` = chronology container
-- `time` = chronology container
-- `event` = narrative object
-- `subevent` = narrative refinement object
+---
 
-## Canonical Hierarchy
+## Correct Structural Separation
+
+The canonical hierarchy is now:
 
 ```text
-week
-  → day
-      → time
-          → event
-              → subevent
+calendar_book_weeks
+    → calendar_book_days
+        → calendar_book_times
+            → calendar_events
+                → calendar_subevents
 ```
 
-## Critical Architectural Clarification
+Meaning:
 
-- Week/day/time rows are real structural rows in `calendar_events`.
-- They are not virtual metadata.
-- Events should attach to time rows.
-- Subevents should attach to event rows.
+- weeks = Book chronology containers
+- days = Book chronology containers
+- times = Book chronology containers
+- events = narrative containers
+- subevents = narrative refinements
 
-## Projection Distinction
+---
 
-- `projection_type_book` projections use week/day/time hierarchy.
-- `projection_type_timeline_view` does NOT use the same counting semantics.
-- Projection 5 (`realtime_projection_main`) should not receive Book-style week/day/time nodes.
+## Projection Scope
 
-## Identity System Discoveries
+Book chronology containers are projection-scoped.
 
-- `entity_id` is constrained by legacy invariants.
-- `calendar_events.entity_id` is still expected to follow:
-  ```text
-  calendar_event:{id}
-  ```
-- `projection_entity_id` is the true structural identity layer.
-- Structural uniqueness constraints already use `projection_entity_id`.
+Important distinction:
 
-## Key Schema Findings
+- `projection_type_book`
+    - uses week/day/time chronology structure
+- `projection_type_timeline_view`
+    - does NOT use Book chronology containers
 
-- `ux_calendar_week_unique` uses:
-  ```text
-  projection_entity_id + week_index
-  ```
-- `ux_calendar_structural_identity` uses:
-  ```text
-  projection_entity_id
-  layer_id
-  sequence_index
-  parent_event_id_norm
-  ```
-- The schema already anticipated layered chronology containers.
+Therefore:
 
-## Current Safe Repair Strategy
+```text
+calendar_book_weeks
+calendar_book_days
+calendar_book_times
+```
 
-- Repair only `projection_type_book` projections.
-- Reconstruct missing week/day/time rows first.
-- Do not dynamically reconstruct chronology during reads.
-- Do not move chronology synthesis into node ensurers.
-- Preserve projection-backed chronology architecture.
+must NEVER be treated as global chronology tables.
 
-## Projection Validation Hardening
+They are Book-projection chronology structures.
 
-- Projection builds must reject orphan projection rows.
-- Projection builds must reject duplicate `chronology_address` rows.
-- Book projections must enforce chronology uniqueness.
+---
 
-## Known Good Conclusions
+## calendar_book_weeks Semantics
 
-- The hierarchy collapse was structural, not chronological.
-- Chronology fields acted as fossilized topology after parent deletion.
-- The existing architecture was not wrong; the database state became corrupted.
+The table now represents Book-local chronology.
 
-## Important Operational Notes
+### Identity Semantics
 
-- Do not apply Book-style chronology container reconstruction to `projection_type_timeline_view` projections.
-- Do not continue structural repair without checking projection type semantics first.
+```text
+id
+    = storage identity
+
+week_index
+    = Book-local chronology position
+
+entity_id
+    = semantic identity
+```
+
+### Correct Identity Shape
+
+Example:
+
+```text
+calendar_book_week:projection=1:week=1
+```
+
+### Week Index Rules
+
+`week_index` is:
+
+- 1-based
+- projection-local
+- dense chronology order
+
+Examples:
+
+```text
+Book 1:
+1
+2
+3
+
+Book 2:
+1
+2
+3
+```
+
+NOT globally increasing.
+
+---
+
+## Current Table Constraints
+
+`calendar_book_weeks` currently uses:
+
+```text
+PRIMARY(id)
+
+UNIQUE(entity_id)
+
+UNIQUE(projection_id, week_index)
+```
+
+Meaning:
+
+```text
+projection_id + week_index
+```
+
+is the canonical Book chronology coordinate.
+
+---
+
+## Confirmed Materializer Behavior
+
+`materialize_calendar_chronology.php`
+
+does NOT require week/day/time rows to live inside `calendar_events`.
+
+The procedure only materializes:
+
+```text
+event → subevent chronology inheritance
+```
+
+through chronology metadata fields:
+
+- week_index
+- day_index
+- time_index
+- event_index
+- chronology_address
+
+This means chronology synthesis can remain intact while structural tables are separated cleanly.
+
+---
+
+## Important Migration Principle
+
+Do NOT rebuild structure from surviving parent_event_id relationships.
+
+Those relationships are contaminated by the earlier polymorphic container system.
+
+Instead:
+
+```text
+events
+    → derive chronology tuples
+        → synthesize canonical Book containers
+```
+
+---
+
+## Current Migration Direction
+
+1. Create Book chronology tables
+2. Populate canonical Book week rows
+3. Populate Book day rows
+4. Populate Book time rows
+5. Attach narrative events to Book times
+6. Preserve chronology materialization boundary
+7. Rebuild projections after graph stabilization
+
+---
+
+## Important Non-Goals
+
+Do NOT:
+
+- restore week/day/time rows inside `calendar_events`
+- rebuild chronology dynamically during reads
+- regress projection-backed architecture
+- treat projection 5 as Book chronology
+- conflate narrative events with chronology containers
+
