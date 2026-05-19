@@ -49,11 +49,19 @@ try {
     );
 
     respond(200, $result);
-
 } catch (Throwable $e) {
+
+    debugRespond(500, [
+        'status' => 'error',
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
+    ], $e);
+}
+
+/*} catch (Throwable $e) {
 
     debugRespond(500, [
         'status' => 'error',
         'error' => 'Failed to start or continue workflow chat',
     ], $e);
-}
+}*/
