@@ -175,7 +175,8 @@ function fw_start_chat_request(
 
             $session['workflow_id'],
 
-            $result['state']
+            $result['state_id']
+            ?? $result['state']
             ?? $session['state_id'],
 
             $result['status']
@@ -228,7 +229,8 @@ function fw_start_chat_request(
 
         $workflowId,
 
-        $result['state']
+        $result['state_id']
+        ?? $result['state']
         ?? 'unknown',
 
         $result['status']
