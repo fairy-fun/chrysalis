@@ -18,14 +18,17 @@ require_once __DIR__ . '/directives/directive_service.php';
 
 require_once __DIR__ . '/procedures/workflow_registry.php';
 
+require_once __DIR__ . '/procedures/workflow_value_resolver.php';
+require_once __DIR__ . '/procedures/workflow_context_writer.php';
+
 require_once __DIR__ . '/procedures/workflow_boolean_transition_driver.php';
 require_once __DIR__ . '/procedures/workflow_match_transition_driver.php';
 
 require_once __DIR__ . '/procedures/workflow_driver_dispatcher.php';
+require_once __DIR__ . '/procedures/workflow_db_driver.php';
 require_once __DIR__ . '/procedures/workflow_prose_driver.php';
 
 require_once __DIR__ . '/procedures/workflow_transition_resolver.php';
-
 
 require_once __DIR__ . '/procedures/workflow_assertion_action_handler.php';
 require_once __DIR__ . '/procedures/workflow_driver_action_handler.php';
@@ -39,8 +42,6 @@ require_once __DIR__ . '/procedures/workflow_state_dispatcher.php';
 require_once __DIR__ . '/procedures/workflow_chat_start_handler.php';
 
 require_once __DIR__ . '/procedures/workflow_state_engine.php';
-
-
 
 $GLOBALS['fw_workflow_registry'] =
     fw_load_workflow_registry(
