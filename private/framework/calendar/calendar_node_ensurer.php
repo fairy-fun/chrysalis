@@ -184,63 +184,6 @@ function insert_calendar_node(
             $projectionId
         );
 
-        if (
-            $layerId === 'calendar_layer_subevent'
-            && $parentEventId !== null
-        ) {
-
-            $stmt = $pdo->prepare("
-        SELECT
-            real_date_start_id,
-            real_date_end_id,
-            week_index,
-            day_index,
-            time_index,
-            event_index,
-            chronology_address
-        FROM sxnzlfun_chrysalis.calendar_events
-        WHERE id = :id
-        LIMIT 1
-    ");
-
-            $stmt->execute([
-                ':id' => $parentEventId,
-            ]);
-
-            $parentChronology = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($parentChronology) {
-
-                $payload['real_date_start_id']
-                    = $parentChronology['real_date_start_id'];
-
-                $payload['real_date_end_id']
-                    = $parentChronology['real_date_end_id'];
-
-                $payload['week_index']
-                    = $parentChronology['week_index'];
-
-                $payload['day_index']
-                    = $parentChronology['day_index'];
-
-                $payload['time_index']
-                    = $parentChronology['time_index'];
-
-                $payload['event_index']
-                    = $parentChronology['event_index'];
-
-                if (
-                    !empty($parentChronology['chronology_address'])
-                    && !empty($payload['subevent_index'])
-                ) {
-                    $payload['chronology_address']
-                        = $parentChronology['chronology_address']
-                        . '.'
-                        . $payload['subevent_index'];
-                }
-            }
-        }
-
         $stmt = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
                 entity_id,
