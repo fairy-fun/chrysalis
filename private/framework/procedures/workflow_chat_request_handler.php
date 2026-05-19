@@ -202,7 +202,7 @@ function fw_start_chat_request(
     |--------------------------------------------------------------------------
     */
 
-    $workflowId = fw_match_chat_workflow(
+    $workflowId = fw_resolve_workflow_id_from_chat_message(
         $userMessage
     );
 
