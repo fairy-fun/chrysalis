@@ -65,3 +65,6 @@ Show me the prose for 1.2.1.3.1
 You may also request prose by temporal position:
 
 Show me the prose for week 1 day 2
+
+#### Retrieve real-time calendar events
+Show me projection_id = 5; for a given time-span

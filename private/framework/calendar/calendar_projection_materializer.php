@@ -266,18 +266,22 @@ function fetch_projection_source_events(
     );
 
     $stmt = $pdo->prepare("
-        SELECT
-            e.id,
-            e.summary,
-            e.notes,
-            e.parent_event_id,
-            e.sequence_index,
-            e.chronology_address,
-            e.real_date_start_id,
-            e.real_date_end_id,
-            e.projection_id
-        FROM calendar_events e
-        WHERE e.projection_id = :projection_id
+        SELECT DISTINCT
+    e.id,
+    e.summary,
+    e.notes,
+    e.parent_event_id,
+    e.sequence_index,
+    e.chronology_address,
+    e.real_date_start_id,
+    e.real_date_end_id,
+    e.projection_id
+FROM calendar_events e
+INNER JOIN calendar_event_projection_membership m
+    ON m.calendar_event_id = e.id
+INNER JOIN calendar_projections p
+    ON p.entity_id = m.projection_entity_id
+WHERE p.id = :projection_id
         {$orderBy}
     ");
 
