@@ -13,6 +13,12 @@ declare(strict_types=1);
  *
  * calendar_events.prose_body is intentionally not used as authority.
  *
+ * Semantic rule:
+ *
+ * prose exists for NL/API answering only when a prose projection resolves
+ * to a published, non-empty prose draft. Empty published drafts are not
+ * treated as answerable prose.
+ *
  * Live hierarchy model:
  *
  * calendar_events.parent_event_id
@@ -49,6 +55,7 @@ function resolve_event_graph_prose(
             e.layer_id,
             e.summary,
             pp.id AS prose_projection_id,
+            pp.target_entity_id AS prose_target_entity_id,
             pp.published_prose_draft_id,
             pp.role_id,
             pp.projection_order,
@@ -108,6 +115,7 @@ function resolve_event_graph_prose(
             ],
             'published_prose' => [
                 'prose_projection_id' => (int)$row['prose_projection_id'],
+                'prose_target_entity_id' => (string)$row['prose_target_entity_id'],
                 'published_prose_draft_id' => (int)$row['published_prose_draft_id'],
                 'prose_draft_id' => (int)$row['prose_draft_id'],
                 'prose_entity_id' => $row['prose_entity_id'],
@@ -119,7 +127,7 @@ function resolve_event_graph_prose(
             ],
         ];
 
-        $proseTargets[] = (string)$row['entity_id'];
+        $proseTargets[] = (string)$row['prose_target_entity_id'];
 
         if ((int)$row['id'] === (int)$event['id']) {
             $directProse[] = $entry;
