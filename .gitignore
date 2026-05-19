@@ -44,3 +44,4 @@ Thumbs.db
 /private/framework/ci/.seeded_ids.json
 /private/framework/ci/.repo_api_request_runner.php
 /private/framework/contracts/local_db_config.php
+/private/framework/procedures/schema
