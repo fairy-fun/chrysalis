@@ -331,6 +331,80 @@ WHERE e.id = '%s'
     }
 }
 
+function update_calendar_subevent_payload(
+    PDO $pdo,
+    int $calendarEventRowId,
+    array $payload
+): array {
+    $existing = get_calendar_node_by_id(
+        $pdo,
+        $calendarEventRowId
+    );
+
+    assert_calendar_node_entity_type_matches_layer(
+        $pdo,
+        $existing
+    );
+
+    if (
+        ($existing['layer_id'] ?? null)
+        !== 'calendar_layer_subevent'
+    ) {
+        throw new RuntimeException(
+            'Expected calendar_layer_subevent'
+        );
+    }
+
+    $payload = filter_calendar_node_payload(
+        'calendar_layer_subevent',
+        $payload
+    );
+
+    assert_calendar_node_payload_invariants(
+        'calendar_layer_subevent',
+        $payload
+    );
+
+    $stmt = $pdo->prepare("
+        UPDATE sxnzlfun_chrysalis.calendar_events
+        SET
+            summary = :summary,
+            prose_body = :prose_body,
+            beat_type_id = :beat_type_id,
+            beat_hash = :beat_hash,
+            updated_at = NOW()
+        WHERE id = :id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':summary'
+        => $payload['summary']
+            ?? $existing['summary']
+                ?? null,
+
+        ':prose_body'
+        => $payload['prose_body']
+            ?? null,
+
+        ':beat_type_id'
+        => $payload['beat_type_id']
+            ?? null,
+
+        ':beat_hash'
+        => $payload['beat_hash']
+            ?? null,
+
+        ':id'
+        => $calendarEventRowId,
+    ]);
+
+    return get_calendar_node_by_id(
+        $pdo,
+        $calendarEventRowId
+    );
+}
+
 /**
  * ============================
  * SUPPORT
@@ -753,3 +827,4 @@ function get_calendar_node_by_id(PDO $pdo, int $id): array
 
     return $row;
 }
+
