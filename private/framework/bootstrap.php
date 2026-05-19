@@ -31,6 +31,7 @@ require_once __DIR__ . '/procedures/workflow_prose_driver.php';
 
 require_once __DIR__ . '/procedures/workflow_transition_resolver.php';
 
+require_once __DIR__ . '/procedures/workflow_assertion_evaluator.php';
 require_once __DIR__ . '/procedures/workflow_assertion_action_handler.php';
 require_once __DIR__ . '/procedures/workflow_driver_action_handler.php';
 
