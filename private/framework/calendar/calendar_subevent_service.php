@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_layer_ensurers.php';
+require_once __DIR__ . '/calendar_chronology_resolver.php';
 
 function create_calendar_subevent_core(PDO $pdo, array $body): array
 {
@@ -208,51 +209,15 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         'source_document'
         => $sourceDocument ?: null,
-
-        /*
-        |--------------------------------------------------------------------------
-        | Persist inherited chronology
-        |--------------------------------------------------------------------------
-        */
-
-        'real_date_start_id'
-        => $parent['real_date_start_id'] ?? null,
-
-        'real_date_end_id'
-        => $parent['real_date_end_id'] ?? null,
-
-        'week_index'
-        => isset($parent['week_index'])
-            ? (int)$parent['week_index']
-            : null,
-
-        'day_index'
-        => isset($parent['day_index'])
-            ? (int)$parent['day_index']
-            : null,
-
-        'time_index'
-        => isset($parent['time_index'])
-            ? (int)$parent['time_index']
-            : null,
-
-        'event_index'
-        => isset($parent['event_index'])
-            ? (int)$parent['event_index']
-            : null,
-
-        /*
-        |--------------------------------------------------------------------------
-        | Derived chronology address
-        |--------------------------------------------------------------------------
-        */
-
-        'chronology_address'
-        => build_subevent_chronology_address(
-            $parent['chronology_address'] ?? null,
-            $subeventIndex
-        ),
     ];
+
+    $payload = array_merge(
+        $payload,
+        inherit_calendar_subevent_chronology(
+            $parent,
+            $subeventIndex
+        )
+    );
 
     $payload = array_filter(
         $payload,
@@ -326,26 +291,4 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         throw $e;
     }
-}
-
-function build_subevent_chronology_address(
-    ?string $parentAddress,
-    ?int $subeventIndex
-): ?string {
-
-    if (
-        $parentAddress === null ||
-        trim($parentAddress) === ''
-    ) {
-        return null;
-    }
-
-    if (
-        $subeventIndex === null ||
-        $subeventIndex < 1
-    ) {
-        return $parentAddress;
-    }
-
-    return $parentAddress . '.' . $subeventIndex;
 }
