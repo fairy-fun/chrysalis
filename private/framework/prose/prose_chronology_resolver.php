@@ -8,6 +8,7 @@ declare(strict_types=1);
  * Canonical read path:
  *
  * calendar_event_projections
+ * → calendar_projection_builds
  * → calendar_events
  * → prose_projections
  * → prose_drafts
@@ -53,11 +54,20 @@ function resolve_prose_by_chronology_address(
 
         FROM calendar_event_projections cep
 
+        INNER JOIN calendar_projection_builds cpb
+            ON cpb.id = cep.build_id
+
         INNER JOIN calendar_events ce
             ON ce.id = cep.calendar_event_id
 
         WHERE cep.calendar_projection_id = :projection_id
           AND cep.chronology_address = :chronology_address
+          AND cpb.id = (
+                SELECT MAX(id)
+                FROM calendar_projection_builds
+                WHERE projection_id = :projection_id
+                  AND status = 'valid'
+          )
 
         ORDER BY cep.id DESC
         LIMIT 1
@@ -187,12 +197,21 @@ function resolve_prose_by_week_day(
 
         FROM calendar_event_projections cep
 
+        INNER JOIN calendar_projection_builds cpb
+            ON cpb.id = cep.build_id
+
         INNER JOIN calendar_events ce
             ON ce.id = cep.calendar_event_id
 
         WHERE cep.calendar_projection_id = :projection_id
           AND ce.week_index = :week_index
           AND ce.day_index = :day_index
+          AND cpb.id = (
+                SELECT MAX(id)
+                FROM calendar_projection_builds
+                WHERE projection_id = :projection_id
+                  AND status = 'valid'
+          )
 
         ORDER BY
             ce.time_index ASC,
