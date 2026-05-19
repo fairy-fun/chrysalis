@@ -201,3 +201,219 @@ Do NOT:
 - treat projection 5 as Book chronology
 - conflate narrative events with chronology containers
 
+# Chrysalis Calendar Book Day Structure Notes
+
+## Core Architectural Principle
+
+`calendar_book_days` separates:
+
+- chronology position
+- semantic weekday meaning
+
+These are NOT the same concept.
+
+---
+
+## Correct Day Model
+
+The table should contain BOTH:
+
+```text
+day_index
+```
+
+and:
+
+```text
+day_of_week_id
+```
+
+### day_index
+
+Represents:
+
+```text
+position within the Book week
+```
+
+Examples:
+
+```text
+1
+2
+3
+4
+5
+6
+7
+```
+
+This is chronology ordering only.
+
+---
+
+### day_of_week_id
+
+Represents:
+
+```text
+canonical semantic weekday identity
+```
+
+Examples:
+
+```text
+dow_sunday
+dow_monday
+dow_tuesday
+dow_wednesday
+dow_thursday
+dow_friday
+dow_saturday
+```
+
+This is semantic weekday meaning.
+
+---
+
+## Existing Canonical Weekday System
+
+The database already contains:
+
+```text
+day_of_week_classvals
+```
+
+This is the canonical weekday abstraction layer.
+
+Current rows include:
+
+```text
+dow_sunday
+dow_monday
+dow_tuesday
+dow_wednesday
+dow_thursday
+dow_friday
+dow_saturday
+```
+
+with additional metadata:
+
+- ISO weekday numbering
+- calendar weekday numbering
+- labels
+- codes
+
+This means weekday semantics are already centralized and modernized.
+
+---
+
+## Important Architectural Distinction
+
+These are DIFFERENT:
+
+```text
+day_index = 2
+```
+
+and:
+
+```text
+day_of_week_id = dow_monday
+```
+
+Meaning:
+
+```text
+Book Week position
+```
+
+is not the same thing as:
+
+```text
+weekday semantic identity
+```
+
+This prevents chronology ordering from becoming tightly coupled to weekday naming.
+
+---
+
+## Required calendar_book_days Update
+
+Because `calendar_book_days` was empty, the semantic weekday field could be added cleanly.
+
+### Add Semantic Weekday Field
+
+```sql
+ALTER TABLE calendar_book_days
+ADD COLUMN day_of_week_id VARCHAR(64) NOT NULL
+AFTER day_index;
+```
+
+---
+
+### Add Referential Constraint
+
+```sql
+ALTER TABLE calendar_book_days
+ADD CONSTRAINT fk_calendar_book_days_day_of_week
+FOREIGN KEY (day_of_week_id)
+REFERENCES day_of_week_classvals(id);
+```
+
+---
+
+## Example Insert
+
+```sql
+INSERT INTO calendar_book_days (
+    projection_id,
+    week_id,
+    day_index,
+    day_of_week_id,
+    entity_id,
+    summary
+)
+VALUES (
+    1,
+    1,
+    1,
+    'dow_sunday',
+    'calendar_book_day:projection=1:week=1:day=1',
+    'Sunday'
+);
+```
+
+Meaning:
+
+```text
+Book 1
+Week 1
+Day position 1
+Semantic weekday Sunday
+```
+
+without hardcoded weekday systems.
+
+---
+
+## Future-Proofing Benefit
+
+Because semantic weekdays are centralized in:
+
+```text
+day_of_week_classvals
+```
+
+future chronology systems can support:
+
+- ISO calendars
+- localized calendars
+- narrative calendars
+- alternate chronology systems
+- custom ordering systems
+
+without rewriting Book chronology structure tables.
+
+
