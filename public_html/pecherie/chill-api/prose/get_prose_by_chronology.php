@@ -25,6 +25,8 @@ try {
 
     $projectionId = $body['projection_id'] ?? null;
     $chronologyAddress = $body['chronology_address'] ?? null;
+    $weekIndex = $body['week_index'] ?? null;
+    $dayIndex = $body['day_index'] ?? null;
 
     if (
         !is_int($projectionId)
@@ -38,12 +40,29 @@ try {
         );
     }
 
-    if (
-        !is_string($chronologyAddress)
-        || trim($chronologyAddress) === ''
-    ) {
+    $hasChronologyAddress =
+        is_string($chronologyAddress)
+        && trim($chronologyAddress) !== '';
+
+    $hasWeekDay =
+        (
+            is_int($weekIndex)
+            || (
+                is_string($weekIndex)
+                && ctype_digit($weekIndex)
+            )
+        )
+        && (
+            is_int($dayIndex)
+            || (
+                is_string($dayIndex)
+                && ctype_digit($dayIndex)
+            )
+        );
+
+    if (!$hasChronologyAddress && !$hasWeekDay) {
         throw new InvalidArgumentException(
-            'chronology_address is required'
+            'Provide either chronology_address or week_index/day_index'
         );
     }
 
@@ -51,17 +70,38 @@ try {
 
     $expectedDatabase = verifyExpectedDatabase($pdo);
 
-    $result = resolve_prose_by_chronology_address(
+    if ($hasChronologyAddress) {
+
+        $cleanChronologyAddress = trim($chronologyAddress);
+
+        $result = resolve_prose_by_chronology_address(
+            $pdo,
+            (int)$projectionId,
+            $cleanChronologyAddress
+        );
+
+        respond(200, [
+            'status' => 'ok',
+            'database' => $expectedDatabase,
+            'projection_id' => (int)$projectionId,
+            'chronology_address' => $cleanChronologyAddress,
+            'result' => $result,
+        ]);
+    }
+
+    $result = resolve_prose_by_week_day(
         $pdo,
         (int)$projectionId,
-        trim($chronologyAddress)
+        (int)$weekIndex,
+        (int)$dayIndex
     );
 
     respond(200, [
         'status' => 'ok',
         'database' => $expectedDatabase,
         'projection_id' => (int)$projectionId,
-        'chronology_address' => trim($chronologyAddress),
+        'week_index' => (int)$weekIndex,
+        'day_index' => (int)$dayIndex,
         'result' => $result,
     ]);
 
