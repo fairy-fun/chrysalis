@@ -27,9 +27,11 @@ function fw_execute_workflow_calendar_display_day_prose(
         ];
     }
 
+    $realDateStartId = trim($realDateStartId);
+
     $artifact = fw_display_calendar_day_prose(
         $pdo,
-        trim($realDateStartId)
+        $realDateStartId
     );
 
     return [
@@ -37,7 +39,7 @@ function fw_execute_workflow_calendar_display_day_prose(
         'status' => ($artifact['item_count'] > 0) ? 'ok' : 'empty',
         'workflow' => 'calendar_day_display_prose',
         'tier' => 2,
-        'real_date_start_id' => trim($realDateStartId),
+        'real_date_start_id' => $realDateStartId,
         'context' => array_merge(
             $context,
             [
@@ -67,36 +69,48 @@ function fw_display_calendar_day_prose(
             child.event_index,
             child.time_index,
             child.chronology_address,
+
             parent.entity_id AS parent_entity_id,
             parent.summary AS parent_summary,
+
             COALESCE(
                 child.real_date_start_id,
                 parent.real_date_start_id
-            ) AS effective_day_id
+            ) AS effective_day_id,
+
+            COALESCE(
+                parent.event_index,
+                child.event_index,
+                999999
+            ) AS effective_event_index
+
         FROM calendar_events child
+
         LEFT JOIN calendar_events parent
             ON parent.id = child.parent_event_id
            AND child.layer_id = 'calendar_layer_subevent'
+
         WHERE COALESCE(
                 child.real_date_start_id,
                 parent.real_date_start_id
             ) = :real_date_start_id
+
           AND (
-                child.prose_body IS NOT NULL
-                OR child.notes IS NOT NULL
+                NULLIF(TRIM(child.prose_body), '') IS NOT NULL
+                OR NULLIF(TRIM(child.notes), '') IS NOT NULL
             )
+
         ORDER BY
-            COALESCE(
-                parent.event_index,
-                child.event_index
-            ) ASC,
+            effective_event_index ASC,
+
             CASE
                 WHEN child.layer_id = 'calendar_layer_event'
                 THEN 0
                 ELSE 1
             END ASC,
-            child.subevent_index ASC,
-            child.sequence_index ASC,
+
+            COALESCE(child.subevent_index, 0) ASC,
+            COALESCE(child.sequence_index, 999999) ASC,
             child.id ASC
     ");
 
@@ -110,6 +124,7 @@ function fw_display_calendar_day_prose(
     $assembledProse = [];
 
     foreach ($rows as $row) {
+
         $proseBody = trim((string)($row['prose_body'] ?? ''));
         $notes = trim((string)($row['notes'] ?? ''));
 
@@ -117,31 +132,46 @@ function fw_display_calendar_day_prose(
             continue;
         }
 
+        $layerId = (string)$row['layer_id'];
+        $summary = trim((string)($row['summary'] ?? ''));
+
         $item = [
             'id' => (int)$row['id'],
             'entity_id' => (string)$row['entity_id'],
-            'parent_event_id' => $row['parent_event_id'],
+
+            'layer_id' => $layerId,
+            'is_subevent' => ($layerId === 'calendar_layer_subevent'),
+
+            'calendar_hierarchy_parent_id' => $row['parent_event_id'],
             'parent_entity_id' => $row['parent_entity_id'],
             'parent_summary' => $row['parent_summary'],
-            'layer_id' => (string)$row['layer_id'],
-            'summary' => (string)($row['summary'] ?? ''),
+
+            'summary' => $summary,
+
             'chronology_address' => $row['chronology_address'],
             'real_date_start_id' => $row['real_date_start_id'],
             'effective_day_id' => (string)$row['effective_day_id'],
+
             'event_index' => $row['event_index'],
+            'effective_event_index' => $row['effective_event_index'],
             'time_index' => $row['time_index'],
             'subevent_index' => $row['subevent_index'],
             'sequence_index' => $row['sequence_index'],
+
             'prose_body' => $proseBody,
             'notes' => $notes,
         ];
 
         $items[] = $item;
 
-        if ($proseBody !== '') {
-            $assembledProse[] = $proseBody;
-        } elseif ($notes !== '') {
-            $assembledProse[] = $notes;
+        $text = ($proseBody !== '')
+            ? $proseBody
+            : $notes;
+
+        if ($summary !== '') {
+            $assembledProse[] = '[' . $summary . ']' . "\n" . $text;
+        } else {
+            $assembledProse[] = $text;
         }
     }
 
