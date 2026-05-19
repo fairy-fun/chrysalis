@@ -44,6 +44,9 @@ The runtime will ask for the calendar event entity ID, such as calendar_event:7
 Reply with the entity ID.
 
 ___
+
+#### check to see if prose is attached to a calendar event or subevent
+Tier 3: if I ask you if blank has prose, don't just look at `prose_body`
 ___
 
 ### Tier 4
