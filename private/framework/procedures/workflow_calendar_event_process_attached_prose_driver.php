@@ -25,13 +25,20 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
     $entityId = trim($entityId);
 
     /**
-     * Resolve prose payload
-     * (supports either input or action payload for flexibility)
+     * Resolve canonically attached prose:
+     *
+     * calendar_event
+     *   → prose_projections.target_entity_id
+     *   → prose_drafts.prose_body
      */
     $stmt = $pdo->prepare("
-    SELECT prose_body
-    FROM calendar_events
-    WHERE entity_id = :entity_id
+    SELECT
+        pd.prose_body
+    FROM prose_projections pp
+    INNER JOIN prose_drafts pd
+        ON pd.id = pp.published_prose_draft_id
+    WHERE pp.target_entity_id = :entity_id
+    ORDER BY pp.id DESC
     LIMIT 1
 ");
 
@@ -41,19 +48,19 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    if (!$row) {
+        throw new RuntimeException(
+            'No prose projection attached to calendar event'
+        );
+    }
+
     $prose = trim((string)($row['prose_body'] ?? ''));
 
     if ($prose === '') {
         throw new RuntimeException(
-            'No prose_body attached to calendar event'
+            'Attached prose draft has empty prose_body'
         );
     }
-
-    if (!is_string($prose)) {
-        throw new RuntimeException('Invalid prose payload type');
-    }
-
-    $prose = trim($prose);
 
     /**
      * Tier 3 orchestration boundary
