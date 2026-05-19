@@ -266,10 +266,6 @@ function fetch_projection_source_events(
         $projectionType
     );
 
-    $projectionEntityId = calendar_projection_entity_id(
-        $pdo,
-        $projectionId
-    );
 
     $projectionMembershipColumn = 'projection_' . 'entity_id';
 
@@ -285,14 +281,14 @@ function fetch_projection_source_events(
         e.real_date_end_id,
         e.projection_id
     FROM calendar_events e
-    INNER JOIN calendar_event_projection_membership m
-        ON m.calendar_event_id = e.id
-    WHERE m.{$projectionMembershipColumn} = :projection_key
-    {$orderBy}
+INNER JOIN calendar_event_projection_membership m
+    ON m.calendar_event_id = e.id
+WHERE m.projection_id = :projection_id
+{$orderBy}
 ");
 
     $stmt->execute([
-        'projection_key' => $projectionEntityId,
+        'projection_id' => $projectionId,
     ]);
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
