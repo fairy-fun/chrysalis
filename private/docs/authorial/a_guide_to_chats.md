@@ -40,8 +40,24 @@ The runtime will ask for the calendar event entity ID, such as calendar_event:7
 Reply with the entity ID.
 
 ___
+___
+
 ### Tier 4
 
-#### Show me the prose for [x.x] 
+#### Retrieve prose by chronology address
 
-#### Show me the prose for week [x] day [y]
+To retrieve prose already attached to a calendar event or subevent by chronology position, tell the chat:
+
+```text
+Show me the prose for 1.2.1.3
+
+or
+
+Show me the prose for 1.2.1.3.1
+```
+
+#### Retrieve prose by week/day position
+
+You may also request prose by temporal position:
+
+Show me the prose for week 1 day 2
