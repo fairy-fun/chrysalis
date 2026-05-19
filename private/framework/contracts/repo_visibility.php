@@ -25,6 +25,7 @@ return [
         'public_html/pecherie/chill-api/audit',
         'public_html/pecherie/chill-api/calendar',
         'public_html/pecherie/chill-api/prose',
+        'public_html/pecherie/chill-api/workflow',
         'public_html/pecherie/chill-api/reference',
         'public_html/pecherie/chill-api/music',
         'public_html/pecherie/chill-api/dreams',
