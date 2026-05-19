@@ -138,3 +138,127 @@ function resolve_prose_by_chronology_address(
         'published_prose' => $rows[0],
     ];
 }
+
+function resolve_prose_by_week_day(
+    PDO $pdo,
+    int $projectionId,
+    int $weekIndex,
+    int $dayIndex
+): array {
+
+    if ($projectionId < 1) {
+        throw new InvalidArgumentException(
+            'projectionId must be positive'
+        );
+    }
+
+    if ($weekIndex < 1) {
+        throw new InvalidArgumentException(
+            'weekIndex must be positive'
+        );
+    }
+
+    if ($dayIndex < 1) {
+        throw new InvalidArgumentException(
+            'dayIndex must be positive'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Projection-backed chronology span lookup
+    |--------------------------------------------------------------------------
+    */
+
+    $stmt = $pdo->prepare("
+        SELECT
+            cep.calendar_event_id,
+            cep.chronology_address,
+
+            ce.entity_id,
+            ce.summary,
+            ce.notes,
+            ce.layer_id,
+
+            ce.week_index,
+            ce.day_index,
+            ce.time_index,
+            ce.event_index
+
+        FROM calendar_event_projections cep
+
+        INNER JOIN calendar_events ce
+            ON ce.id = cep.calendar_event_id
+
+        WHERE cep.calendar_projection_id = :projection_id
+          AND ce.week_index = :week_index
+          AND ce.day_index = :day_index
+
+        ORDER BY
+            ce.time_index ASC,
+            ce.event_index ASC,
+            ce.id ASC
+    ");
+
+    $stmt->execute([
+        ':projection_id' => $projectionId,
+        ':week_index' => $weekIndex,
+        ':day_index' => $dayIndex,
+    ]);
+
+    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($events === []) {
+        return [
+            'status' => 'no_events_found',
+            'week_index' => $weekIndex,
+            'day_index' => $dayIndex,
+            'entries' => [],
+        ];
+    }
+
+    $entries = [];
+
+    $proseStmt = $pdo->prepare("
+        SELECT
+            pp.id AS prose_projection_id,
+
+            pd.id AS prose_draft_id,
+            pd.entity_id AS prose_entity_id,
+            pd.title,
+            pd.summary,
+            pd.prose_body
+
+        FROM prose_projections pp
+
+        INNER JOIN prose_drafts pd
+            ON pd.id = pp.published_prose_draft_id
+
+        WHERE pp.target_entity_id = :target_entity_id
+
+        ORDER BY pp.id ASC
+
+        LIMIT 1
+    ");
+
+    foreach ($events as $event) {
+
+        $proseStmt->execute([
+            ':target_entity_id' => $event['entity_id'],
+        ]);
+
+        $prose = $proseStmt->fetch(PDO::FETCH_ASSOC);
+
+        $entries[] = [
+            'event' => $event,
+            'published_prose' => $prose ?: null,
+        ];
+    }
+
+    return [
+        'status' => 'ok',
+        'week_index' => $weekIndex,
+        'day_index' => $dayIndex,
+        'entries' => $entries,
+    ];
+}
