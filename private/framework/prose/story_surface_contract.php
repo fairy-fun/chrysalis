@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/prose_surface_envelope.php';
+
 /**
  * Tier 4 story surface façade.
  *

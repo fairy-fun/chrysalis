@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/prose_surface_envelope.php';
+require_once __DIR__ . '/story_surface_contract.php';
 
 /**
  * Projection-backed chronology prose resolver.
@@ -69,16 +69,15 @@ function resolve_prose_by_chronology_address(
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if ($events === []) {
-        return build_tier4_envelope(
-            mode: 'chronology',
-            status: 'chronology_not_found',
+        return build_chronology_surface(
             address: $chronologyAddress,
             projectionId: $projectionId,
             nodes: [],
             meta: [
                 'is_subtree' => true,
                 'prose_projection_count' => 0,
-            ]
+            ],
+            status: 'chronology_not_found'
         );
     }
 
@@ -123,16 +122,15 @@ function resolve_prose_by_chronology_address(
         );
     }
 
-    return build_tier4_envelope(
-        mode: 'chronology',
-        status: $proseProjectionCount > 0 ? 'prose_found' : 'prose_missing',
+    return build_chronology_surface(
         address: $chronologyAddress,
         projectionId: $projectionId,
         nodes: $nodes,
         meta: [
             'is_subtree' => true,
             'prose_projection_count' => $proseProjectionCount,
-        ]
+        ],
+        status: $proseProjectionCount > 0 ? 'prose_found' : 'prose_missing'
     );
 }
 
