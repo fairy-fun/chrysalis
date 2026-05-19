@@ -82,6 +82,7 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
     );
 
     return [
+        'success' => true,
         'status' => 'ok',
         'workflow' => 'calendar_event_process_attached_prose',
         'tier' => 3,
