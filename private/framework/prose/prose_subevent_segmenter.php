@@ -54,20 +54,12 @@ function segment_prose_into_subevents(
     foreach ($merged as $block) {
 
         $metadata = derive_prose_metadata($block);
+        $beat = derive_calendar_beat($pdo, $block);
 
-        $beat = derive_calendar_beat(
-            $pdo,
-            $block
-        );
-
-        $summary = trim(
-            (string)($beat['label'] ?? '')
-        );
+        $summary = trim((string)($beat['label'] ?? ''));
 
         if ($summary === '') {
-            $summary = trim(
-                (string)($metadata['summary'] ?? '')
-            );
+            $summary = trim((string)($metadata['summary'] ?? ''));
         }
 
         if ($summary === '') {
