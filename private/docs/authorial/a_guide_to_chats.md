@@ -2,6 +2,10 @@
 
 To start a workflow in a new natural-language chat, simply describe what you want naturally.
 
+### Tier 1
+#### Create an event in the correct projection
+
+
 ### Tier 2
 
 #### Add prose to an existing event
