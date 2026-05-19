@@ -19,6 +19,10 @@ declare(strict_types=1);
  * to a published, non-empty prose draft. Empty published drafts are not
  * treated as answerable prose.
  *
+ * Tooling/debugging rule:
+ *
+ * prose projection presence is reported separately from answerable prose.
+ *
  * Live hierarchy model:
  *
  * calendar_events.parent_event_id
@@ -39,9 +43,12 @@ function resolve_event_graph_prose(
             'entity_id' => is_string($eventIdentity) ? $eventIdentity : null,
             'event_id' => is_int($eventIdentity) ? $eventIdentity : null,
             'prose_state' => 'none',
+            'has_any_prose_projection' => false,
             'has_direct_prose' => false,
             'has_child_event_prose' => false,
             'prose_targets' => [],
+            'prose_projection_targets' => [],
+            'prose_projection_count' => 0,
             'direct_prose' => [],
             'child_event_prose' => [],
         ];
@@ -91,11 +98,16 @@ function resolve_event_graph_prose(
     $directProse = [];
     $childEventProse = [];
     $proseTargets = [];
+    $proseProjectionTargets = [];
+    $proseProjectionCount = 0;
 
     foreach ($rows as $row) {
         if (empty($row['prose_projection_id'])) {
             continue;
         }
+
+        $proseProjectionCount++;
+        $proseProjectionTargets[] = (string)$row['prose_target_entity_id'];
 
         if (empty($row['published_prose_draft_id']) || empty($row['prose_draft_id'])) {
             continue;
@@ -138,6 +150,7 @@ function resolve_event_graph_prose(
 
     $hasDirectProse = $directProse !== [];
     $hasChildEventProse = $childEventProse !== [];
+    $hasAnyProseProjection = $proseProjectionCount > 0;
 
     if ($hasDirectProse && $hasChildEventProse) {
         $proseState = 'mixed';
@@ -155,9 +168,12 @@ function resolve_event_graph_prose(
         'entity_id' => $event['entity_id'],
         'event_id' => (int)$event['id'],
         'prose_state' => $proseState,
+        'has_any_prose_projection' => $hasAnyProseProjection,
         'has_direct_prose' => $hasDirectProse,
         'has_child_event_prose' => $hasChildEventProse,
         'prose_targets' => array_values(array_unique($proseTargets)),
+        'prose_projection_targets' => array_values(array_unique($proseProjectionTargets)),
+        'prose_projection_count' => $proseProjectionCount,
         'direct_prose' => $directProse,
         'child_event_prose' => $childEventProse,
     ];
