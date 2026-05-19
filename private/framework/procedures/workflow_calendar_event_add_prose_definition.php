@@ -245,7 +245,13 @@ return [
 
         'terminal_prose_created' => [
             'type' => 'terminal',
+
             'message' => 'Prose draft created successfully.',
+
+            'response' => [
+                'next_workflow' =>
+                    '$context.persist_prose_draft.calendar.next_workflow',
+            ],
         ],
 
         'terminal_prose_persist_failed' => [
