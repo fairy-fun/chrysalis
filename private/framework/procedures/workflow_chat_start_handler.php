@@ -5,30 +5,9 @@ function fw_resolve_workflow_id_from_chat_message(
     string $userMessage
 ): ?string {
 
-    $message = strtolower(trim($userMessage));
-
-    $routes = [
-        'i want to add prose to an existing calendar event' => 'calendar_event_add_prose',
-        'add prose to a calendar event' => 'calendar_event_add_prose',
-        'add prose to existing calendar event' => 'calendar_event_add_prose',
-        'add prose to an existing calendar event' => 'calendar_event_add_prose',
-        'i want to process attached prose into calendar subevents'
-        => 'calendar_event_process_attached_prose',
-
-        'process attached prose into calendar subevents'
-        => 'calendar_event_process_attached_prose',
-
-        'process attached prose'
-        => 'calendar_event_process_attached_prose',
-    ];
-
-    foreach ($routes as $phrase => $workflowId) {
-        if (str_contains($message, $phrase)) {
-            return $workflowId;
-        }
-    }
-
-    return null;
+    return fw_match_chat_workflow(
+        $userMessage
+    );
 }
 
 function fw_start_workflow_from_chat(
