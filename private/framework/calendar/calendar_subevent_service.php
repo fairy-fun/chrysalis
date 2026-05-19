@@ -82,7 +82,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
                 id,
                 event_id,
                 projection_id,
-                projection_entity_id,
                 entity_id,
                 layer_id,
 
@@ -123,7 +122,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
                 id,
                 event_id,
                 projection_id,
-                projection_entity_id,
                 entity_id,
                 layer_id,
 
