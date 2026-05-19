@@ -184,6 +184,70 @@ function insert_calendar_node(
             $projectionId
         );
 
+        if (
+            $layerId === 'calendar_layer_subevent'
+            && $parentEventId !== null
+        ) {
+            $stmt = $pdo->prepare("
+        SELECT
+            real_date_start_id,
+            real_date_end_id,
+            week_index,
+            day_index,
+            time_index,
+            event_index
+        FROM sxnzlfun_chrysalis.calendar_events
+        WHERE id = :id
+          AND layer_id = 'calendar_layer_event'
+        LIMIT 1
+    ");
+
+            $stmt->execute([
+                ':id' => $parentEventId,
+            ]);
+
+            $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (is_array($parent)) {
+                $payload['real_date_start_id'] = $parent['real_date_start_id'] ?? null;
+                $payload['real_date_end_id'] = $parent['real_date_end_id'] ?? null;
+                $payload['week_index'] = $parent['week_index'] ?? null;
+                $payload['day_index'] = $parent['day_index'] ?? null;
+                $payload['time_index'] = $parent['time_index'] ?? null;
+                $payload['event_index'] = $parent['event_index'] ?? null;
+
+                $parts = [
+                    $payload['week_index'] ?? null,
+                    $payload['day_index'] ?? null,
+                    $payload['time_index'] ?? null,
+                    $payload['event_index'] ?? null,
+                    $payload['subevent_index'] ?? null,
+                ];
+
+                $valid = true;
+
+                foreach ($parts as $part) {
+                    if (
+                        filter_var(
+                            $part,
+                            FILTER_VALIDATE_INT,
+                            ['options' => ['min_range' => 1]]
+                        ) === false
+                    ) {
+                        $valid = false;
+                        break;
+                    }
+                }
+
+                if ($valid) {
+                    $payload['chronology_address'] = implode(
+                        '.',
+                        array_map('intval', $parts)
+                    );
+                }
+            }
+        }
+
         $stmt = $pdo->prepare("
             INSERT INTO sxnzlfun_chrysalis.calendar_events (
                 entity_id,
