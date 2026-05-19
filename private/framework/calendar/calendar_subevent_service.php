@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_layer_ensurers.php';
-require_once __DIR__ . '/calendar_chronology_resolver.php';
 
 function create_calendar_subevent_core(PDO $pdo, array $body): array
 {
@@ -90,17 +89,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
                 event_type_id,
                 domain_id,
                 class_type_id,
-                location_id,
-
-                real_date_start_id,
-                real_date_end_id,
-
-                week_index,
-                day_index,
-                time_index,
-                event_index,
-
-                chronology_address
+                location_id
 
             FROM sxnzlfun_chrysalis.calendar_events
 
@@ -141,17 +130,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
                 event_type_id,
                 domain_id,
                 class_type_id,
-                location_id,
-
-                real_date_start_id,
-                real_date_end_id,
-
-                week_index,
-                day_index,
-                time_index,
-                event_index,
-
-                chronology_address
+                location_id
 
             FROM sxnzlfun_chrysalis.calendar_events
 
@@ -177,7 +156,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
     /*
     |--------------------------------------------------------------------------
-    | Chronology inheritance
+    | Subevent payload
     |--------------------------------------------------------------------------
     */
 
@@ -210,14 +189,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
         'source_document'
         => $sourceDocument ?: null,
     ];
-
-    $payload = array_merge(
-        $payload,
-        inherit_calendar_subevent_chronology(
-            $parent,
-            $subeventIndex
-        )
-    );
 
     $payload = array_filter(
         $payload,
