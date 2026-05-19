@@ -111,8 +111,8 @@ return [
             'type' => 'action',
 
             'action' => [
-                'driver' => 'prose',
-                'operation' => 'segment_subevents',
+                'driver' => 'calendar',
+                'operation' => 'process_attached_prose',
 
                 'payload' => [
                     'calendar_event_id' => '$context.calendar_event.entity_id',
@@ -154,7 +154,7 @@ return [
                 'Calendar prose successfully processed into subevents.',
 
             'response' => [
-                'artifact' => '$context.process_attached_prose.artifact',
+                'artifact' => '$context.artifact',
                 'workflow' => 'calendar_event_process_attached_prose',
                 'tier' => 3,
             ],

@@ -57,10 +57,19 @@ function fw_execute_workflow_prose_segment_subevents(
         ];
     }
 
+    require_once __DIR__ . '/workflow_artifact_builder.php';
+
+    $subevents = segment_prose_into_subevents($prose);
+
+    $artifact = build_subevent_segmentation_artifact(
+        $subevents
+    );
+
     return [
         'success' => true,
+
         'context' => [
-            'subevents' => segment_prose_into_subevents($prose),
+            'artifact' => $artifact,
         ],
     ];
 }
