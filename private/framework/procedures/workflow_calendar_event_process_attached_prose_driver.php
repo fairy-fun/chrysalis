@@ -65,21 +65,15 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
         'entity_id' => $entityId,
 
         /**
-         * Raw execution (Tier 3 truth source)
+         * Raw execution result (DB + orchestration truth)
          */
         'execution' => $result,
 
         /**
-         * Structured artifact layer (interpretation)
+         * Artifact MUST be placed into context for workflow engine merging
          */
-        'artifact' => $artifact,
-
-        /**
-         * Explicit audit separation marker
-         */
-        'trace' => [
-            'produced_at' => date('c'),
-            'workflow_type' => 'calendar_event_process_attached_prose',
+        'context' => [
+            'artifact' => $artifact,
         ],
     ];
 }
