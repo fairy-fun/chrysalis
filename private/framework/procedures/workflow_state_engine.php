@@ -104,25 +104,6 @@ function fw_run_workflow_state(
     );
 }
 
-function fw_get_workflow_definition(
-    string $workflowId
-): array {
-
-    $registry = $GLOBALS['fw_workflow_registry'] ?? [];
-
-    if (
-        !isset($registry[$workflowId]) ||
-        !is_array($registry[$workflowId])
-    ) {
-
-        throw new RuntimeException(
-            "Unknown workflow_id: {$workflowId}"
-        );
-    }
-
-    return $registry[$workflowId];
-}
-
 function fw_get_workflow_state(
     array $workflow,
     string $stateName
