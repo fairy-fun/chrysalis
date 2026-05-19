@@ -18,9 +18,43 @@ function fw_resolve_workflow_value(
     array $context = []
 ): mixed {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Recursive array resolution
+    |--------------------------------------------------------------------------
+    */
+
+    if (is_array($value)) {
+
+        $resolved = [];
+
+        foreach ($value as $key => $child) {
+
+            $resolved[$key] = fw_resolve_workflow_value(
+                $child,
+                $input,
+                $context
+            );
+        }
+
+        return $resolved;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Non-string literals
+    |--------------------------------------------------------------------------
+    */
+
     if (!is_string($value)) {
         return $value;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Raw scalar strings
+    |--------------------------------------------------------------------------
+    */
 
     if (!str_starts_with($value, '$')) {
         return $value;
