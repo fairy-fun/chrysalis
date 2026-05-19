@@ -11,13 +11,11 @@ function suggestNextCharacterBeat(
     string $currentThemeEntityId
 ): array {
     $projectionId = null;
-    $projectionEntityId = null;
 
     if ($projectionIdentity !== null) {
         if (is_int($projectionIdentity) || ctype_digit((string)$projectionIdentity)) {
             $projectionId = (int)$projectionIdentity;
             assert_calendar_projection_exists($pdo, $projectionId);
-            $projectionEntityId = calendar_projection_entity_id($pdo, $projectionId);
         } else {
             $projectionEntityId = trim((string)$projectionIdentity);
 
@@ -126,7 +124,6 @@ function suggestNextCharacterBeat(
         'status' => 'ok',
         'subject_entity_id' => $characterEntityId,
         'projection_id' => $projectionId,
-        'projection_entity_id' => $projectionEntityId,
         'current_theme_entity_id' => $currentThemeEntityId,
         'suggestion_count' => count($rows),
         'suggestions' => $rows,
