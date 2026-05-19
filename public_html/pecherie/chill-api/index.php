@@ -6,47 +6,39 @@ ini_set('display_startup_errors', '0');
 error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
-function api_error(int $statusCode, string $message): never
-{
-    http_response_code($statusCode);
-    echo json_encode([
+
+require_once __DIR__ . '/../../../private/framework/api/api_bootstrap.php';
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    respond(405, [
         'status' => 'error',
-        'error' => $message,
-    ], JSON_UNESCAPED_SLASHES);
-    exit;
+        'error' => 'Method not allowed',
+    ]);
 }
 
-function read_request_body(): array
-{
-    if (array_key_exists('_API_BODY', $GLOBALS) && is_array($GLOBALS['_API_BODY'])) {
-        return $GLOBALS['_API_BODY'];
-    }
+requireAuth();
 
-    $raw = function_exists('ci_get_php_input')
-        ? ci_get_php_input()
-        : file_get_contents('php://input');
+$body = getJsonBody();
 
-    if ($raw === false) {
-        api_error(400, 'Unable to read request body');
-    }
+$operation = $body['operation'] ?? $body['endpoint'] ?? null;
 
-    $body = json_decode($raw, true);
-    if (!is_array($body)) {
-        api_error(400, 'Invalid JSON body');
-    }
-
-    $GLOBALS['_API_BODY'] = $body;
-    $GLOBALS['_QUERY_BODY'] = $body;
-
-    return $body;
+/**
+ * GPT Actions do not automatically copy the OpenAPI operationId into the JSON body.
+ * For the natural-language workflow chat entrypoint, infer the router operation from
+ * the presence of a chat message when no explicit operation/endpoint is supplied.
+ */
+if (($operation === null || $operation === '') && isset($body['message'])) {
+    $operation = 'startWorkflowChat';
 }
 
-$body = read_request_body();
-
-$operation = $body['operation'] ?? $body['endpoint'] ?? '';
-if (!is_string($operation) || $operation === '') {
-    api_error(400, 'Missing operation');
+if (!is_string($operation) || trim($operation) === '') {
+    respond(400, [
+        'status' => 'error',
+        'error' => 'Missing operation',
+    ]);
 }
+
+$operation = trim($operation);
 
 $GLOBALS['_API_BODY'] = $body;
 $GLOBALS['_QUERY_BODY'] = $body;
@@ -254,6 +246,8 @@ switch ($operation) {
         break;
 
     default:
-        api_error(400, 'Unknown operation: ' . $operation);
+        respond(400, [
+            'status' => 'error',
+            'error' => 'Unknown operation: ' . $operation,
+        ]);
 }
-
