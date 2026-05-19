@@ -350,6 +350,29 @@ function assert_projection_build_integrity(
         );
     }
 
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM calendar_event_projections cep
+        LEFT JOIN calendar_events ce
+            ON ce.id = cep.calendar_event_id
+        WHERE cep.build_id = :build_id
+          AND cep.calendar_projection_id = :projection_id
+          AND ce.id IS NULL
+    ");
+
+    $stmt->execute([
+        'build_id' => $buildId,
+        'projection_id' => $projectionId,
+    ]);
+
+    $orphanCount = (int)$stmt->fetchColumn();
+
+    if ($orphanCount > 0) {
+        throw new RuntimeException(
+            "Projection build {$buildId} contains {$orphanCount} orphan calendar event reference(s)."
+        );
+    }
+
     if ($projectionType === 'time') {
         $stmt = $pdo->prepare("
             SELECT COUNT(*)
@@ -409,6 +432,35 @@ function assert_projection_build_integrity(
         if ((int)$stmt->fetchColumn() > 0) {
             throw new RuntimeException(
                 "Book 1 projection build {$buildId} has rows missing chronology_address."
+            );
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT chronology_address, COUNT(*) AS duplicate_count
+            FROM calendar_event_projections
+            WHERE build_id = :build_id
+              AND calendar_projection_id = :projection_id
+              AND chronology_address IS NOT NULL
+            GROUP BY chronology_address
+            HAVING COUNT(*) > 1
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            'build_id' => $buildId,
+            'projection_id' => $projectionId,
+        ]);
+
+        $duplicate = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (is_array($duplicate)) {
+            throw new RuntimeException(
+                sprintf(
+                    'Book 1 projection build %d has duplicate chronology_address %s (%d rows).',
+                    $buildId,
+                    (string)$duplicate['chronology_address'],
+                    (int)$duplicate['duplicate_count']
+                )
             );
         }
     }
