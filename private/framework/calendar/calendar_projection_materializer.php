@@ -266,9 +266,6 @@ function fetch_projection_source_events(
         $projectionType
     );
 
-
-    $projectionMembershipColumn = 'projection_' . 'entity_id';
-
     $stmt = $pdo->prepare("
     SELECT DISTINCT
         e.id,
