@@ -10,10 +10,12 @@ SELECT
     id,
     subject_entity_id,
     parent_event_id,
+    book_time_id,
     chronology_address,
     summary
 FROM {$schemaName}.calendar_events
 WHERE parent_event_id IS NULL
+  AND book_time_id IS NULL
   AND chronology_address LIKE '%.%.%'
 SQL;
 
