@@ -38,3 +38,10 @@ Call startWorkflowChat with message: I want to process attached prose into calen
 The runtime will ask for the calendar event entity ID, such as calendar_event:7
 
 Reply with the entity ID.
+
+___
+### Tier 4
+
+#### Show me the prose for [x.x] 
+
+#### Show me the prose for week [x] day [y]

@@ -10,10 +10,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     |--------------------------------------------------------------------------
     | Canonical runtime identity
     |--------------------------------------------------------------------------
-    |
-    | projection_id is now the authoritative runtime identity.
-    | parent_event_entity_id remains temporary compatibility ingress only.
-    |
     */
 
     $parentProjectionId = isset($body['parent_projection_id'])
@@ -83,16 +79,33 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         $stmt = $pdo->prepare("
             SELECT
+                id,
                 event_id,
                 projection_id,
+                projection_entity_id,
                 entity_id,
+                layer_id,
+
                 event_type_id,
                 domain_id,
                 class_type_id,
-                location_id
+                location_id,
+
+                real_date_start_id,
+                real_date_end_id,
+
+                week_index,
+                day_index,
+                time_index,
+                event_index,
+
+                chronology_address
+
             FROM sxnzlfun_chrysalis.calendar_events
+
             WHERE projection_id = :projection_id
-            AND layer_id = 'calendar_layer_event'
+              AND layer_id = 'calendar_layer_event'
+
             LIMIT 1
         ");
 
@@ -105,24 +118,45 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
     /*
     |--------------------------------------------------------------------------
-    | Compatibility fallback (temporary)
+    | Compatibility fallback
     |--------------------------------------------------------------------------
     */
 
-    if (!$parent && is_string($parentEventEntityId) && trim($parentEventEntityId) !== '') {
+    if (
+        !$parent &&
+        is_string($parentEventEntityId) &&
+        trim($parentEventEntityId) !== ''
+    ) {
 
         $stmt = $pdo->prepare("
             SELECT
+                id,
                 event_id,
                 projection_id,
+                projection_entity_id,
                 entity_id,
+                layer_id,
+
                 event_type_id,
                 domain_id,
                 class_type_id,
-                location_id
+                location_id,
+
+                real_date_start_id,
+                real_date_end_id,
+
+                week_index,
+                day_index,
+                time_index,
+                event_index,
+
+                chronology_address
+
             FROM sxnzlfun_chrysalis.calendar_events
+
             WHERE entity_id = :entity_id
-            AND layer_id = 'calendar_layer_event'
+              AND layer_id = 'calendar_layer_event'
+
             LIMIT 1
         ");
 
@@ -134,6 +168,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     }
 
     if (!$parent) {
+
         throw new RuntimeException(
             'Invalid parent calendar event reference'
         );
@@ -141,26 +176,87 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
     /*
     |--------------------------------------------------------------------------
-    | Inheritance
+    | Chronology inheritance
     |--------------------------------------------------------------------------
     */
 
     $payload = [
+
         'summary' => $eventLabel ?: 'Subevent',
+
         'subevent_index' => $subeventIndex,
+
         'prose_body' => $proseBody ?: null,
-        'event_type_id' => $eventTypeId ?: $parent['event_type_id'],
-        'domain_id' => $domainId ?: $parent['domain_id'],
-        'class_type_id' => $classTypeId ?: $parent['class_type_id'],
-        'beat_hash' => $beatHash ?: null,
-        'location_id' => $locationId ?: $parent['location_id'],
-        'notes' => $notes ?: null,
-        'source_document' => $sourceDocument ?: null,
+
+        'event_type_id'
+        => $eventTypeId ?: $parent['event_type_id'],
+
+        'domain_id'
+        => $domainId ?: $parent['domain_id'],
+
+        'class_type_id'
+        => $classTypeId ?: $parent['class_type_id'],
+
+        'location_id'
+        => $locationId ?: $parent['location_id'],
+
+        'beat_hash'
+        => $beatHash ?: null,
+
+        'notes'
+        => $notes ?: null,
+
+        'source_document'
+        => $sourceDocument ?: null,
+
+        /*
+        |--------------------------------------------------------------------------
+        | Persist inherited chronology
+        |--------------------------------------------------------------------------
+        */
+
+        'real_date_start_id'
+        => $parent['real_date_start_id'] ?? null,
+
+        'real_date_end_id'
+        => $parent['real_date_end_id'] ?? null,
+
+        'week_index'
+        => isset($parent['week_index'])
+            ? (int)$parent['week_index']
+            : null,
+
+        'day_index'
+        => isset($parent['day_index'])
+            ? (int)$parent['day_index']
+            : null,
+
+        'time_index'
+        => isset($parent['time_index'])
+            ? (int)$parent['time_index']
+            : null,
+
+        'event_index'
+        => isset($parent['event_index'])
+            ? (int)$parent['event_index']
+            : null,
+
+        /*
+        |--------------------------------------------------------------------------
+        | Derived chronology address
+        |--------------------------------------------------------------------------
+        */
+
+        'chronology_address'
+        => build_subevent_chronology_address(
+            $parent['chronology_address'] ?? null,
+            $subeventIndex
+        ),
     ];
 
     $payload = array_filter(
         $payload,
-        fn ($v) => $v !== null
+        static fn ($v) => $v !== null
     );
 
     if ($clientId) {
@@ -175,13 +271,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     |--------------------------------------------------------------------------
     | Ensure subevent
     |--------------------------------------------------------------------------
-    |
-    | Transitional behavior:
-    | ensure_calendar_subevent() still expects entity identity.
-    |
-    | We therefore resolve canonically via projection_id first,
-    | then bridge into the existing ensurer contract.
-    |
     */
 
     try {
@@ -237,4 +326,26 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         throw $e;
     }
+}
+
+function build_subevent_chronology_address(
+    ?string $parentAddress,
+    ?int $subeventIndex
+): ?string {
+
+    if (
+        $parentAddress === null ||
+        trim($parentAddress) === ''
+    ) {
+        return null;
+    }
+
+    if (
+        $subeventIndex === null ||
+        $subeventIndex < 1
+    ) {
+        return $parentAddress;
+    }
+
+    return $parentAddress . '.' . $subeventIndex;
 }
