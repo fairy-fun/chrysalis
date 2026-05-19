@@ -271,7 +271,30 @@ function insert_calendar_node(
 
         try {
 
-            remove_entity_row_if_unused($pdo, $temporaryEntityId);
+            try {
+                remove_entity_row_if_unused($pdo, $temporaryEntityId);
+            } catch (PDOException $e) {
+                $info = $e->errorInfo ?? [];
+
+                $isDeletePrivilegeError =
+                    (string)($info[0] ?? '') === '42000'
+                    && (int)($info[1] ?? 0) === 1142;
+
+                if (!$isDeletePrivilegeError) {
+                    throw $e;
+                }
+
+                // Non-fatal under workflow DB permissions:
+                // pending calendar entity rows are safe to leave temporarily.
+                // Author cleanup SQL:
+                //
+                // DELETE e
+                // FROM sxnzlfun_chrysalis.entities e
+                // LEFT JOIN sxnzlfun_chrysalis.calendar_events ce
+                //   ON ce.entity_id = e.id
+                // WHERE e.id LIKE '__pending_calendar_event__:%'
+                //   AND ce.id IS NULL;
+            }
 
         } catch (PDOException $e) {
 
