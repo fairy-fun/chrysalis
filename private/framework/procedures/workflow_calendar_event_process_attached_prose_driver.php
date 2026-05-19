@@ -28,10 +28,26 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
      * Resolve prose payload
      * (supports either input or action payload for flexibility)
      */
-    $prose =
-        $input['prose']
-        ?? $action['payload']['prose']
-        ?? '';
+    $stmt = $pdo->prepare("
+    SELECT prose_body
+    FROM calendar_events
+    WHERE entity_id = :entity_id
+    LIMIT 1
+");
+
+    $stmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $prose = trim((string)($row['prose_body'] ?? ''));
+
+    if ($prose === '') {
+        throw new RuntimeException(
+            'No prose_body attached to calendar event'
+        );
+    }
 
     if (!is_string($prose)) {
         throw new RuntimeException('Invalid prose payload type');
