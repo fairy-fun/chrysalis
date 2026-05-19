@@ -110,7 +110,7 @@ function persist_segmented_subevents(
             $pdo,
             [
                 'client_id' => build_subevent_client_id($parentEventEntityId, $slot),
-                'parent_event_id' => $parentEventId,
+                'parent_event_entity_id' => $parentEventEntityId,
                 'subevent_index' => $slot,
                 'event_label' => $summary,
                 'prose_body' => $proseBody,
