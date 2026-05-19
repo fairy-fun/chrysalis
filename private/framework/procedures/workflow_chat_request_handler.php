@@ -157,7 +157,7 @@ function fw_start_chat_request(
 
             $input[
             $session['expected_input']
-            ] = $userMessage;
+            ] = trim($userMessage);
         }
 
         $result = fw_resume_workflow(
