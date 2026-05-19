@@ -20,11 +20,22 @@ function respond(int $statusCode, array $payload): never
     exit;
 }
 
+/*function debugRespond(int $statusCode, array $payload, ?Throwable $e = null): never
+{
+    if (DEBUG_MODE && $e !== null) {
+        $payload['exception'] = get_class($e);
+        $payload['message'] = $e->getMessage();
+    }
+
+    respond($statusCode, $payload);
+}*/
+
 function debugRespond(int $statusCode, array $payload, ?Throwable $e = null): never
 {
     if (DEBUG_MODE && $e !== null) {
         $payload['exception'] = get_class($e);
         $payload['message'] = $e->getMessage();
+        $payload['trace'] = $e->getTraceAsString();
     }
 
     respond($statusCode, $payload);
