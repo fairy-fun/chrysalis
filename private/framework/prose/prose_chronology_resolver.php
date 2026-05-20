@@ -207,17 +207,16 @@ function resolve_prose_by_week_day(
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if ($events === []) {
-        return build_tier4_envelope(
-            mode: 'temporal',
-            status: 'no_events_found',
-            address: 'week:' . $weekIndex . '/day:' . $dayIndex,
-            projectionId: $projectionId,
-            nodes: [],
-            meta: [
+        return build_chronology_surface(
+            'week:' . $weekIndex . '/day:' . $dayIndex,
+            $projectionId,
+            [],
+            [
                 'week_index' => $weekIndex,
                 'day_index' => $dayIndex,
                 'prose_projection_count' => 0,
-            ]
+            ],
+            'no_events_found'
         );
     }
 
@@ -266,16 +265,15 @@ function resolve_prose_by_week_day(
         );
     }
 
-    return build_tier4_envelope(
-        mode: 'temporal',
-        status: 'ok',
-        address: 'week:' . $weekIndex . '/day:' . $dayIndex,
-        projectionId: $projectionId,
-        nodes: $nodes,
-        meta: [
+    return build_chronology_surface(
+        'week:' . $weekIndex . '/day:' . $dayIndex,
+        $projectionId,
+        $nodes,
+        [
             'week_index' => $weekIndex,
             'day_index' => $dayIndex,
             'prose_projection_count' => $proseProjectionCount,
-        ]
+        ],
+        'ok'
     );
 }
