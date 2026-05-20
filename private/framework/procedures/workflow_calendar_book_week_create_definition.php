@@ -111,7 +111,7 @@ return [
                 'operator' => 'equals',
 
                 'right'
-                    => '$context.required_projection_type_id',
+                    => 'projection_type_book',
             ],
 
             'transition' => [
