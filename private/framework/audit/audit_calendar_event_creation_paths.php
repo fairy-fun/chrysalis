@@ -145,6 +145,10 @@ function assert_calendar_event_creation_paths(): void
         // Allowed outside Tier 1:
         // - explicit chronology authoring/bootstrap operations
         // - administrative creation of calendar_book_weeks/calendar_book_days/calendar_book_times
+        //
+        // Allowed inside Tier 1:
+        // - user-facing chronology tuple input that immediately resolves through
+        //   resolve_calendar_book_time_id() into canonical book_time_id locality
         if (
             $isTierOneEventCreationPath &&
             preg_match(
@@ -154,6 +158,10 @@ function assert_calendar_event_creation_paths(): void
             !str_contains(
                 $contents,
                 'calendar_book_times'
+            ) &&
+            !str_contains(
+                $contents,
+                'resolve_calendar_book_time_id('
             ) &&
             !str_contains(
                 $contents,
