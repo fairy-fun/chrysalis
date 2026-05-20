@@ -118,17 +118,36 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ Block legacy chronology-container index logic in calendar framework code.
-        // event_index is allowed: it is canonical Book event locality when paired
-        // with calendar_events.book_time_id.
-                if (
-                    str_contains($path, '/private/framework/calendar/') &&
-                    preg_match('/\b(?:week_index|day_index|time_index)\b/', $contents)
-                ) {
-                    throw new RuntimeException(
-                        "Legacy chronology-container index logic detected in {$path}"
-                    );
-                }
+        // ❌ Block legacy chronology-container locality persistence.
+        // Canonical Book chronology resolution is allowed when targeting
+        // calendar_book_weeks/calendar_book_days/calendar_book_times.
+        //
+        // Forbidden:
+        // - using week/day/time indexes as calendar_events locality
+        // - recursive chronology reconstruction
+        //
+        // Allowed:
+        // - chronology tuple resolution into canonical Book containers
+        // - migration bridges from legacy calendar_layer_time rows
+        if (
+            str_contains($path, '/private/framework/calendar/') &&
+            preg_match(
+                '/\b(?:week_index|day_index|time_index)\b/',
+                $contents
+            ) &&
+            !str_contains(
+                $contents,
+                'calendar_book_times'
+            ) &&
+            !str_contains(
+                $contents,
+                'resolve_calendar_book_time_id_from_legacy_time_node'
+            )
+        ) {
+            throw new RuntimeException(
+                "Legacy chronology-container locality logic detected in {$path}"
+            );
+        }
 
         // ❌ Block old hierarchical creator naming outside deprecated shim comments/defs.
         if (preg_match('/under_.*(?:event|time|day)/i', $contents)) {
