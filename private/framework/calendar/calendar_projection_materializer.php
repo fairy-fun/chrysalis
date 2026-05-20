@@ -46,7 +46,6 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             $projectionId
         );
 
-
         // 5. Fetch source events
         $events = fetch_projection_source_events(
             $pdo,
@@ -116,7 +115,7 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             $insert->execute($row);
         }
 
-        // 6. Validate complete build before marking valid
+        // 7. Validate complete build before marking valid
         assert_projection_build_integrity(
             $pdo,
             $buildId,
@@ -124,7 +123,7 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             $projectionType
         );
 
-        // 7. Mark valid
+        // 8. Mark valid
         $pdo->prepare("
             UPDATE calendar_projection_builds
             SET status = 'valid',
@@ -186,7 +185,7 @@ function build_calendar_projection_row(
         'notes' => $event['notes'] ?? null,
     ];
 
-    if ($projectionType === 'time') {
+    if ($projectionType === 'projection_type_timeline_view') {
         $row['projection_starts_at'] = resolve_calendar_datetime(
             $pdo,
             $event['real_date_start_id'] ?? null
@@ -197,18 +196,17 @@ function build_calendar_projection_row(
             $event['real_date_end_id'] ?? null
         );
 
-    } elseif ($projectionType === 'structure') {
-
-        $row['projection_address'] =
-            $event['projection_address']
-            ?? $event['address']
-            ?? null;
-
-    } elseif ($projectionType === 'book1') {
+    } elseif ($projectionType === 'projection_type_book') {
 
         $row['chronology_address'] =
             $event['chronology_address']
             ?? null;
+
+    } elseif ($projectionType === 'projection_type_journal') {
+
+        throw new RuntimeException(
+            'Journal projection materialization is not implemented.'
+        );
 
     } else {
         throw new RuntimeException(
@@ -243,9 +241,9 @@ function fetch_calendar_projection_type(
     }
 
     $validTypes = [
-        'time',
-        'structure',
-        'book1',
+        'projection_type_book',
+        'projection_type_journal',
+        'projection_type_timeline_view',
     ];
 
     if (!in_array($type, $validTypes, true)) {
@@ -274,6 +272,8 @@ function fetch_projection_source_events(
         e.parent_event_id,
         e.sequence_index,
         e.chronology_address,
+        e.book_time_id,
+        e.event_index,
         e.real_date_start_id,
         e.real_date_end_id,
         e.projection_id
@@ -294,17 +294,16 @@ WHERE m.projection_id = :projection_id
 function calendar_projection_source_order_by(
     string $projectionType
 ): string {
-    if ($projectionType === 'book1') {
+    if ($projectionType === 'projection_type_book') {
         return "
             ORDER BY
-                e.chronology_address ASC,
-                COALESCE(e.parent_event_id, 0) ASC,
-                e.sequence_index ASC,
+                e.book_time_id ASC,
+                e.event_index ASC,
                 e.id ASC
         ";
     }
 
-    if ($projectionType === 'time') {
+    if ($projectionType === 'projection_type_timeline_view') {
         return "
             ORDER BY
                 e.real_date_start_id ASC,
@@ -313,13 +312,10 @@ function calendar_projection_source_order_by(
         ";
     }
 
-    if ($projectionType === 'structure') {
-        return "
-            ORDER BY
-                COALESCE(e.parent_event_id, 0) ASC,
-                e.sequence_index ASC,
-                e.id ASC
-        ";
+    if ($projectionType === 'projection_type_journal') {
+        throw new RuntimeException(
+            'Journal projection materialization is not implemented.'
+        );
     }
 
     throw new RuntimeException(
@@ -376,7 +372,7 @@ function assert_projection_build_integrity(
         );
     }
 
-    if ($projectionType === 'time') {
+    if ($projectionType === 'projection_type_timeline_view') {
         $stmt = $pdo->prepare("
             SELECT COUNT(*)
             FROM calendar_event_projections
@@ -392,18 +388,23 @@ function assert_projection_build_integrity(
 
         if ((int)$stmt->fetchColumn() > 0) {
             throw new RuntimeException(
-                "Time projection build {$buildId} has rows missing projection_starts_at."
+                "Timeline projection build {$buildId} has rows missing projection_starts_at."
             );
         }
     }
 
-    if ($projectionType === 'structure') {
+    if ($projectionType === 'projection_type_book') {
         $stmt = $pdo->prepare("
             SELECT COUNT(*)
-            FROM calendar_event_projections
-            WHERE build_id = :build_id
-              AND calendar_projection_id = :projection_id
-              AND projection_address IS NULL
+            FROM calendar_event_projections cep
+            INNER JOIN calendar_events ce
+                ON ce.id = cep.calendar_event_id
+            WHERE cep.build_id = :build_id
+              AND cep.calendar_projection_id = :projection_id
+              AND (
+                  ce.book_time_id IS NULL
+                  OR ce.event_index IS NULL
+              )
         ");
 
         $stmt->execute([
@@ -413,59 +414,15 @@ function assert_projection_build_integrity(
 
         if ((int)$stmt->fetchColumn() > 0) {
             throw new RuntimeException(
-                "Structure projection build {$buildId} has rows missing projection_address."
+                "Book projection build {$buildId} has rows missing canonical Book locality."
             );
         }
     }
 
-    if ($projectionType === 'book1') {
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*)
-            FROM calendar_event_projections
-            WHERE build_id = :build_id
-              AND calendar_projection_id = :projection_id
-              AND chronology_address IS NULL
-        ");
-
-        $stmt->execute([
-            'build_id' => $buildId,
-            'projection_id' => $projectionId,
-        ]);
-
-        if ((int)$stmt->fetchColumn() > 0) {
-            throw new RuntimeException(
-                "Book 1 projection build {$buildId} has rows missing chronology_address."
-            );
-        }
-
-        $stmt = $pdo->prepare("
-            SELECT chronology_address, COUNT(*) AS duplicate_count
-            FROM calendar_event_projections
-            WHERE build_id = :build_id
-              AND calendar_projection_id = :projection_id
-              AND chronology_address IS NOT NULL
-            GROUP BY chronology_address
-            HAVING COUNT(*) > 1
-            LIMIT 1
-        ");
-
-        $stmt->execute([
-            'build_id' => $buildId,
-            'projection_id' => $projectionId,
-        ]);
-
-        $duplicate = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (is_array($duplicate)) {
-            throw new RuntimeException(
-                sprintf(
-                    'Book 1 projection build %d has duplicate chronology_address %s (%d rows).',
-                    $buildId,
-                    (string)$duplicate['chronology_address'],
-                    (int)$duplicate['duplicate_count']
-                )
-            );
-        }
+    if ($projectionType === 'projection_type_journal') {
+        throw new RuntimeException(
+            'Journal projection materialization is not implemented.'
+        );
     }
 }
 
@@ -491,32 +448,32 @@ function assert_calendar_projection_row_integrity(
         );
     }
 
-    if ($projectionType === 'time') {
+    if ($projectionType === 'projection_type_timeline_view') {
 
         if ($row['projection_starts_at'] === null) {
             throw new RuntimeException(
-                'Time projection row missing projection_starts_at.'
+                'Timeline projection row missing projection_starts_at.'
             );
         }
 
         if ($row['projection_address'] !== null) {
             throw new RuntimeException(
-                'Time projection row must not use projection_address.'
+                'Timeline projection row must not use projection_address.'
             );
         }
 
         if ($row['chronology_address'] !== null) {
             throw new RuntimeException(
-                'Time projection row must not use chronology_address.'
+                'Timeline projection row must not use chronology_address.'
             );
         }
     }
 
-    if ($projectionType === 'structure') {
+    if ($projectionType === 'projection_type_book') {
 
-        if ($row['projection_address'] === null) {
+        if ($row['projection_address'] !== null) {
             throw new RuntimeException(
-                'Structure projection row missing projection_address.'
+                'Book projection row must not use projection_address.'
             );
         }
 
@@ -525,38 +482,14 @@ function assert_calendar_projection_row_integrity(
             $row['projection_ends_at'] !== null
         ) {
             throw new RuntimeException(
-                'Structure projection row must not use temporal fields.'
-            );
-        }
-
-        if ($row['chronology_address'] !== null) {
-            throw new RuntimeException(
-                'Structure projection row must not use chronology_address.'
+                'Book projection row must not use temporal fields.'
             );
         }
     }
 
-    if ($projectionType === 'book1') {
-
-        if ($row['chronology_address'] === null) {
-            throw new RuntimeException(
-                'Book 1 projection row missing chronology_address.'
-            );
-        }
-
-        if ($row['projection_address'] !== null) {
-            throw new RuntimeException(
-                'Book 1 projection row must not use projection_address.'
-            );
-        }
-
-        if (
-            $row['projection_starts_at'] !== null ||
-            $row['projection_ends_at'] !== null
-        ) {
-            throw new RuntimeException(
-                'Book 1 projection row must not use temporal fields.'
-            );
-        }
+    if ($projectionType === 'projection_type_journal') {
+        throw new RuntimeException(
+            'Journal projection materialization is not implemented.'
+        );
     }
 }
