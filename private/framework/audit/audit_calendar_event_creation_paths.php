@@ -18,6 +18,14 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/procedures/materialize_calendar_chronology.php'
     );
 
+    $allowedBookChronologyMaterializerFile = realpath(
+        $repoRoot . '/private/framework/calendar/admin/calendar_book_chronology_materializer.php'
+    );
+
+    $allowedBookWeekWorkflowDriverFile = realpath(
+        $repoRoot . '/private/framework/procedures/workflow_calendar_book_week_create_driver.php'
+    );
+
     $allowedProjectionMaterializerFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
     );
@@ -96,6 +104,24 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
+        // ❌ Tier 0 chronology topology authoring is restricted to approved surfaces.
+        // Book chronology containers are canonical topology state, not convenience data.
+        if (
+            preg_match(
+                '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?(?:calendar_book_weeks|calendar_book_days|calendar_book_times)\b/i',
+                $contents
+            )
+        ) {
+            if (
+                $path !== $allowedBookChronologyMaterializerFile &&
+                $path !== $allowedBookWeekWorkflowDriverFile
+            ) {
+                throw new RuntimeException(
+                    "Unauthorised Book chronology topology mutation detected in {$path}"
+                );
+            }
+        }
+
         // ❌ Projection/build rows are derived read-model state.
         // They must be written only by the projection materializer.
         if (
@@ -162,19 +188,6 @@ function assert_calendar_event_creation_paths(): void
         // ❌ Block legacy chronology-container locality persistence in Tier 1 event creation.
         // Canonical Tier 1 event locality must resolve to calendar_book_times.id and then
         // persist through calendar_events.book_time_id + event_index only.
-        //
-        // Forbidden in Tier 1:
-        // - using week/day/time indexes as calendar_events locality
-        // - creating or inferring chronology containers during event placement
-        // - recursive chronology reconstruction
-        //
-        // Allowed outside Tier 1:
-        // - explicit chronology authoring/bootstrap operations
-        // - administrative creation of calendar_book_weeks/calendar_book_days/calendar_book_times
-        //
-        // Allowed inside Tier 1:
-        // - user-facing chronology tuple input that immediately resolves through
-        //   resolve_calendar_book_time_id() into canonical book_time_id locality
         if (
             $isTierOneEventCreationPath &&
             preg_match(
