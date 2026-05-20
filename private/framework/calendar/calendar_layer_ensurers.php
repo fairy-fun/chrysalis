@@ -86,10 +86,35 @@ function ensure_calendar_event(
             $parent
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Book projection locality
+        |--------------------------------------------------------------------------
+        |
+        | sequence_index belongs to recursive containment semantics
+        | (calendar_layer_subevent ancestry), not Book chronology locality.
+        |
+        | Book chronology locality is:
+        |
+        |   projection_id + book_time_id + event_index
+        |
+        | Therefore Book event creation must NEVER reinterpret a caller
+        | sequence_index as canonical event_index.
+        |
+        | event_index may be provided explicitly through payload for
+        | compatibility/runtime override cases; otherwise canonical allocation
+        | occurs inside ensure_calendar_book_event().
+        |
+        */
+
+        $eventIndex = isset($payload['event_index'])
+            ? (int)$payload['event_index']
+            : null;
+
         return ensure_calendar_book_event(
             $pdo,
             $bookTimeId,
-            $sequenceIndex,
+            $eventIndex,
             $payload
         );
     }
