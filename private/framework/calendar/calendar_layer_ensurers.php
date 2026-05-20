@@ -71,21 +71,32 @@ function ensure_calendar_event(
 ): array {
     $parent = resolve_calendar_node_for_layer_wrapper($pdo, $parentEntityId);
 
-    // 1. Structural validation (layer → layer)
+    $projectionTypeId = resolve_calendar_projection_type_id(
+        $pdo,
+        (int)$parent['projection_id']
+    );
+
+    if (
+        $projectionTypeId === 'projection_type_book'
+        && ($parent['layer_id'] ?? null) === 'calendar_layer_time'
+    ) {
+        throw new RuntimeException(
+            'Book projection events must be created through calendar_book_times using book_time_id + event_index, not legacy calendar_layer_time rows.'
+        );
+    }
+
     assert_calendar_parent_transition($parent, 'calendar_layer_event');
 
-    // 2. Semantic validation (type → type)
     assert_calendar_semantic_parent_child(
         (string)$parent['entity_type_id'],
         'entity_type_calendar_event'
     );
 
-    // 3. Delegate to primitive
     return ensure_calendar_node(
         $pdo,
         (int)$parent['projection_id'],
         'calendar_layer_event',
-        (int)$parent['id'], // ← structural key (correct)
+        (int)$parent['id'],
         $sequenceIndex,
         $payload
     );
@@ -123,23 +134,7 @@ function resolve_calendar_node_for_layer_wrapper(
     string|int $identity
 ): array {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Canonical runtime identity
-    |--------------------------------------------------------------------------
-    |
-    | projection_id is now canonical runtime identity.
-    | entity_id remains compatibility ingress only.
-    |
-    */
-
     $row = null;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Projection-first resolution
-    |--------------------------------------------------------------------------
-    */
 
     if (is_int($identity) || ctype_digit((string)$identity)) {
 
@@ -165,12 +160,6 @@ function resolve_calendar_node_for_layer_wrapper(
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
         }
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Compatibility entity fallback
-    |--------------------------------------------------------------------------
-    */
 
     if (!$row) {
 
@@ -209,12 +198,6 @@ function resolve_calendar_node_for_layer_wrapper(
 
     assert_calendar_node_entity_type_matches_layer($pdo, $row);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Structural invariants
-    |--------------------------------------------------------------------------
-    */
-
     if (
         !isset($row['id']) ||
         (int)$row['id'] < 1
@@ -223,16 +206,6 @@ function resolve_calendar_node_for_layer_wrapper(
             'Invalid calendar node: missing valid internal id'
         );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Transitional compatibility invariant
-    |--------------------------------------------------------------------------
-    |
-    | projection_entity_id still exists for downstream compatibility,
-    | but is no longer treated as canonical runtime identity.
-    |
-    */
 
     if (
         !isset($row['projection_id']) ||
@@ -244,4 +217,32 @@ function resolve_calendar_node_for_layer_wrapper(
     }
 
     return $row;
+}
+
+function resolve_calendar_projection_type_id(PDO $pdo, int $projectionId): string
+{
+    if ($projectionId < 1) {
+        throw new InvalidArgumentException('projection_id must be positive');
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT projection_type_id
+        FROM sxnzlfun_chrysalis.calendar_projections
+        WHERE id = :projection_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':projection_id' => $projectionId,
+    ]);
+
+    $projectionTypeId = $stmt->fetchColumn();
+
+    if (!is_string($projectionTypeId) || trim($projectionTypeId) === '') {
+        throw new RuntimeException(
+            'Missing projection_type_id for calendar projection ' . $projectionId
+        );
+    }
+
+    return trim($projectionTypeId);
 }
