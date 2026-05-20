@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../calendar/prose_calendar_orchestrator.php';
+require_once __DIR__ . '/../prose/prose_semantic_orchestrator.php';
+require_once __DIR__ . '/workflow_artifact_builder.php';
 
 function fw_execute_workflow_calendar_event_process_attached_prose(
     PDO $pdo,
@@ -68,13 +69,39 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
      * - idempotency guards
      * - persistence into calendar_events
      */
-    $result = execute_calendar_batch_from_prose(
+
+    $stmt = $pdo->prepare("
+    SELECT
+        id,
+        entity_id,
+        parent_event_id,
+        projection_id,
+        chronology_address,
+        layer_id,
+        summary
+    FROM calendar_events
+    WHERE entity_id = :entity_id
+    LIMIT 1
+");
+
+    $stmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $calendarEvent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($calendarEvent)) {
+        throw new RuntimeException(
+            'Calendar event not found for entity_id: ' . $entityId
+        );
+    }
+
+    $result = orchestrate_prose_semantics(
         $pdo,
-        $entityId,
+        $calendarEvent,
         $prose
     );
 
-    require_once __DIR__ . '/workflow_artifact_builder.php';
 
     $artifact = build_calendar_subevent_artifact_graph(
         $entityId,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/prose_chronology_resolver.php';
 require_once __DIR__ . '/event_graph_prose_resolver.php';
+require_once __DIR__ . '/story_surface_contract.php';
 
 /**
  * Tier 4 unified story surface resolver.
@@ -63,9 +64,12 @@ function resolve_story_surface(
     |--------------------------------------------------------------------------
     */
 
-    return [
-        'status' => 'unknown_surface',
-        'address' => $address,
-        'entries' => []
-    ];
+    return build_story_surface(
+        'unknown',
+        $address,
+        $projectionId,
+        [],
+        [],
+        'unknown_surface'
+    );
 }
