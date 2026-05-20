@@ -62,7 +62,7 @@ return [
             'assert' => [
                 'left' => '$context.projection.projection_type_id',
                 'operator' => 'equals',
-                'right' => 'projection_type_book',
+                'right' => '$context.required_projection_type_id',
             ],
 
             'transition' => [
@@ -344,5 +344,9 @@ return [
             'type' => 'terminal',
             'message' => 'A summary is required.',
         ],
+    ],
+
+    'initial_context' => [
+        'required_projection_type_id' => 'projection_type_book',
     ],
 ];
