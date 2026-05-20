@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_node_ensurer.php';
+require_once __DIR__ . '/calendar_book_event_ensurer.php';
 require_once __DIR__ . '/calendar_hierarchy_validator.php';
 
 function ensure_calendar_week(
@@ -80,8 +81,16 @@ function ensure_calendar_event(
         $projectionTypeId === 'projection_type_book'
         && ($parent['layer_id'] ?? null) === 'calendar_layer_time'
     ) {
-        throw new RuntimeException(
-            'Book projection events must be created through calendar_book_times using book_time_id + event_index, not legacy calendar_layer_time rows.'
+        $bookTimeId = resolve_calendar_book_time_id_from_legacy_time_node(
+            $pdo,
+            $parent
+        );
+
+        return ensure_calendar_book_event(
+            $pdo,
+            $bookTimeId,
+            $sequenceIndex,
+            $payload
         );
     }
 
@@ -245,4 +254,80 @@ function resolve_calendar_projection_type_id(PDO $pdo, int $projectionId): strin
     }
 
     return trim($projectionTypeId);
+}
+
+function resolve_calendar_book_time_id_from_legacy_time_node(
+    PDO $pdo,
+    array $timeNode
+): int {
+    if (($timeNode['layer_id'] ?? null) !== 'calendar_layer_time') {
+        throw new RuntimeException(
+            'Expected legacy calendar_layer_time node'
+        );
+    }
+
+    $projectionId = (int)($timeNode['projection_id'] ?? 0);
+
+    if ($projectionId < 1) {
+        throw new RuntimeException(
+            'Legacy time node missing projection_id'
+        );
+    }
+
+    $chronologyAddress = trim((string)($timeNode['chronology_address'] ?? ''));
+
+    if ($chronologyAddress === '') {
+        throw new RuntimeException(
+            'Legacy time node missing chronology_address'
+        );
+    }
+
+    $parts = array_map('intval', explode('.', $chronologyAddress));
+
+    if (count($parts) < 3) {
+        throw new RuntimeException(
+            'Legacy time node chronology_address must include week.day.time'
+        );
+    }
+
+    [$weekIndex, $dayIndex, $timeIndex] = $parts;
+
+    if ($weekIndex < 1 || $dayIndex < 1 || $timeIndex < 1) {
+        throw new RuntimeException(
+            'Invalid legacy time node chronology tuple'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT cbt.id
+        FROM sxnzlfun_chrysalis.calendar_book_times cbt
+        INNER JOIN sxnzlfun_chrysalis.calendar_book_days cbd
+            ON cbd.id = cbt.day_id
+        INNER JOIN sxnzlfun_chrysalis.calendar_book_weeks cbw
+            ON cbw.id = cbd.week_id
+        WHERE cbw.projection_id = :projection_id
+          AND cbd.projection_id = :projection_id
+          AND cbt.projection_id = :projection_id
+          AND cbw.week_index = :week_index
+          AND cbd.day_index = :day_index
+          AND cbt.time_index = :time_index
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':projection_id' => $projectionId,
+        ':week_index' => $weekIndex,
+        ':day_index' => $dayIndex,
+        ':time_index' => $timeIndex,
+    ]);
+
+    $bookTimeId = $stmt->fetchColumn();
+
+    if ($bookTimeId === false || (int)$bookTimeId < 1) {
+        throw new RuntimeException(
+            'Canonical calendar_book_time not found for legacy time node chronology tuple'
+        );
+    }
+
+    return (int)$bookTimeId;
 }
