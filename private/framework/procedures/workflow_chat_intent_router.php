@@ -11,6 +11,12 @@ function fw_match_chat_workflow(
 
     $map = [
 
+        'create a book event'
+        => 'calendar_book_event_create',
+
+        'create book event'
+        => 'calendar_book_event_create',
+
         'create an event'
         => 'calendar_event_create',
 
