@@ -64,6 +64,21 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
+        // ❌ chronology_address is legacy/render-cache state only.
+        // The approved insert primitive must not write it during source event creation.
+        // Book render/export identity is derived later by the projection materializer.
+        if (
+            $path === $allowedInsertFile &&
+            preg_match(
+                '/\bINSERT\s+INTO\s+(?:sxnzlfun_chrysalis\.)?calendar_events\s*\([^)]*\bchronology_address\b/is',
+                $contents
+            )
+        ) {
+            throw new RuntimeException(
+                "calendar_events.chronology_address must not be written during event creation in {$path}"
+            );
+        }
+
         // ❌ calendar_events writes must stay inside approved source-table boundaries.
         // This deliberately protects calendar_events only, not derived tables such as
         // calendar_event_projections.
@@ -131,6 +146,17 @@ function assert_calendar_event_creation_paths(): void
                 $isTierOneEventCreationPath = true;
                 break;
             }
+        }
+
+        // ❌ Tier 1 event creation must not read from or write to chronology_address.
+        // chronology_address is derived render/export identity, not creation authority.
+        if (
+            $isTierOneEventCreationPath &&
+            str_contains($contents, 'chronology_address')
+        ) {
+            throw new RuntimeException(
+                "chronology_address usage detected in Tier 1 event creation path {$path}"
+            );
         }
 
         // ❌ Block legacy chronology-container locality persistence in Tier 1 event creation.
