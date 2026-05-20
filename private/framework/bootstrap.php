@@ -29,8 +29,15 @@ require_once __DIR__ . '/procedures/workflow_driver_dispatcher.php';
 require_once __DIR__ . '/procedures/workflow_db_driver.php';
 require_once __DIR__ . '/procedures/workflow_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_create_driver.php';
+require_once __DIR__ . '/procedures/workflow_calendar_book_week_create_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_process_attached_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_day_display_prose_driver.php';
+
+if (!function_exists('fw_execute_workflow_calendar_book_week_create')) {
+    throw new RuntimeException(
+        'Workflow driver not loaded: fw_execute_workflow_calendar_book_week_create'
+    );
+}
 
 require_once __DIR__ . '/procedures/workflow_transition_resolver.php';
 
