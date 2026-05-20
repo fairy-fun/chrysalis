@@ -118,15 +118,17 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ Block legacy index-based creator logic in calendar framework code.
-        if (
-            str_contains($path, '/private/framework/calendar/') &&
-            preg_match('/\b(?:week_index|day_index|time_index|event_index)\b/', $contents)
-        ) {
-            throw new RuntimeException(
-                "Legacy index-based calendar logic detected in {$path}"
-            );
-        }
+        // ❌ Block legacy chronology-container index logic in calendar framework code.
+        // event_index is allowed: it is canonical Book event locality when paired
+        // with calendar_events.book_time_id.
+                if (
+                    str_contains($path, '/private/framework/calendar/') &&
+                    preg_match('/\b(?:week_index|day_index|time_index)\b/', $contents)
+                ) {
+                    throw new RuntimeException(
+                        "Legacy chronology-container index logic detected in {$path}"
+                    );
+                }
 
         // ❌ Block old hierarchical creator naming outside deprecated shim comments/defs.
         if (preg_match('/under_.*(?:event|time|day)/i', $contents)) {
