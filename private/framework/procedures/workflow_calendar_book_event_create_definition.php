@@ -1,9 +1,9 @@
 <?php
 
 return [
-    'workflow_id' => 'calendar_event_create',
+    'workflow_id' => 'calendar_book_event_create',
     'tier' => 1,
-    'intent' => 'Create a calendar event in the correct projection',
+    'intent' => 'Create a Book calendar event in the correct projection',
 
     'entry_state' => 'await_projection_id',
 
@@ -173,12 +173,12 @@ return [
 
         'terminal_event_created' => [
             'type' => 'terminal',
-            'message' => 'Calendar event created successfully.',
+            'message' => 'Book calendar event created successfully.',
         ],
 
         'terminal_event_creation_failed' => [
             'type' => 'terminal',
-            'message' => 'Failed to create calendar event.',
+            'message' => 'Failed to create Book calendar event.',
         ],
 
         'terminal_missing_projection_id' => [
@@ -193,7 +193,7 @@ return [
 
         'terminal_unsupported_projection_type' => [
             'type' => 'terminal',
-            'message' => 'Tier 1 event creation currently supports Book projections only.',
+            'message' => 'Tier 1 Book event creation supports Book projections only.',
         ],
 
         'terminal_missing_week_index' => [
