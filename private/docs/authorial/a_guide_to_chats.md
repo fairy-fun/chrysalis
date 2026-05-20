@@ -5,6 +5,10 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 ### Tier 1
 #### Create an event in the correct projection
 
+##### Create a book event
+
+##### Create an event that only attaches to the real-time calendar
+
 
 ### Tier 2
 
