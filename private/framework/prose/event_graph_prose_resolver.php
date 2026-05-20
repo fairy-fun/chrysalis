@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/prose_surface_envelope.php';
+require_once __DIR__ . '/story_surface_contract.php';
 
 function resolve_event_graph_prose(
     PDO $pdo,
@@ -12,13 +13,11 @@ function resolve_event_graph_prose(
     $event = resolve_calendar_event_for_prose_graph($pdo, $eventIdentity);
 
     if ($event === null) {
-        return build_tier4_envelope(
-            mode: 'graph',
-            status: 'event_not_found',
-            address: (string)$eventIdentity,
-            projectionId: null,
-            nodes: [],
-            meta: [
+        return build_graph_surface(
+            (string)$eventIdentity,
+            null,
+            [],
+            [
                 'prose_state' => 'none',
                 'has_any_prose_projection' => false,
                 'has_direct_prose' => false,
@@ -26,7 +25,8 @@ function resolve_event_graph_prose(
                 'prose_targets' => [],
                 'prose_projection_targets' => [],
                 'prose_projection_count' => 0,
-            ]
+            ],
+            'event_not_found'
         );
     }
 
@@ -149,13 +149,11 @@ function resolve_event_graph_prose(
         $proseState = 'none';
     }
 
-    return build_tier4_envelope(
-        mode: 'graph',
-        status: 'ok',
-        address: (string)$event['entity_id'],
-        projectionId: null,
-        nodes: $nodes,
-        meta: [
+    return build_graph_surface(
+        (string)$event['entity_id'],
+        null,
+        $nodes,
+        [
             'event' => $event,
             'entity_id' => $event['entity_id'],
             'event_id' => (int)$event['id'],
@@ -166,7 +164,8 @@ function resolve_event_graph_prose(
             'prose_targets' => array_values(array_unique($proseTargets)),
             'prose_projection_targets' => array_values(array_unique($proseProjectionTargets)),
             'prose_projection_count' => $proseProjectionCount,
-        ]
+        ],
+        'ok'
     );
 }
 
