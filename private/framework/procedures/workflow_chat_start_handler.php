@@ -41,6 +41,12 @@ function fw_start_workflow_from_chat(
         );
     }
 
+    $initialContext = $definition['initial_context'] ?? [];
+
+    if (!is_array($initialContext)) {
+        $initialContext = [];
+    }
+
     return fw_resume_workflow(
         $pdo,
         $workflowId,
@@ -48,7 +54,10 @@ function fw_start_workflow_from_chat(
         [
             'user_message' => $userMessage,
         ],
-        $context,
+        array_merge(
+            $initialContext,
+            $context
+        ),
         $snapshots
     );
 }
