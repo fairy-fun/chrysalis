@@ -9,19 +9,37 @@ function fw_match_chat_workflow(
         trim($message)
     );
 
-    $map = [
+    $intentMap = [
 
-        'create a book event'
-        => 'calendar_book_event_create',
-
-        'create book event'
-        => 'calendar_book_event_create',
+        'create event'
+        => 'calendar_event_create',
 
         'create an event'
         => 'calendar_event_create',
 
+        'create calendar event'
+        => 'calendar_event_create',
+
         'create a calendar event'
         => 'calendar_event_create',
+
+        'add event'
+        => 'calendar_event_create',
+
+        'add an event'
+        => 'calendar_event_create',
+
+        'add calendar event'
+        => 'calendar_event_create',
+
+        'add a calendar event'
+        => 'calendar_event_create',
+
+        'create book event'
+        => 'calendar_book_event_create',
+
+        'create a book event'
+        => 'calendar_book_event_create',
 
         'i want to add prose to an existing calendar event'
         => 'calendar_event_add_prose',
@@ -72,7 +90,7 @@ function fw_match_chat_workflow(
         => 'calendar_day_display_prose',
     ];
 
-    foreach ($map as $phrase => $workflowId) {
+    foreach ($intentMap as $phrase => $workflowId) {
 
         if (str_contains($message, $phrase)) {
             return $workflowId;
