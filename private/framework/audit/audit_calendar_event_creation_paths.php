@@ -22,6 +22,12 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
     );
 
+    $tierOneEventCreationPaths = [
+        '/private/framework/calendar/calendar_event_creation_service.php',
+        '/private/framework/calendar/calendar_book_event_ensurer.php',
+        '/private/framework/procedures/workflow_calendar_event_create_driver.php',
+    ];
+
     $rii = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($repoRoot)
     );
@@ -56,6 +62,21 @@ function assert_calendar_event_creation_paths(): void
                     "Illegal INSERT INTO calendar_events in {$path}"
                 );
             }
+        }
+
+        // ❌ chronology_address is legacy/render-cache state only.
+        // The approved insert primitive must not write it during source event creation.
+        // Book render/export identity is derived later by the projection materializer.
+        if (
+            $path === $allowedInsertFile &&
+            preg_match(
+                '/\bINSERT\s+INTO\s+(?:sxnzlfun_chrysalis\.)?calendar_events\s*\([^)]*\bchronology_address\b/is',
+                $contents
+            )
+        ) {
+            throw new RuntimeException(
+                "calendar_events.chronology_address must not be written during event creation in {$path}"
+            );
         }
 
         // ❌ calendar_events writes must stay inside approved source-table boundaries.
@@ -118,19 +139,44 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ Block legacy chronology-container locality persistence.
-        // Canonical Book chronology resolution is allowed when targeting
-        // calendar_book_weeks/calendar_book_days/calendar_book_times.
+        $isTierOneEventCreationPath = false;
+
+        foreach ($tierOneEventCreationPaths as $tierOnePath) {
+            if (str_contains($path, $tierOnePath)) {
+                $isTierOneEventCreationPath = true;
+                break;
+            }
+        }
+
+        // ❌ Tier 1 event creation must not read from or write to chronology_address.
+        // chronology_address is derived render/export identity, not creation authority.
+        if (
+            $isTierOneEventCreationPath &&
+            str_contains($contents, 'chronology_address')
+        ) {
+            throw new RuntimeException(
+                "chronology_address usage detected in Tier 1 event creation path {$path}"
+            );
+        }
+
+        // ❌ Block legacy chronology-container locality persistence in Tier 1 event creation.
+        // Canonical Tier 1 event locality must resolve to calendar_book_times.id and then
+        // persist through calendar_events.book_time_id + event_index only.
         //
-        // Forbidden:
+        // Forbidden in Tier 1:
         // - using week/day/time indexes as calendar_events locality
+        // - creating or inferring chronology containers during event placement
         // - recursive chronology reconstruction
         //
-        // Allowed:
-        // - chronology tuple resolution into canonical Book containers
-        // - migration bridges from legacy calendar_layer_time rows
+        // Allowed outside Tier 1:
+        // - explicit chronology authoring/bootstrap operations
+        // - administrative creation of calendar_book_weeks/calendar_book_days/calendar_book_times
+        //
+        // Allowed inside Tier 1:
+        // - user-facing chronology tuple input that immediately resolves through
+        //   resolve_calendar_book_time_id() into canonical book_time_id locality
         if (
-            str_contains($path, '/private/framework/calendar/') &&
+            $isTierOneEventCreationPath &&
             preg_match(
                 '/\b(?:week_index|day_index|time_index)\b/',
                 $contents
@@ -141,11 +187,15 @@ function assert_calendar_event_creation_paths(): void
             ) &&
             !str_contains(
                 $contents,
+                'resolve_calendar_book_time_id('
+            ) &&
+            !str_contains(
+                $contents,
                 'resolve_calendar_book_time_id_from_legacy_time_node'
             )
         ) {
             throw new RuntimeException(
-                "Legacy chronology-container locality logic detected in {$path}"
+                "Legacy chronology-container locality logic detected in Tier 1 event creation path {$path}"
             );
         }
 

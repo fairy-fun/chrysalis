@@ -198,9 +198,14 @@ function build_calendar_projection_row(
 
     } elseif ($projectionType === 'projection_type_book') {
 
-        $row['chronology_address'] =
-            $event['chronology_address']
-            ?? build_materialized_book_chronology_address($event);
+        /*
+         * Render identity only.
+         *
+         * Book chronology locality is carried by book_time_id + event_index.
+         * chronology_address is a derived display/export address and must not
+         * be read back from calendar_events as canonical source data.
+         */
+        $row['chronology_address'] = build_materialized_book_chronology_address($event);
 
     } elseif ($projectionType === 'projection_type_journal') {
 
@@ -221,16 +226,28 @@ function build_materialized_book_chronology_address(
     array $event
 ): string {
 
-    $bookTimeId = (int)($event['book_time_id'] ?? 0);
+    $weekIndex = (int)($event['book_week_index'] ?? 0);
+    $dayIndex = (int)($event['book_day_index'] ?? 0);
+    $timeIndex = (int)($event['book_time_index'] ?? 0);
     $eventIndex = (int)($event['event_index'] ?? 0);
 
-    if ($bookTimeId < 1 || $eventIndex < 1) {
+    if (
+        $weekIndex < 1 ||
+        $dayIndex < 1 ||
+        $timeIndex < 1 ||
+        $eventIndex < 1
+    ) {
         throw new RuntimeException(
-            'Cannot derive chronology_address without canonical Book locality'
+            'Cannot derive chronology_address without canonical Book chronology containers'
         );
     }
 
-    return $bookTimeId . '.' . $eventIndex;
+    return implode('.', [
+        $weekIndex,
+        $dayIndex,
+        $timeIndex,
+        $eventIndex,
+    ]);
 }
 
 function fetch_calendar_projection_type(
@@ -286,6 +303,9 @@ function fetch_projection_source_events(
         $whereFragments[] = '
             e.book_time_id IS NOT NULL
             AND e.event_index IS NOT NULL
+            AND cbt.id IS NOT NULL
+            AND cbd.id IS NOT NULL
+            AND cbw.id IS NOT NULL
         ';
     }
 
@@ -307,10 +327,19 @@ function fetch_projection_source_events(
         e.event_index,
         e.real_date_start_id,
         e.real_date_end_id,
-        e.projection_id
+        e.projection_id,
+        cbw.week_index AS book_week_index,
+        cbd.day_index AS book_day_index,
+        cbt.time_index AS book_time_index
     FROM calendar_events e
 INNER JOIN calendar_event_projection_membership m
     ON m.calendar_event_id = e.id
+LEFT JOIN calendar_book_times cbt
+    ON cbt.id = e.book_time_id
+LEFT JOIN calendar_book_days cbd
+    ON cbd.id = cbt.day_id
+LEFT JOIN calendar_book_weeks cbw
+    ON cbw.id = cbd.week_id
 WHERE m.projection_id = :projection_id
 {$additionalWhere}
 {$orderBy}
