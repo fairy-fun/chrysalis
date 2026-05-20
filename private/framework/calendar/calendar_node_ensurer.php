@@ -28,8 +28,14 @@ function ensure_calendar_node(
         throw new InvalidArgumentException('sequence_index must be positive');
     }
 
-    if (!isset($payload['summary']) || trim((string)$payload['summary']) === '') {
-        throw new InvalidArgumentException('summary is required');
+    if (
+        array_key_exists('summary', $payload)
+        && $payload['summary'] !== null
+        && trim((string)$payload['summary']) === ''
+    ) {
+        throw new InvalidArgumentException(
+            'summary cannot be empty string'
+        );
     }
 
     $projectionId = resolve_calendar_projection_id(
