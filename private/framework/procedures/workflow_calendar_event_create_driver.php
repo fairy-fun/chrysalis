@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/workflow_value_resolver.php';
 require_once __DIR__ . '/../calendar/calendar_book_chronology_ensurer.php';
 require_once __DIR__ . '/../calendar/calendar_book_event_ensurer.php';
+require_once __DIR__ . '/../calendar/calendar_event_projection_membership_service.php';
+require_once __DIR__ . '/../calendar/calendar_projection_materializer.php';
 
 function fw_execute_workflow_calendar_create_book_event(
     PDO $pdo,
@@ -89,6 +91,17 @@ function fw_execute_workflow_calendar_create_book_event(
         ]
     );
 
+    $memberships = ensure_calendar_event_projection_memberships(
+        $pdo,
+        (int)$event['id'],
+        [$projectionId]
+    );
+
+    $projectionBuildId = rebuild_calendar_projection(
+        $pdo,
+        $projectionId
+    );
+
     return [
         'success' => true,
 
@@ -96,6 +109,8 @@ function fw_execute_workflow_calendar_create_book_event(
             $context,
             [
                 'calendar_event' => $event,
+                'projection_memberships' => $memberships,
+                'projection_build_id' => $projectionBuildId,
 
                 'calendar_book_event_create' => [
                     'projection_id' => $projectionId,
@@ -106,6 +121,7 @@ function fw_execute_workflow_calendar_create_book_event(
                     'event_index' => $event['event_index'] ?? $eventIndex,
                     'entity_id' => $event['entity_id'] ?? null,
                     'id' => $event['id'] ?? null,
+                    'projection_build_id' => $projectionBuildId,
                 ],
             ]
         ),
