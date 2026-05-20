@@ -2,6 +2,12 @@
 
 To start a workflow in a new natural-language chat, simply describe what you want naturally.
 
+### Tier 0
+
+#### I am creating chronology containers.
+
+#### I want to create a Book week
+
 ### Tier 1
 #### Create an event in the correct projection
 
