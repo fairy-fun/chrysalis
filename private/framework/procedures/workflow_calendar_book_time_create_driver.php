@@ -22,13 +22,24 @@ function fw_execute_workflow_calendar_book_time_create(
     | Resolve payload
     |--------------------------------------------------------------------------
     |
-    | This workflow is Tier 0/admin chronology authoring.
+    | Tier 0 canonical chronology topology authoring only.
     |
-    | It materializes canonical chronology containers:
+    | This workflow materializes:
     |
     |   calendar_book_times
     |
-    | It must NOT create calendar_events.
+    | It must NOT:
+    |
+    | - create calendar_events
+    | - infer chronology topology
+    | - reconstruct chronology locality
+    | - use chronology_address as authority
+    |
+    | Canonical locality authority:
+    |
+    |   projection_id
+    |   + day_id
+    |   + time_index
     |
     */
 
@@ -44,23 +55,31 @@ function fw_execute_workflow_calendar_book_time_create(
 
     $dayId = (int)($payload['day_id'] ?? 0);
 
-    $weekIndex = (int)($payload['week_index'] ?? 0);
-
-    $dayIndex = (int)($payload['day_index'] ?? 0);
-
     $timeIndex = (int)($payload['time_index'] ?? 0);
 
     $timeLabelId = array_key_exists('time_label_id', $payload)
         ? trim((string)$payload['time_label_id'])
         : null;
 
+    if ($timeLabelId === '') {
+        $timeLabelId = null;
+    }
+
     $summary = array_key_exists('summary', $payload)
         ? trim((string)$payload['summary'])
         : null;
 
+    if ($summary === '') {
+        $summary = null;
+    }
+
     $notes = array_key_exists('notes', $payload)
         ? trim((string)$payload['notes'])
         : null;
+
+    if ($notes === '') {
+        $notes = null;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -89,20 +108,6 @@ function fw_execute_workflow_calendar_book_time_create(
         );
     }
 
-    if ($weekIndex < 1) {
-
-        throw new RuntimeException(
-            'calendar_book_time_create requires positive week_index'
-        );
-    }
-
-    if ($dayIndex < 1) {
-
-        throw new RuntimeException(
-            'calendar_book_time_create requires positive day_index'
-        );
-    }
-
     if ($timeIndex < 1) {
 
         throw new RuntimeException(
@@ -126,19 +131,16 @@ function fw_execute_workflow_calendar_book_time_create(
         SELECT
             id,
             entity_id,
-            projection_id,
-            week_index
+            projection_id
         FROM calendar_book_weeks
         WHERE id = :week_id
           AND projection_id = :projection_id
-          AND week_index = :week_index
         LIMIT 1
     ");
 
     $parentWeekStmt->execute([
         ':week_id' => $weekId,
         ':projection_id' => $projectionId,
-        ':week_index' => $weekIndex,
     ]);
 
     $parentWeek = $parentWeekStmt->fetch(PDO::FETCH_ASSOC);
@@ -159,6 +161,10 @@ function fw_execute_workflow_calendar_book_time_create(
     |
     | Tier 0 must NOT infer or create missing days here.
     |
+    | Canonical locality authority after containment resolution:
+    |
+    |   day_id
+    |
     */
 
     $parentDayStmt = $pdo->prepare("
@@ -173,7 +179,6 @@ function fw_execute_workflow_calendar_book_time_create(
         WHERE id = :day_id
           AND projection_id = :projection_id
           AND week_id = :week_id
-          AND day_index = :day_index
         LIMIT 1
     ");
 
@@ -181,7 +186,6 @@ function fw_execute_workflow_calendar_book_time_create(
         ':day_id' => $dayId,
         ':projection_id' => $projectionId,
         ':week_id' => $weekId,
-        ':day_index' => $dayIndex,
     ]);
 
     $parentDay = $parentDayStmt->fetch(PDO::FETCH_ASSOC);
@@ -198,7 +202,7 @@ function fw_execute_workflow_calendar_book_time_create(
     | Existing chronology protection
     |--------------------------------------------------------------------------
     |
-    | Duplicate canonical time locality is forbidden.
+    | Duplicate canonical chronology locality is forbidden.
     |
     | Canonical locality:
     |
@@ -253,11 +257,9 @@ function fw_execute_workflow_calendar_book_time_create(
     | Optional metadata enrichment
     |--------------------------------------------------------------------------
     |
-    | chronology locality remains:
-    |
-    |   projection_id + day_id + time_index
-    |
     | These fields are descriptive only.
+    |
+    | They are NOT chronology locality authority.
     |
     */
 
@@ -267,21 +269,21 @@ function fw_execute_workflow_calendar_book_time_create(
         ':id' => (int)$time['id'],
     ];
 
-    if ($summary !== null && $summary !== '') {
+    if ($summary !== null) {
 
         $updateFields[] = 'summary = :summary';
 
         $updateParams[':summary'] = $summary;
     }
 
-    if ($notes !== null && $notes !== '') {
+    if ($notes !== null) {
 
         $updateFields[] = 'notes = :notes';
 
         $updateParams[':notes'] = $notes;
     }
 
-    if ($timeLabelId !== null && $timeLabelId !== '') {
+    if ($timeLabelId !== null) {
 
         $updateFields[] = 'time_label_id = :time_label_id';
 
@@ -294,7 +296,7 @@ function fw_execute_workflow_calendar_book_time_create(
 
         $stmt = $pdo->prepare(
             '
-            UPDATE sxnzlfun_chrysalis.calendar_book_times
+            UPDATE calendar_book_times
             SET ' . implode(",\n                ", $updateFields) . '
             WHERE id = :id
             '
@@ -304,7 +306,7 @@ function fw_execute_workflow_calendar_book_time_create(
 
         $reload = $pdo->prepare("
             SELECT *
-            FROM sxnzlfun_chrysalis.calendar_book_times
+            FROM calendar_book_times
             WHERE id = :id
             LIMIT 1
         ");
@@ -325,7 +327,7 @@ function fw_execute_workflow_calendar_book_time_create(
     | Projection rebuild
     |--------------------------------------------------------------------------
     |
-    | Chronology containers affect projection render topology.
+    | Chronology topology mutations require immediate projection rebuild.
     |
     */
 
@@ -352,10 +354,6 @@ function fw_execute_workflow_calendar_book_time_create(
 
                     'day_id' => $dayId,
 
-                    'week_index' => $weekIndex,
-
-                    'day_index' => $dayIndex,
-
                     'time_index' => $timeIndex,
 
                     'calendar_book_time_id'
@@ -368,7 +366,8 @@ function fw_execute_workflow_calendar_book_time_create(
                         => $projectionBuildId,
                 ],
 
-                'projection_build_id' => $projectionBuildId,
+                'projection_build_id'
+                    => $projectionBuildId,
             ]
         ),
     ];
