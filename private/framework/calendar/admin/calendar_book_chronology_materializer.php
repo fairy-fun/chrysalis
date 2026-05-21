@@ -167,6 +167,92 @@ function materialize_calendar_book_day(
     );
 }
 
+function materialize_calendar_book_time(
+    PDO $pdo,
+    int $projectionId,
+    int $dayId,
+    int $timeIndex
+): array {
+
+    assert_calendar_book_projection_exists($pdo, $projectionId);
+
+    if ($dayId < 1) {
+        throw new InvalidArgumentException('day_id must be positive');
+    }
+
+    if ($timeIndex < 1) {
+        throw new InvalidArgumentException('time_index must be positive');
+    }
+
+    $parentStmt = $pdo->prepare("
+        SELECT id
+        FROM calendar_book_days
+        WHERE id = :day_id
+          AND projection_id = :projection_id
+        LIMIT 1
+    ");
+
+    $parentStmt->execute([
+        ':day_id' => $dayId,
+        ':projection_id' => $projectionId,
+    ]);
+
+    $parentDayId = $parentStmt->fetchColumn();
+
+    if ($parentDayId === false || (int)$parentDayId < 1) {
+        throw new RuntimeException('calendar_book_day parent not found');
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM calendar_book_times
+        WHERE projection_id = :projection_id
+          AND day_id = :day_id
+          AND time_index = :time_index
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':projection_id' => $projectionId,
+        ':day_id' => $dayId,
+        ':time_index' => $timeIndex,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (is_array($row)) {
+        return $row;
+    }
+
+    $insert = $pdo->prepare("
+        INSERT INTO calendar_book_times (
+            projection_id,
+            day_id,
+            time_index,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            :projection_id,
+            :day_id,
+            :time_index,
+            NOW(),
+            NOW()
+        )
+    ");
+
+    $insert->execute([
+        ':projection_id' => $projectionId,
+        ':day_id' => $dayId,
+        ':time_index' => $timeIndex,
+    ]);
+
+    return reload_calendar_book_time(
+        $pdo,
+        (int)$pdo->lastInsertId()
+    );
+}
+
 function reload_calendar_book_week(
     PDO $pdo,
     int $weekId
@@ -212,6 +298,31 @@ function reload_calendar_book_day(
 
     if (!is_array($row)) {
         throw new RuntimeException('calendar_book_day reload failed');
+    }
+
+    return $row;
+}
+
+function reload_calendar_book_time(
+    PDO $pdo,
+    int $timeId
+): array {
+
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM calendar_book_times
+        WHERE id = :id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':id' => $timeId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($row)) {
+        throw new RuntimeException('calendar_book_time reload failed');
     }
 
     return $row;
