@@ -149,6 +149,39 @@ function fw_execute_workflow_calendar_book_day_create(
 
     /*
     |--------------------------------------------------------------------------
+    | day_of_week authority validation
+    |--------------------------------------------------------------------------
+    |
+    | Canonical Book day containers must reference a valid
+    | day_of_week_classvals authority row.
+    |
+    */
+
+    $dayOfWeekStmt = $pdo->prepare("
+        SELECT
+            id,
+            code,
+            label
+        FROM day_of_week_classvals
+        WHERE id = :id
+        LIMIT 1
+    ");
+
+    $dayOfWeekStmt->execute([
+        ':id' => $dayOfWeekId,
+    ]);
+
+    $dayOfWeek = $dayOfWeekStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($dayOfWeek)) {
+
+        throw new RuntimeException(
+            'Invalid day_of_week_id supplied'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Canonical chronology container materialization
     |--------------------------------------------------------------------------
     */
