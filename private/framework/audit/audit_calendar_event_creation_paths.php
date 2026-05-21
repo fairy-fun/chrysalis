@@ -18,16 +18,28 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/procedures/materialize_calendar_chronology.php'
     );
 
-    $allowedBookChronologyMaterializerFile = realpath(
-        $repoRoot . '/private/framework/calendar/admin/calendar_book_chronology_materializer.php'
+    $allowedBookChronologyMaterializerFile = (
+        realpath(
+            $repoRoot . '/private/framework/calendar/admin/calendar_book_chronology_materializer.php'
+        ) ?: ''
     );
 
-    $allowedBookWeekWorkflowDriverFile = realpath(
-        $repoRoot . '/private/framework/procedures/workflow_calendar_book_week_create_driver.php'
+    $allowedBookWeekWorkflowDriverFile = (
+        realpath(
+            $repoRoot . '/private/framework/procedures/workflow_calendar_book_week_create_driver.php'
+        ) ?: ''
     );
 
-    $allowedBookDayWorkflowDriverFile = realpath(
-        $repoRoot . '/private/framework/procedures/workflow_calendar_book_day_create_driver.php'
+    $allowedBookDayWorkflowDriverFile = (
+        realpath(
+            $repoRoot . '/private/framework/procedures/workflow_calendar_book_day_create_driver.php'
+        ) ?: ''
+    );
+
+    $allowedBookTimeWorkflowDriverFile = (
+        realpath(
+            $repoRoot . '/private/framework/procedures/workflow_calendar_book_time_create_driver.php'
+        ) ?: ''
     );
 
     $allowedProjectionMaterializerFile = realpath(
@@ -140,15 +152,17 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Time topology mutations are restricted to the chronology materializer only
-        // until a dedicated Tier 0 time workflow exists.
+        // ❌ Time topology mutations are restricted to approved Tier 0 surfaces.
         if (
             preg_match(
                 '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_times\b/i',
                 $contents
             )
         ) {
-            if ($path !== $allowedBookChronologyMaterializerFile) {
+            if (
+                $path !== $allowedBookChronologyMaterializerFile &&
+                $path !== $allowedBookTimeWorkflowDriverFile
+            ) {
                 throw new RuntimeException(
                     "Unauthorised calendar_book_times mutation detected in {$path}"
                 );
