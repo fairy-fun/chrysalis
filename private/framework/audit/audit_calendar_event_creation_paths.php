@@ -26,6 +26,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/procedures/workflow_calendar_book_week_create_driver.php'
     );
 
+    $allowedBookDayWorkflowDriverFile = realpath(
+        $repoRoot . '/private/framework/procedures/workflow_calendar_book_day_create_driver.php'
+    );
+
     $allowedProjectionMaterializerFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
     );
@@ -88,8 +92,6 @@ function assert_calendar_event_creation_paths(): void
         }
 
         // ❌ calendar_events writes must stay inside approved source-table boundaries.
-        // This deliberately protects calendar_events only, not derived tables such as
-        // calendar_event_projections.
         if (
             preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_events\b/i', $contents)
         ) {
@@ -104,11 +106,10 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Tier 0 chronology topology authoring is restricted to approved surfaces.
-        // Book chronology containers are canonical topology state, not convenience data.
+        // ❌ Week topology mutations are restricted to approved Tier 0 surfaces.
         if (
             preg_match(
-                '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?(?:calendar_book_weeks|calendar_book_days|calendar_book_times)\b/i',
+                '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_weeks\b/i',
                 $contents
             )
         ) {
@@ -117,13 +118,44 @@ function assert_calendar_event_creation_paths(): void
                 $path !== $allowedBookWeekWorkflowDriverFile
             ) {
                 throw new RuntimeException(
-                    "Unauthorised Book chronology topology mutation detected in {$path}"
+                    "Unauthorised calendar_book_weeks mutation detected in {$path}"
+                );
+            }
+        }
+
+        // ❌ Day topology mutations are restricted to approved Tier 0 surfaces.
+        if (
+            preg_match(
+                '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_days\b/i',
+                $contents
+            )
+        ) {
+            if (
+                $path !== $allowedBookChronologyMaterializerFile &&
+                $path !== $allowedBookDayWorkflowDriverFile
+            ) {
+                throw new RuntimeException(
+                    "Unauthorised calendar_book_days mutation detected in {$path}"
+                );
+            }
+        }
+
+        // ❌ Time topology mutations are restricted to the chronology materializer only
+        // until a dedicated Tier 0 time workflow exists.
+        if (
+            preg_match(
+                '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_times\b/i',
+                $contents
+            )
+        ) {
+            if ($path !== $allowedBookChronologyMaterializerFile) {
+                throw new RuntimeException(
+                    "Unauthorised calendar_book_times mutation detected in {$path}"
                 );
             }
         }
 
         // ❌ Projection/build rows are derived read-model state.
-        // They must be written only by the projection materializer.
         if (
             preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?(?:calendar_event_projections|calendar_projection_builds)\b/i', $contents)
         ) {
@@ -175,7 +207,6 @@ function assert_calendar_event_creation_paths(): void
         }
 
         // ❌ Tier 1 event creation must not read from or write to chronology_address.
-        // chronology_address is derived render/export identity, not creation authority.
         if (
             $isTierOneEventCreationPath &&
             str_contains($contents, 'chronology_address')
@@ -186,8 +217,6 @@ function assert_calendar_event_creation_paths(): void
         }
 
         // ❌ Block legacy chronology-container locality persistence in Tier 1 event creation.
-        // Canonical Tier 1 event locality must resolve to calendar_book_times.id and then
-        // persist through calendar_events.book_time_id + event_index only.
         if (
             $isTierOneEventCreationPath &&
             preg_match(
