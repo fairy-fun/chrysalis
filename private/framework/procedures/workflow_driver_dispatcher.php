@@ -40,6 +40,7 @@ function fw_execute_workflow_driver_operation(
         'calendar' => [
             'create_book_event' => 'fw_execute_workflow_calendar_create_book_event',
             'create_book_week' => 'fw_execute_workflow_calendar_book_week_create',
+            'create_book_day' => 'fw_execute_workflow_calendar_book_day_create',
             'process_attached_prose' => 'fw_execute_workflow_calendar_event_process_attached_prose',
             'display_day_prose' => 'fw_execute_workflow_calendar_display_day_prose',
         ],
