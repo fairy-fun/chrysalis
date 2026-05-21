@@ -320,30 +320,7 @@ return [
                     => 'terminal_time_already_exists',
 
                 'failure_state'
-                    => 'await_optional_time_label_id',
-            ],
-        ],
-
-        'await_optional_time_label_id' => [
-
-            'type' => 'input',
-
-            'prompt'
-                => 'Optional time_label_id for this time? Leave blank to skip.',
-
-            'expected_input' => 'time_label_id',
-
-            'transition' => [
-
-                'driver' => 'match',
-
-                'value' => '$input.time_label_id',
-
-                'cases' => [
-                    '' => 'await_optional_summary',
-                ],
-
-                'default' => 'await_optional_summary',
+                    => 'await_optional_summary',
             ],
         ],
 
@@ -416,9 +393,6 @@ return [
 
                     'time_index'
                         => '$input.time_index',
-
-                    'time_label_id'
-                        => '$input.time_label_id',
 
                     'summary'
                         => '$input.summary',
