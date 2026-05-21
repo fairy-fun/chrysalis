@@ -4,21 +4,6 @@ return [
 
     'workflow_id' => 'calendar_book_time_create',
 
-    /*
-    |--------------------------------------------------------------------------
-    | Ontology tier
-    |--------------------------------------------------------------------------
-    |
-    | This workflow performs canonical Book chronology-container authoring.
-    |
-    | It is NOT Tier 1 event creation.
-    |
-    | It materializes:
-    |
-    |   calendar_book_times
-    |
-    */
-
     'tier' => 0,
 
     'intent'
@@ -27,12 +12,6 @@ return [
     'entry_state' => 'await_projection_id',
 
     'states' => [
-
-        /*
-        |--------------------------------------------------------------------------
-        | Projection selection
-        |--------------------------------------------------------------------------
-        */
 
         'await_projection_id' => [
 
@@ -97,12 +76,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Projection ontology validation
-        |--------------------------------------------------------------------------
-        */
-
         'assert_book_projection' => [
 
             'type' => 'action',
@@ -129,12 +102,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Canonical parent week locality
-        |--------------------------------------------------------------------------
-        */
-
         'await_week_index' => [
 
             'type' => 'input',
@@ -157,18 +124,6 @@ return [
                 'default' => 'validate_parent_week',
             ],
         ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | Parent week containment validation
-        |--------------------------------------------------------------------------
-        |
-        | Time creation requires an existing canonical week container.
-        |
-        | Tier 0 may materialize times.
-        | Tier 0 must NOT infer or create missing weeks here.
-        |
-        */
 
         'validate_parent_week' => [
 
@@ -217,12 +172,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Canonical parent day locality
-        |--------------------------------------------------------------------------
-        */
-
         'await_day_index' => [
 
             'type' => 'input',
@@ -245,17 +194,6 @@ return [
                 'default' => 'validate_parent_day',
             ],
         ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | Parent day containment validation
-        |--------------------------------------------------------------------------
-        |
-        | Time creation requires an existing canonical day container.
-        |
-        | Tier 0 must NOT infer or create missing days here.
-        |
-        */
 
         'validate_parent_day' => [
 
@@ -310,12 +248,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Canonical time locality
-        |--------------------------------------------------------------------------
-        */
-
         'await_time_index' => [
 
             'type' => 'input',
@@ -339,15 +271,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Existing chronology protection
-        |--------------------------------------------------------------------------
-        |
-        | Duplicate canonical time locality is forbidden.
-        |
-        */
-
         'check_existing_time' => [
 
             'type' => 'action',
@@ -363,10 +286,10 @@ return [
                 'sql' => '
                     SELECT
                         id,
+                        entity_id,
                         projection_id,
                         day_id,
-                        time_index,
-                        entity_id
+                        time_index
                     FROM calendar_book_times
                     WHERE projection_id = :projection_id
                       AND day_id = :day_id
@@ -397,27 +320,16 @@ return [
                     => 'terminal_time_already_exists',
 
                 'failure_state'
-                    => 'await_time_label_id',
+                    => 'await_optional_time_label_id',
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Canonical time identity
-        |--------------------------------------------------------------------------
-        |
-        | Live schema uses:
-        |
-        |   calendar_book_times.time_label_id
-        |
-        */
-
-        'await_time_label_id' => [
+        'await_optional_time_label_id' => [
 
             'type' => 'input',
 
             'prompt'
-                => 'Optional time_label_id for this canonical time? Leave blank to skip.',
+                => 'Optional time_label_id for this time? Leave blank to skip.',
 
             'expected_input' => 'time_label_id',
 
@@ -434,12 +346,6 @@ return [
                 'default' => 'await_optional_summary',
             ],
         ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | Optional metadata
-        |--------------------------------------------------------------------------
-        */
 
         'await_optional_summary' => [
 
@@ -487,12 +393,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Canonical chronology authoring
-        |--------------------------------------------------------------------------
-        */
-
         'create_book_time' => [
 
             'type' => 'action',
@@ -513,12 +413,6 @@ return [
 
                     'day_id'
                         => '$context.calendar_book_day.id',
-
-                    'week_index'
-                        => '$context.calendar_book_week.week_index',
-
-                    'day_index'
-                        => '$context.calendar_book_day.day_index',
 
                     'time_index'
                         => '$input.time_index',
@@ -544,12 +438,6 @@ return [
                     => 'terminal_book_time_creation_failed',
             ],
         ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | Terminal states
-        |--------------------------------------------------------------------------
-        */
 
         'terminal_book_time_created' => [
 
@@ -639,12 +527,6 @@ return [
                 => 'That canonical Book time already exists.',
         ],
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Initial ontology context
-    |--------------------------------------------------------------------------
-    */
 
     'initial_context' => [
 
