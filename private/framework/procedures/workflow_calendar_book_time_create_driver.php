@@ -41,6 +41,8 @@ function fw_execute_workflow_calendar_book_time_create(
     |   + day_id
     |   + time_index
     |
+    | time_index is pure locality.
+    |
     */
 
     $payload = fw_resolve_workflow_value(
@@ -56,14 +58,6 @@ function fw_execute_workflow_calendar_book_time_create(
     $dayId = (int)($payload['day_id'] ?? 0);
 
     $timeIndex = (int)($payload['time_index'] ?? 0);
-
-    $timeLabelId = array_key_exists('time_label_id', $payload)
-        ? trim((string)$payload['time_label_id'])
-        : null;
-
-    if ($timeLabelId === '') {
-        $timeLabelId = null;
-    }
 
     $summary = array_key_exists('summary', $payload)
         ? trim((string)$payload['summary'])
@@ -119,12 +113,6 @@ function fw_execute_workflow_calendar_book_time_create(
     |--------------------------------------------------------------------------
     | Canonical parent week containment validation
     |--------------------------------------------------------------------------
-    |
-    | Time creation requires an existing canonical Book week container.
-    |
-    | Tier 0 may materialize times.
-    | Tier 0 must NOT infer or create missing weeks here.
-    |
     */
 
     $parentWeekStmt = $pdo->prepare("
@@ -156,15 +144,6 @@ function fw_execute_workflow_calendar_book_time_create(
     |--------------------------------------------------------------------------
     | Canonical parent day containment validation
     |--------------------------------------------------------------------------
-    |
-    | Time creation requires an existing canonical Book day container.
-    |
-    | Tier 0 must NOT infer or create missing days here.
-    |
-    | Canonical locality authority after containment resolution:
-    |
-    |   day_id
-    |
     */
 
     $parentDayStmt = $pdo->prepare("
@@ -201,13 +180,6 @@ function fw_execute_workflow_calendar_book_time_create(
     |--------------------------------------------------------------------------
     | Existing chronology protection
     |--------------------------------------------------------------------------
-    |
-    | Duplicate canonical chronology locality is forbidden.
-    |
-    | Canonical locality:
-    |
-    |   projection_id + day_id + time_index
-    |
     */
 
     $existingStmt = $pdo->prepare("
@@ -254,13 +226,8 @@ function fw_execute_workflow_calendar_book_time_create(
 
     /*
     |--------------------------------------------------------------------------
-    | Optional metadata enrichment
+    | Optional descriptive metadata
     |--------------------------------------------------------------------------
-    |
-    | These fields are descriptive only.
-    |
-    | They are NOT chronology locality authority.
-    |
     */
 
     $updateFields = [];
@@ -281,13 +248,6 @@ function fw_execute_workflow_calendar_book_time_create(
         $updateFields[] = 'notes = :notes';
 
         $updateParams[':notes'] = $notes;
-    }
-
-    if ($timeLabelId !== null) {
-
-        $updateFields[] = 'time_label_id = :time_label_id';
-
-        $updateParams[':time_label_id'] = $timeLabelId;
     }
 
     if ($updateFields !== []) {
@@ -326,9 +286,6 @@ function fw_execute_workflow_calendar_book_time_create(
     |--------------------------------------------------------------------------
     | Projection rebuild
     |--------------------------------------------------------------------------
-    |
-    | Chronology topology mutations require immediate projection rebuild.
-    |
     */
 
     $projectionBuildId = rebuild_calendar_projection(
