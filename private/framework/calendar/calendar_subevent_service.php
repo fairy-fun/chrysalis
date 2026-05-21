@@ -12,11 +12,9 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     |--------------------------------------------------------------------------
     */
 
-    $parentProjectionId = isset($body['parent_projection_id'])
-        ? (int)$body['parent_projection_id']
-        : null;
-
-    $parentEventEntityId = $body['parent_event_entity_id'] ?? null;
+    $parentEventEntityId = isset($body['parent_event_entity_id'])
+        ? trim((string)$body['parent_event_entity_id'])
+        : '';
 
     $eventLabel = $body['event_label'] ?? null;
 
@@ -69,86 +67,70 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
     /*
     |--------------------------------------------------------------------------
-    | Canonical parent resolution (projection-first)
+    | Canonical parent event resolution
     |--------------------------------------------------------------------------
+    |
+    | Projection membership is NOT canonical parent identity.
+    |
+    | A projection may contain:
+    |
+    | - multiple root events
+    | - multiple timelines
+    | - unrelated event trees
+    |
+    | Therefore:
+    |
+    |   projection_id
+    |
+    | must never be used as implicit parent authority.
+    |
+    | Canonical parent identity must be explicit.
+    |
     */
 
-    $parent = null;
-
-    if ($parentProjectionId !== null && $parentProjectionId > 0) {
-
-        $stmt = $pdo->prepare("
-            SELECT
-                id,
-                event_id,
-                projection_id,
-                entity_id,
-                layer_id,
-
-                event_type_id,
-                domain_id,
-                class_type_id,
-                location_id
-
-            FROM sxnzlfun_chrysalis.calendar_events
-
-            WHERE projection_id = :projection_id
-              AND layer_id = 'calendar_layer_event'
-
-            LIMIT 1
-        ");
-
-        $stmt->execute([
-            ':projection_id' => $parentProjectionId,
-        ]);
-
-        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Compatibility fallback
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        !$parent &&
-        is_string($parentEventEntityId) &&
-        trim($parentEventEntityId) !== ''
-    ) {
-
-        $stmt = $pdo->prepare("
-            SELECT
-                id,
-                event_id,
-                projection_id,
-                entity_id,
-                layer_id,
-
-                event_type_id,
-                domain_id,
-                class_type_id,
-                location_id
-
-            FROM sxnzlfun_chrysalis.calendar_events
-
-            WHERE entity_id = :entity_id
-              AND layer_id = 'calendar_layer_event'
-
-            LIMIT 1
-        ");
-
-        $stmt->execute([
-            ':entity_id' => $parentEventEntityId,
-        ]);
-
-        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    if (!$parent) {
+    if ($parentEventEntityId === '') {
 
         throw new RuntimeException(
-            'Invalid parent calendar event reference'
+            'parent_event_entity_id is required'
+        );
+    }
+
+    $parentStmt = $pdo->prepare("
+        SELECT
+            id,
+            event_id,
+            projection_id,
+            entity_id,
+            layer_id,
+            event_type_id,
+            domain_id,
+            class_type_id,
+            location_id
+        FROM calendar_events
+        WHERE entity_id = :entity_id
+          AND layer_id = 'calendar_layer_event'
+        LIMIT 1
+    ");
+
+    $parentStmt->execute([
+        ':entity_id' => $parentEventEntityId,
+    ]);
+
+    $parentEvent = $parentStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($parentEvent)) {
+
+        throw new RuntimeException(
+            'Canonical parent event not found'
+        );
+    }
+
+    $parentEventId = (int)$parentEvent['id'];
+
+    if ($parentEventId < 1) {
+
+        throw new RuntimeException(
+            'Invalid canonical parent event'
         );
     }
 
@@ -167,16 +149,16 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
         'prose_body' => $proseBody ?: null,
 
         'event_type_id'
-        => $eventTypeId ?: $parent['event_type_id'],
+        => $eventTypeId ?: $parentEvent['event_type_id'],
 
         'domain_id'
-        => $domainId ?: $parent['domain_id'],
+        => $domainId ?: $parentEvent['domain_id'],
 
         'class_type_id'
-        => $classTypeId ?: $parent['class_type_id'],
+        => $classTypeId ?: $parentEvent['class_type_id'],
 
         'location_id'
-        => $locationId ?: $parent['location_id'],
+        => $locationId ?: $parentEvent['location_id'],
 
         'beat_hash'
         => $beatHash ?: null,
@@ -211,7 +193,7 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         $result = ensure_calendar_subevent(
             $pdo,
-            (string)$parent['entity_id'],
+            (string)$parentEvent['entity_id'],
             null,
             $payload
         );
