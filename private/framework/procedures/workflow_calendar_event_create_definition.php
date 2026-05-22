@@ -176,7 +176,10 @@ return [
 
         'terminal_event_created' => [
             'type' => 'terminal',
+
             'message' => 'Calendar event created successfully.',
+
+            'handoff_packet' => '$context.handoff_packet',
         ],
 
         'terminal_event_creation_failed' => [
