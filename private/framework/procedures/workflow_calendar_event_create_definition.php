@@ -3,7 +3,7 @@
 return [
     'workflow_id' => 'calendar_event_create',
     'tier' => 1,
-    'intent' => 'Create a calendar event through ontology-guided locality interview',
+    'intent' => 'Create a calendar event using canonical Book locality identity.',
 
     'entry_state' => 'await_projection_id',
 
@@ -67,123 +67,21 @@ return [
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'await_book_week_index',
+                'next' => 'await_book_time_id',
                 'failure_state' => 'terminal_unsupported_projection_type',
             ],
         ],
 
-        'await_book_week_index' => [
+        'await_book_time_id' => [
             'type' => 'input',
-            'prompt' => 'What week index should this Book event belong to?',
-            'expected_input' => 'week_index',
+            'prompt' => 'Which canonical Book time should this event belong to?',
+            'expected_input' => 'book_time_id',
 
             'transition' => [
                 'driver' => 'match',
-                'value' => '$input.week_index',
+                'value' => '$input.book_time_id',
                 'cases' => [
-                    '' => 'terminal_missing_week_index',
-                ],
-                'default' => 'validate_book_week',
-            ],
-        ],
-
-        'validate_book_week' => [
-            'type' => 'action',
-
-            'action' => [
-                'driver' => 'db',
-                'operation' => 'select_one',
-                'store' => 'book_week',
-
-                'sql' => '
-                    SELECT
-                        id,
-                        projection_id,
-                        week_index
-                    FROM calendar_book_weeks
-                    WHERE projection_id = :projection_id
-                      AND week_index = :week_index
-                    LIMIT 1
-                ',
-
-                'bindings' => [
-                    'projection_id' => '$context.projection.id',
-                    'week_index' => '$input.week_index',
-                ],
-            ],
-
-            'success_if' => 'row_exists',
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'await_book_day_index',
-                'failure_state' => 'terminal_book_week_not_found',
-            ],
-        ],
-
-        'await_book_day_index' => [
-            'type' => 'input',
-            'prompt' => 'What day index within that week?',
-            'expected_input' => 'day_index',
-
-            'transition' => [
-                'driver' => 'match',
-                'value' => '$input.day_index',
-                'cases' => [
-                    '' => 'terminal_missing_day_index',
-                ],
-                'default' => 'validate_book_day',
-            ],
-        ],
-
-        'validate_book_day' => [
-            'type' => 'action',
-
-            'action' => [
-                'driver' => 'db',
-                'operation' => 'select_one',
-                'store' => 'book_day',
-
-                'sql' => '
-                    SELECT
-                        d.id,
-                        d.book_week_id,
-                        d.day_index
-                    FROM calendar_book_days d
-                    INNER JOIN calendar_book_weeks w
-                        ON w.id = d.book_week_id
-                    WHERE w.projection_id = :projection_id
-                      AND w.week_index = :week_index
-                      AND d.day_index = :day_index
-                    LIMIT 1
-                ',
-
-                'bindings' => [
-                    'projection_id' => '$context.projection.id',
-                    'week_index' => '$input.week_index',
-                    'day_index' => '$input.day_index',
-                ],
-            ],
-
-            'success_if' => 'row_exists',
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'await_book_time_index',
-                'failure_state' => 'terminal_book_day_not_found',
-            ],
-        ],
-
-        'await_book_time_index' => [
-            'type' => 'input',
-            'prompt' => 'What time index within that day?',
-            'expected_input' => 'time_index',
-
-            'transition' => [
-                'driver' => 'match',
-                'value' => '$input.time_index',
-                'cases' => [
-                    '' => 'terminal_missing_time_index',
+                    '' => 'terminal_missing_book_time_id',
                 ],
                 'default' => 'validate_book_time',
             ],
@@ -199,26 +97,19 @@ return [
 
                 'sql' => '
                     SELECT
-                        t.id,
-                        t.book_day_id,
-                        t.time_index
-                    FROM calendar_book_times t
-                    INNER JOIN calendar_book_days d
-                        ON d.id = t.book_day_id
-                    INNER JOIN calendar_book_weeks w
-                        ON w.id = d.book_week_id
-                    WHERE w.projection_id = :projection_id
-                      AND w.week_index = :week_index
-                      AND d.day_index = :day_index
-                      AND t.time_index = :time_index
+                        id,
+                        projection_id,
+                        day_id,
+                        time_index
+                    FROM calendar_book_times
+                    WHERE id = :book_time_id
+                      AND projection_id = :projection_id
                     LIMIT 1
                 ',
 
                 'bindings' => [
+                    'book_time_id' => '$input.book_time_id',
                     'projection_id' => '$context.projection.id',
-                    'week_index' => '$input.week_index',
-                    'day_index' => '$input.day_index',
-                    'time_index' => '$input.time_index',
                 ],
             ],
 
@@ -270,9 +161,7 @@ return [
 
                 'payload' => [
                     'projection_id' => '$context.projection.id',
-                    'week_index' => '$input.week_index',
-                    'day_index' => '$input.day_index',
-                    'time_index' => '$input.time_index',
+                    'book_time_id' => '$context.book_time.id',
                     'event_index' => '$input.event_index',
                     'summary' => '$input.summary',
                 ],
@@ -310,34 +199,14 @@ return [
             'message' => 'This workflow currently supports Book projections only.',
         ],
 
-        'terminal_missing_week_index' => [
+        'terminal_missing_book_time_id' => [
             'type' => 'terminal',
-            'message' => 'A week_index is required.',
-        ],
-
-        'terminal_book_week_not_found' => [
-            'type' => 'terminal',
-            'message' => 'Week does not exist in this Book projection.',
-        ],
-
-        'terminal_missing_day_index' => [
-            'type' => 'terminal',
-            'message' => 'A day_index is required.',
-        ],
-
-        'terminal_book_day_not_found' => [
-            'type' => 'terminal',
-            'message' => 'Day does not exist in this Book chronology.',
-        ],
-
-        'terminal_missing_time_index' => [
-            'type' => 'terminal',
-            'message' => 'A time_index is required.',
+            'message' => 'A book_time_id is required.',
         ],
 
         'terminal_book_time_not_found' => [
             'type' => 'terminal',
-            'message' => 'Time does not exist in this Book chronology.',
+            'message' => 'Book time does not exist in this projection.',
         ],
 
         'terminal_missing_summary' => [
