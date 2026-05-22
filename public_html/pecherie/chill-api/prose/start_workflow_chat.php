@@ -324,6 +324,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
             t.summary,
             t.notes,
             t.time_label_id,
+            cv.id AS matched_time_label_id,
             cv.label AS time_label,
             COALESCE(
                 NULLIF(TRIM(cv.label), \'\'),
@@ -333,7 +334,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
             ) AS display_label
         FROM calendar_book_times t
         LEFT JOIN calendar_time_label_classvals cv
-            ON cv.id = t.time_label_id
+            ON TRIM(cv.id) = TRIM(t.time_label_id)
         WHERE t.projection_id = :projection_id
           AND t.day_id = :day_id
         ORDER BY t.time_index ASC
