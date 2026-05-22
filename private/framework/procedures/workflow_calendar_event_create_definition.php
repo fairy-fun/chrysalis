@@ -11,7 +11,7 @@ return [
 
         'await_projection_id' => [
             'type' => 'input',
-            'prompt' => 'Which projection should the event belong to?',
+            'prompt' => 'Which book should this event belong to? You can answer with a book label such as Book 1.',
             'expected_input' => 'projection_id',
 
             'transition' => [
@@ -35,15 +35,32 @@ return [
                 'sql' => '
                     SELECT
                         id,
+                        entity_id,
                         projection_type_id,
                         projection_code
                     FROM calendar_projections
-                    WHERE id = :projection_id
+                    WHERE projection_type_id = :required_projection_type_id
+                      AND (
+                          (
+                              :projection_id REGEXP "^[0-9]+$"
+                              AND id = CAST(:projection_id AS UNSIGNED)
+                          )
+                          OR entity_id = :projection_id
+                          OR projection_code = :projection_id
+                          OR LOWER(REPLACE(REPLACE(projection_code, "_", ""), "-", ""))
+                             = LOWER(REPLACE(REPLACE(REPLACE(:projection_id, " ", ""), "_", ""), "-", ""))
+                          OR CONCAT(
+                              "book",
+                              CAST(id AS CHAR)
+                          ) = LOWER(REPLACE(REPLACE(REPLACE(:projection_id, " ", ""), "_", ""), "-", ""))
+                      )
+                    ORDER BY id ASC
                     LIMIT 1
                 ',
 
                 'bindings' => [
                     'projection_id' => '$input.projection_id',
+                    'required_projection_type_id' => '$context.required_projection_type_id',
                 ],
             ],
 
@@ -189,12 +206,12 @@ return [
 
         'terminal_missing_projection_id' => [
             'type' => 'terminal',
-            'message' => 'A projection_id is required.',
+            'message' => 'A book projection is required.',
         ],
 
         'terminal_projection_not_found' => [
             'type' => 'terminal',
-            'message' => 'Projection not found.',
+            'message' => 'Book projection not found.',
         ],
 
         'terminal_unsupported_projection_type' => [
