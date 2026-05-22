@@ -13,7 +13,7 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
 ): array {
 
     /**
-     * Resolve canonical calendar event identity from workflow context
+     * Resolve canonical calendar event identity from workflow context.
      */
     $entityId = $context['calendar_event']['entity_id'] ?? null;
 
@@ -26,20 +26,23 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
     $entityId = trim($entityId);
 
     /**
-     * Resolve canonically attached prose:
+     * Resolve canonically attached prose.
      *
      * calendar_event
-     *   → prose_projections.target_entity_id
-     *   → prose_drafts.prose_body
+     *   -> prose_projections.target_entity_id
+     *   -> prose_drafts.published_prose_draft_id
+     *   -> prose_drafts.prose_body
      */
     $stmt = $pdo->prepare("
     SELECT
+        pp.id AS prose_projection_id,
+        pd.id AS prose_draft_id,
+        pd.entity_id AS prose_entity_id,
         pd.prose_body
     FROM prose_projections pp
     INNER JOIN prose_drafts pd
         ON pd.id = pp.published_prose_draft_id
     WHERE pp.target_entity_id = :entity_id
-    ORDER BY pp.id DESC
     LIMIT 1
 ");
 
@@ -55,6 +58,15 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
         );
     }
 
+    $proseProjectionId =
+        (int)($row['prose_projection_id'] ?? 0);
+
+    $proseDraftId =
+        (int)($row['prose_draft_id'] ?? 0);
+
+    $proseEntityId =
+        trim((string)($row['prose_entity_id'] ?? ''));
+
     $prose = trim((string)($row['prose_body'] ?? ''));
 
     if ($prose === '') {
@@ -64,20 +76,22 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
     }
 
     /**
-     * Tier 3 orchestration boundary
-     * - segmentation
-     * - idempotency guards
-     * - persistence into calendar_events
+     * Resolve canonical event identity only.
+     *
+     * chronology_address is render-only and must not participate
+     * in locality or orchestration authority.
      */
-
     $stmt = $pdo->prepare("
     SELECT
         id,
         entity_id,
         parent_event_id,
         projection_id,
-        chronology_address,
         layer_id,
+        book_time_id,
+        event_index,
+        subevent_index,
+        sequence_index,
         summary
     FROM calendar_events
     WHERE entity_id = :entity_id
@@ -96,17 +110,28 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
         );
     }
 
+    /**
+     * Tier 3 orchestration boundary.
+     */
     $result = orchestrate_prose_semantics(
         $pdo,
         $calendarEvent,
         $prose
     );
 
-
     $artifact = build_calendar_subevent_artifact_graph(
         $entityId,
         $result
     );
+
+    $subeventCount =
+        (int)($result['subevent_count'] ?? 0);
+
+    $beatCount =
+        (int)($result['beat_count'] ?? 0);
+
+    $summaryCount =
+        (int)($result['summary_count'] ?? 0);
 
     return [
         'success' => true,
@@ -115,16 +140,41 @@ function fw_execute_workflow_calendar_event_process_attached_prose(
         'tier' => 3,
         'entity_id' => $entityId,
 
-        /**
-         * Raw execution result (DB + orchestration truth)
-         */
         'execution' => $result,
 
-        /**
-         * Artifact MUST be placed into context for workflow engine merging
-         */
         'context' => [
             'artifact' => $artifact,
+
+            'handoff_packet' => [
+                'workflow_stage' => 'prose_processed',
+
+                'canonical' => [
+                    'calendar_event_entity_id'
+                        => $entityId,
+
+                    'prose_entity_id'
+                        => $proseEntityId,
+
+                    'prose_projection_id'
+                        => $proseProjectionId,
+                ],
+
+                'derived' => [
+                    'subevent_count'
+                        => $subeventCount,
+
+                    'beat_count'
+                        => $beatCount,
+
+                    'summary_count'
+                        => $summaryCount,
+                ],
+
+                'next_workflow' => [
+                    'workflow_id'
+                        => 'calendar_day_display_prose',
+                ],
+            ],
         ],
     ];
 }
