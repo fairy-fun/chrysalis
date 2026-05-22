@@ -20,9 +20,11 @@ function fw_execute_workflow_calendar_display_day_prose(
     $realDateStartId = $payload['real_date_start_id'] ?? null;
 
     if (!is_string($realDateStartId) || trim($realDateStartId) === '') {
+
         return [
             'success' => false,
-            'error' => 'Missing real_date_start_id for calendar day prose display',
+            'error'
+                => 'Missing real_date_start_id for calendar day prose display',
             'context' => $context,
         ];
     }
@@ -35,11 +37,33 @@ function fw_execute_workflow_calendar_display_day_prose(
     );
 
     return [
+
         'success' => ($artifact['item_count'] > 0),
-        'status' => ($artifact['item_count'] > 0) ? 'ok' : 'empty',
-        'workflow' => 'calendar_day_display_prose',
+
+        'status'
+            => ($artifact['item_count'] > 0)
+                ? 'ok'
+                : 'empty',
+
+        'workflow'
+            => 'calendar_day_display_prose',
+
+        /*
+        |--------------------------------------------------------------------------
+        | Read-side only
+        |--------------------------------------------------------------------------
+        |
+        | This workflow performs NO topology authoring.
+        |
+        | It is a derived prose-display view only.
+        |
+        */
+
         'tier' => 2,
-        'real_date_start_id' => $realDateStartId,
+
+        'real_date_start_id'
+            => $realDateStartId,
+
         'context' => array_merge(
             $context,
             [
@@ -54,20 +78,50 @@ function fw_display_calendar_day_prose(
     string $realDateStartId
 ): array {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Derived prose display query
+    |--------------------------------------------------------------------------
+    |
+    | This workflow is read-side only.
+    |
+    | chronology_address is treated as:
+    |
+    |   derived render identity only
+    |
+    | NOT:
+    | - chronology authority
+    | - locality authority
+    | - ordering authority
+    |
+    | Canonical Book ordering semantics:
+    |
+    |   book_time_id
+    |   -> event_index
+    |   -> subevent_index
+    |
+    | sequence_index is recursive sibling ordering only.
+    |
+    */
+
     $stmt = $pdo->prepare("
         SELECT
             child.id,
             child.entity_id,
             child.parent_event_id,
             child.layer_id,
+
             child.summary,
             child.prose_body,
             child.notes,
+
             child.real_date_start_id,
-            child.sequence_index,
-            child.subevent_index,
+
+            child.book_time_id,
             child.event_index,
-            child.time_index,
+            child.subevent_index,
+            child.sequence_index,
+
             child.chronology_address,
 
             parent.entity_id AS parent_entity_id,
@@ -77,6 +131,12 @@ function fw_display_calendar_day_prose(
                 child.real_date_start_id,
                 parent.real_date_start_id
             ) AS effective_day_id,
+
+            COALESCE(
+                parent.book_time_id,
+                child.book_time_id,
+                999999
+            ) AS effective_book_time_id,
 
             COALESCE(
                 parent.event_index,
@@ -101,6 +161,9 @@ function fw_display_calendar_day_prose(
             )
 
         ORDER BY
+
+            effective_book_time_id ASC,
+
             effective_event_index ASC,
 
             CASE
@@ -110,7 +173,15 @@ function fw_display_calendar_day_prose(
             END ASC,
 
             COALESCE(child.subevent_index, 0) ASC,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Recursive sibling ordering only
+            |--------------------------------------------------------------------------
+            */
+
             COALESCE(child.sequence_index, 999999) ASC,
+
             child.id ASC
     ");
 
@@ -121,11 +192,13 @@ function fw_display_calendar_day_prose(
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $items = [];
+
     $assembledProse = [];
 
     foreach ($rows as $row) {
 
         $proseBody = trim((string)($row['prose_body'] ?? ''));
+
         $notes = trim((string)($row['notes'] ?? ''));
 
         if ($proseBody === '' && $notes === '') {
@@ -133,33 +206,79 @@ function fw_display_calendar_day_prose(
         }
 
         $layerId = (string)$row['layer_id'];
+
         $summary = trim((string)($row['summary'] ?? ''));
 
         $item = [
-            'id' => (int)$row['id'],
-            'entity_id' => (string)$row['entity_id'],
 
-            'layer_id' => $layerId,
-            'is_subevent' => ($layerId === 'calendar_layer_subevent'),
+            'id'
+                => (int)$row['id'],
 
-            'calendar_hierarchy_parent_id' => $row['parent_event_id'],
-            'parent_entity_id' => $row['parent_entity_id'],
-            'parent_summary' => $row['parent_summary'],
+            'entity_id'
+                => (string)$row['entity_id'],
 
-            'summary' => $summary,
+            'layer_id'
+                => $layerId,
 
-            'chronology_address' => $row['chronology_address'],
-            'real_date_start_id' => $row['real_date_start_id'],
-            'effective_day_id' => (string)$row['effective_day_id'],
+            'is_subevent'
+                => ($layerId === 'calendar_layer_subevent'),
 
-            'event_index' => $row['event_index'],
-            'effective_event_index' => $row['effective_event_index'],
-            'time_index' => $row['time_index'],
-            'subevent_index' => $row['subevent_index'],
-            'sequence_index' => $row['sequence_index'],
+            'calendar_hierarchy_parent_id'
+                => $row['parent_event_id'],
 
-            'prose_body' => $proseBody,
-            'notes' => $notes,
+            'parent_entity_id'
+                => $row['parent_entity_id'],
+
+            'parent_summary'
+                => $row['parent_summary'],
+
+            'summary'
+                => $summary,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Derived render identity only
+            |--------------------------------------------------------------------------
+            */
+
+            'chronology_address'
+                => $row['chronology_address'],
+
+            'real_date_start_id'
+                => $row['real_date_start_id'],
+
+            'effective_day_id'
+                => (string)$row['effective_day_id'],
+
+            'book_time_id'
+                => $row['book_time_id'],
+
+            'effective_book_time_id'
+                => $row['effective_book_time_id'],
+
+            'event_index'
+                => $row['event_index'],
+
+            'effective_event_index'
+                => $row['effective_event_index'],
+
+            'subevent_index'
+                => $row['subevent_index'],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Recursive sibling ordering only
+            |--------------------------------------------------------------------------
+            */
+
+            'sequence_index'
+                => $row['sequence_index'],
+
+            'prose_body'
+                => $proseBody,
+
+            'notes'
+                => $notes,
         ];
 
         $items[] = $item;
@@ -169,17 +288,31 @@ function fw_display_calendar_day_prose(
             : $notes;
 
         if ($summary !== '') {
-            $assembledProse[] = '[' . $summary . ']' . "\n" . $text;
+
+            $assembledProse[] =
+                '[' . $summary . ']' . "\n" . $text;
+
         } else {
+
             $assembledProse[] = $text;
         }
     }
 
     return [
-        'type' => 'calendar_day_prose',
-        'real_date_start_id' => $realDateStartId,
-        'item_count' => count($items),
-        'items' => $items,
-        'assembled_prose' => implode("\n\n", $assembledProse),
+
+        'type'
+            => 'calendar_day_prose',
+
+        'real_date_start_id'
+            => $realDateStartId,
+
+        'item_count'
+            => count($items),
+
+        'items'
+            => $items,
+
+        'assembled_prose'
+            => implode("\n\n", $assembledProse),
     ];
 }
