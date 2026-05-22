@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/workflow_value_resolver.php';
-require_once __DIR__ . '/../calendar/calendar_book_chronology_ensurer.php';
 require_once __DIR__ . '/../calendar/calendar_book_event_ensurer.php';
 require_once __DIR__ . '/../calendar/calendar_event_projection_membership_service.php';
 require_once __DIR__ . '/../calendar/calendar_projection_materializer.php';
@@ -22,9 +21,7 @@ function fw_execute_workflow_calendar_create_book_event(
     );
 
     $projectionId = (int)($payload['projection_id'] ?? 0);
-    $weekIndex = (int)($payload['week_index'] ?? 0);
-    $dayIndex = (int)($payload['day_index'] ?? 0);
-    $timeIndex = (int)($payload['time_index'] ?? 0);
+    $bookTimeId = (int)($payload['book_time_id'] ?? 0);
 
     $eventIndex = null;
 
@@ -44,21 +41,9 @@ function fw_execute_workflow_calendar_create_book_event(
         );
     }
 
-    if ($weekIndex < 1) {
+    if ($bookTimeId < 1) {
         throw new RuntimeException(
-            'create_book_event requires week_index'
-        );
-    }
-
-    if ($dayIndex < 1) {
-        throw new RuntimeException(
-            'create_book_event requires day_index'
-        );
-    }
-
-    if ($timeIndex < 1) {
-        throw new RuntimeException(
-            'create_book_event requires time_index'
+            'create_book_event requires book_time_id'
         );
     }
 
@@ -73,14 +58,6 @@ function fw_execute_workflow_calendar_create_book_event(
             'create_book_event requires summary'
         );
     }
-
-    $bookTimeId = resolve_calendar_book_time_id(
-        $pdo,
-        $projectionId,
-        $weekIndex,
-        $dayIndex,
-        $timeIndex
-    );
 
     $event = ensure_calendar_book_event(
         $pdo,
@@ -102,6 +79,9 @@ function fw_execute_workflow_calendar_create_book_event(
         $projectionId
     );
 
+    $resolvedEventIndex =
+        (int)($event['event_index'] ?? $eventIndex ?? 0);
+
     return [
         'success' => true,
 
@@ -112,13 +92,38 @@ function fw_execute_workflow_calendar_create_book_event(
                 'projection_memberships' => $memberships,
                 'projection_build_id' => $projectionBuildId,
 
+                'handoff_packet' => [
+                    'workflow_stage' => 'event_shell_created',
+
+                    'canonical' => [
+                        'calendar_event_entity_id'
+                            => $event['entity_id'] ?? null,
+
+                        'projection_id'
+                            => $projectionId,
+
+                        'book_time_id'
+                            => $bookTimeId,
+
+                        'event_index'
+                            => $resolvedEventIndex,
+                    ],
+
+                    'next_workflow' => [
+                        'workflow_id'
+                            => 'calendar_event_add_prose',
+
+                        'initial_context' => [
+                            'calendar_event_entity_id'
+                                => $event['entity_id'] ?? null,
+                        ],
+                    ],
+                ],
+
                 'calendar_book_event_create' => [
                     'projection_id' => $projectionId,
                     'book_time_id' => $bookTimeId,
-                    'week_index' => $weekIndex,
-                    'day_index' => $dayIndex,
-                    'time_index' => $timeIndex,
-                    'event_index' => $event['event_index'] ?? $eventIndex,
+                    'event_index' => $resolvedEventIndex,
                     'entity_id' => $event['entity_id'] ?? null,
                     'id' => $event['id'] ?? null,
                     'projection_build_id' => $projectionBuildId,
