@@ -250,6 +250,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return [
             'status' => 'not_found',
             'message' => 'Book projection not found.',
+            'answer' => 'Book projection not found.',
             'locality' => $locality,
         ];
     }
@@ -277,6 +278,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return [
             'status' => 'not_found',
             'message' => 'Book week not found.',
+            'answer' => 'Book week not found.',
             'locality' => $locality,
         ];
     }
@@ -306,6 +308,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return [
             'status' => 'not_found',
             'message' => 'Book day not found.',
+            'answer' => 'Book day not found.',
             'locality' => $locality,
         ];
     }
@@ -346,6 +349,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
 
     $timeLayers = [];
     $renderedLabels = [];
+    $replyOptions = [];
 
     foreach ($rows as $row) {
         $timeIndex = (int) $row['time_index'];
@@ -359,16 +363,20 @@ function fw_chill_maybe_answer_calendar_time_layers(
             ? $displayLabel
             : sprintf('Time %d — %s', $timeIndex, $displayLabel);
 
+        $replyOption = 'Time ' . $timeIndex;
+
         $timeLayers[] = array_merge(
             $row,
             [
                 'time_index' => $timeIndex,
                 'display_label' => $displayLabel,
                 'render_label' => $renderLabel,
+                'reply_option' => $replyOption,
             ]
         );
 
         $renderedLabels[] = $renderLabel;
+        $replyOptions[] = $replyOption;
     }
 
     $messageLines = [];
@@ -391,12 +399,21 @@ function fw_chill_maybe_answer_calendar_time_layers(
         foreach ($renderedLabels as $label) {
             $messageLines[] = $label;
         }
+
+        $messageLines[] = '';
+        $messageLines[] = 'Reply with the canonical slot key, for example: ' . implode(', ', $replyOptions) . '.';
     }
+
+    $answer = implode("\n", $messageLines);
 
     return [
         'status' => 'ok',
         'operation' => 'calendar_time_layers_read',
-        'message' => implode("\n", $messageLines),
+        'answer' => $answer,
+        'message' => $answer,
+        'time_layer_labels' => $renderedLabels,
+        'recommended_reply_options' => $replyOptions,
+        'display_instruction' => 'Render the values in time_layer_labels exactly; do not synthesize labels from time_index alone.',
         'locality' => [
             'book_number' => (int) $locality['book_number'],
             'projection_id' => (int) $projection['id'],
