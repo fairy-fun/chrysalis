@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/workflow_calendar_input_normalizer.php';
+
 function fw_execute_workflow_driver_operation(
     PDO $pdo,
     array $action,
