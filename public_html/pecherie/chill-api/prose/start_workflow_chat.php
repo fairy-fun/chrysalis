@@ -432,6 +432,41 @@ function fw_chill_maybe_answer_calendar_time_layers(
     ];
 }
 
+function fw_chill_resolve_message_from_body(array $body): ?string
+{
+    foreach (['message', 'user_message', 'chat_message', 'prompt', 'input'] as $key) {
+        $value = $body[$key] ?? null;
+
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+    }
+
+    $details = $body['details'] ?? null;
+
+    if (is_string($details) && trim($details) !== '') {
+        return trim($details);
+    }
+
+    if (is_array($details)) {
+        foreach (['message', 'user_message', 'chat_message', 'prompt', 'input', 'request'] as $key) {
+            $value = $details[$key] ?? null;
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+    }
+
+    $request = $body['request'] ?? null;
+
+    if (is_string($request) && trim($request) !== '') {
+        return trim($request);
+    }
+
+    return null;
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 
     respond(405, [
@@ -444,7 +479,7 @@ requireAuth();
 
 $body = getJsonBody();
 
-$userMessage = $body['message'] ?? null;
+$userMessage = fw_chill_resolve_message_from_body($body);
 $sessionId = $body['session_id'] ?? null;
 
 if (!is_string($userMessage) || trim($userMessage) === '') {
@@ -452,6 +487,16 @@ if (!is_string($userMessage) || trim($userMessage) === '') {
     respond(400, [
         'status' => 'error',
         'error' => 'message must be a non-empty string',
+        'accepted_message_fields' => [
+            'message',
+            'user_message',
+            'chat_message',
+            'prompt',
+            'input',
+            'details',
+            'details.message',
+            'request',
+        ],
     ]);
 }
 
