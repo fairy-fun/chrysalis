@@ -402,7 +402,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         }
 
         $messageLines[] = '';
-        $messageLines[] = 'Reply with the canonical slot key, for example: ' . implode(', ', $replyOptions) . '.';
+        $messageLines[] = 'To continue creating the event, send a separate reply such as: Time 1.';
     }
 
     $answer = implode("\n", $messageLines);
@@ -413,8 +413,11 @@ function fw_chill_maybe_answer_calendar_time_layers(
         'answer' => $answer,
         'message' => $answer,
         'time_layer_labels' => $renderedLabels,
-        'recommended_reply_options' => $replyOptions,
-        'display_instruction' => 'Render the values in time_layer_labels exactly; do not synthesize labels from time_index alone.',
+        'recommended_reply_options' => [],
+        'is_informational_read' => true,
+        'do_not_resume_workflow_from_this_response' => true,
+        'next_user_action_required' => true,
+        'display_instruction' => 'Render the values in time_layer_labels exactly; do not synthesize labels from time_index alone. This is an informational read, not a workflow input submission.',
         'locality' => [
             'book_number' => (int) $locality['book_number'],
             'projection_id' => (int) $projection['id'],
