@@ -191,15 +191,27 @@ return [
 
                 'sql' => '
                     SELECT
-                        id,
-                        entity_id,
-                        projection_id,
-                        day_id,
-                        time_index
-                    FROM calendar_book_times
-                    WHERE projection_id = :projection_id
-                      AND day_id = :day_id
-                      AND time_index = :time_index
+                        t.id,
+                        t.entity_id,
+                        t.projection_id,
+                        t.day_id,
+                        t.time_index,
+                        t.summary,
+                        t.notes,
+                        t.time_label_id,
+                        cv.label AS time_label,
+                        COALESCE(
+                            NULLIF(TRIM(cv.label), \'\'),
+                            NULLIF(TRIM(t.summary), \'\'),
+                            NULLIF(TRIM(t.notes), \'\'),
+                            CONCAT(\'Time \', t.time_index)
+                        ) AS display_label
+                    FROM calendar_book_times t
+                    LEFT JOIN calendar_time_label_classvals cv
+                        ON cv.id = t.time_label_id
+                    WHERE t.projection_id = :projection_id
+                      AND t.day_id = :day_id
+                      AND t.time_index = :time_index
                     LIMIT 1
                 ',
 
