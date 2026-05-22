@@ -12,6 +12,10 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 #### Create an event in the correct projection
 
 ##### Create a book event
+Write: 
+```text
+startWorkflowChat create book event
+```
 
 ##### Create an event that only attaches to the real-time calendar
 
