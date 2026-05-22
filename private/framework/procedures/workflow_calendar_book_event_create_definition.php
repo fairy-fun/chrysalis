@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'workflow_id' => 'calendar_event_create',
+    'workflow_id' => 'calendar_book_event_create',
     'tier' => 1,
     'intent' => 'Create a calendar event using canonical Book locality identity.',
 
