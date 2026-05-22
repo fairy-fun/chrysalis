@@ -42,24 +42,29 @@ return [
                     WHERE projection_type_id = :required_projection_type_id
                       AND (
                           (
-                              :projection_id REGEXP "^[0-9]+$"
-                              AND id = CAST(:projection_id AS UNSIGNED)
+                              :projection_id_numeric_probe REGEXP "^[0-9]+$"
+                              AND id = CAST(:projection_id_numeric_value AS UNSIGNED)
                           )
-                          OR entity_id = :projection_id
-                          OR projection_code = :projection_id
+                          OR entity_id = :projection_id_entity_id
+                          OR projection_code = :projection_id_projection_code
                           OR LOWER(REPLACE(REPLACE(projection_code, "_", ""), "-", ""))
-                             = LOWER(REPLACE(REPLACE(REPLACE(:projection_id, " ", ""), "_", ""), "-", ""))
+                             = LOWER(REPLACE(REPLACE(REPLACE(:projection_id_normalized_code, " ", ""), "_", ""), "-", ""))
                           OR CONCAT(
                               "book",
                               CAST(id AS CHAR)
-                          ) = LOWER(REPLACE(REPLACE(REPLACE(:projection_id, " ", ""), "_", ""), "-", ""))
+                          ) = LOWER(REPLACE(REPLACE(REPLACE(:projection_id_book_label, " ", ""), "_", ""), "-", ""))
                       )
                     ORDER BY id ASC
                     LIMIT 1
                 ',
 
                 'bindings' => [
-                    'projection_id' => '$input.projection_id',
+                    'projection_id_numeric_probe' => '$input.projection_id',
+                    'projection_id_numeric_value' => '$input.projection_id',
+                    'projection_id_entity_id' => '$input.projection_id',
+                    'projection_id_projection_code' => '$input.projection_id',
+                    'projection_id_normalized_code' => '$input.projection_id',
+                    'projection_id_book_label' => '$input.projection_id',
                     'required_projection_type_id' => '$context.required_projection_type_id',
                 ],
             ],
