@@ -7,22 +7,16 @@ return [
 
     'entry_state' => 'await_calendar_event_entity_id',
 
-    /*
-    |--------------------------------------------------------------------------
-    | 1. Resolve calendar event
-    |--------------------------------------------------------------------------
-    */
-
     'states' => [
 
         'await_calendar_event_entity_id' => [
             'type' => 'input',
             'prompt' => 'What is the calendar event entity ID?',
-            'expected_input' => 'entity_id',
+            'expected_input' => 'calendar_event_entity_id',
 
             'transition' => [
                 'driver' => 'match',
-                'value' => '$input.entity_id',
+                'value' => '$input.calendar_event_entity_id',
                 'cases' => [
                     '' => 'terminal_missing_entity_id',
                 ],
@@ -44,14 +38,18 @@ return [
                         entity_id,
                         parent_event_id,
                         layer_id,
-                        projection_id
+                        projection_id,
+                        book_time_id,
+                        event_index,
+                        subevent_index,
+                        sequence_index
                     FROM calendar_events
                     WHERE entity_id = :entity_id
                     LIMIT 1
                 ',
 
                 'bindings' => [
-                    'entity_id' => '$input.entity_id',
+                    'entity_id' => '$input.calendar_event_entity_id',
                 ],
             ],
 
@@ -63,12 +61,6 @@ return [
                 'failure_state' => 'terminal_calendar_event_not_found',
             ],
         ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | 2. IDEMPOTENCY GUARD (CRITICAL)
-        |--------------------------------------------------------------------------
-        */
 
         'inspect_existing_subevents' => [
             'type' => 'action',
@@ -101,12 +93,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | 3. PROSE PROCESSING (TIER 3 ORCHESTRATION)
-        |--------------------------------------------------------------------------
-        */
-
         'process_attached_prose' => [
             'type' => 'action',
 
@@ -115,8 +101,8 @@ return [
                 'operation' => 'process_attached_prose',
 
                 'payload' => [
-                    'calendar_event_id' => '$context.calendar_event.entity_id',
-                    'calendar_event_db_id' => '$context.calendar_event.id',
+                    'calendar_event_entity_id'
+                        => '$context.calendar_event.entity_id',
                 ],
             ],
 
@@ -126,23 +112,18 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | TERMINALS
-        |--------------------------------------------------------------------------
-        */
-
         'terminal_subevents_already_exist' => [
             'type' => 'terminal',
 
             'message' =>
                 'Subevents already exist for this calendar event.',
 
-            'response' => [
-                'idempotent' => true,
-                'artifact' => [
-                    'parent_event_entity_id' => '$context.calendar_event.entity_id',
-                    'subevents' => [],
+            'handoff_packet' => [
+                'workflow_stage' => 'prose_processing_skipped',
+
+                'canonical' => [
+                    'calendar_event_entity_id'
+                        => '$context.calendar_event.entity_id',
                 ],
             ],
         ],
@@ -153,11 +134,7 @@ return [
             'message' =>
                 'Calendar prose successfully processed into subevents.',
 
-            'response' => [
-                'artifact' => '$context.artifact',
-                'workflow' => 'calendar_event_process_attached_prose',
-                'tier' => 3,
-            ],
+            'handoff_packet' => '$context.handoff_packet',
         ],
 
         'terminal_missing_entity_id' => [
