@@ -12,11 +12,11 @@ return [
         'await_calendar_event_entity_id' => [
             'type' => 'input',
             'prompt' => 'What is the existing calendar event entity ID?',
-            'expected_input' => 'entity_id',
+            'expected_input' => 'calendar_event_entity_id',
 
             'transition' => [
                 'driver' => 'match',
-                'value' => '$input.entity_id',
+                'value' => '$input.calendar_event_entity_id',
                 'cases' => [
                     '' => 'terminal_missing_entity_id',
                 ],
@@ -37,14 +37,16 @@ return [
                         id,
                         entity_id,
                         layer_id,
-                        projection_id
+                        projection_id,
+                        book_time_id,
+                        event_index
                     FROM calendar_events
                     WHERE entity_id = :entity_id
                     LIMIT 1
                 ',
 
                 'bindings' => [
-                    'entity_id' => '$input.entity_id',
+                    'entity_id' => '$input.calendar_event_entity_id',
                 ],
             ],
 
@@ -142,53 +144,11 @@ return [
                 'value' => '$context.calendar_event.layer_id',
 
                 'cases' => [
-                    'calendar_layer_event' => 'resolve_projection_binding',
+                    'calendar_layer_event' => 'await_prose_text',
                     'calendar_layer_subevent' => 'await_prose_text',
                 ],
 
                 'default' => 'terminal_wrong_layer',
-            ],
-        ],
-
-        'resolve_projection_binding' => [
-            'type' => 'action',
-
-            'assert' => [
-                'left' => '$context.calendar_event.projection_id',
-                'operator' => 'is_not_null',
-            ],
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'await_prose_text',
-                'failure_state' => 'terminal_missing_projection',
-            ],
-        ],
-
-        'await_projection_binding' => [
-            'type' => 'input',
-            'prompt' => 'Which projection should the prose be added to?',
-            'expected_input' => 'projection_id',
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'validate_projection_binding',
-            ],
-        ],
-
-        'validate_projection_binding' => [
-            'type' => 'action',
-
-            'assert' => [
-                'left' => '$input.projection_id',
-                'operator' => 'equals',
-                'right' => '$context.calendar_event.projection_id',
-            ],
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'await_prose_text',
-                'failure_state' => 'terminal_projection_mismatch',
             ],
         ],
 
@@ -233,24 +193,34 @@ return [
             ],
         ],
 
-        'terminal_missing_projection' => [
-            'type' => 'terminal',
-            'message' => 'calendar_event is not attached to a projection.',
-        ],
-
-        'terminal_projection_mismatch' => [
-            'type' => 'terminal',
-            'message' => 'Projection does not match calendar_event projection.',
-        ],
-
         'terminal_prose_created' => [
             'type' => 'terminal',
 
             'message' => 'Prose draft created successfully.',
 
-            'response' => [
-                'next_workflow' =>
-                    '$context.persist_prose_draft.calendar.next_workflow',
+            'handoff_packet' => [
+                'workflow_stage' => 'prose_attached',
+
+                'canonical' => [
+                    'calendar_event_entity_id'
+                        => '$context.calendar_event.entity_id',
+
+                    'prose_entity_id'
+                        => '$context.persist_prose_draft.entity_id',
+
+                    'prose_projection_id'
+                        => '$context.persist_prose_draft.projection.id',
+                ],
+
+                'next_workflow' => [
+                    'workflow_id'
+                        => 'calendar_event_process_attached_prose',
+
+                    'initial_context' => [
+                        'calendar_event_entity_id'
+                            => '$context.calendar_event.entity_id',
+                    ],
+                ],
             ],
         ],
 
