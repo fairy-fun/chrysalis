@@ -9,6 +9,15 @@ function fw_match_chat_workflow(
         trim($message)
     );
 
+    if (preg_match('/\b(continue|resume|use|open)\s+(calendar\s+)?event\s+calendar_event:\d+\b/', $message) === 1) {
+        return 'calendar_event_add_prose';
+    }
+
+    if (preg_match('/\bcalendar_event:\d+\b/', $message) === 1
+        && str_contains($message, 'beat')) {
+        return 'calendar_event_add_prose';
+    }
+
     $intentMap = [
 
         'create event'
