@@ -77,23 +77,26 @@ calendar_projections
 
 unless the workflow explicitly modified topology.
 
-Safe Event Delete
+### Safe Event Delete
+```sql
 DELETE FROM calendar_events
 WHERE id = 354
 OR entity_id = 'calendar_event:354'
 LIMIT 1;
+```
 Post-Delete Verification
-SELECT
-id,
-entity_id,
-projection_id,
-book_time_id,
-event_index,
-summary
-FROM calendar_events
-WHERE id = 354
-OR entity_id = 'calendar_event:354';
-
+```sql
+    SELECT
+    id,
+    entity_id,
+    projection_id,
+    book_time_id,
+    event_index,
+    summary
+    FROM calendar_events
+    WHERE id = 354
+    OR entity_id = 'calendar_event:354';
+```
 Expected result:
 
 0 rows
