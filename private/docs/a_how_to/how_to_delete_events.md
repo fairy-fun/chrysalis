@@ -28,9 +28,9 @@ These are intentionally orthogonal.
 
 ---
 
-# Safe Event Deletion Procedure
+## Safe Event Deletion Procedure
 
-## 1. Verify the event exists
+### 1. Verify the event exists
 
 ```sql
 SELECT
@@ -45,22 +45,25 @@ WHERE id = 354
    OR entity_id = 'calendar_event:354';
 ```
 
-2. Check dependent references
-   Prose projections
-   SELECT *
-   FROM prose_projections
-   WHERE target_entity_id = 'calendar_event:354';
-   Recursive subevent references
-   SELECT *
-   FROM calendar_layer_subevent
-   WHERE parent_event_entity_id = 'calendar_event:354'
-   OR child_event_entity_id = 'calendar_event:354';
-   Linked fact references
-   SELECT *
-   FROM entity_linked_facts_global
-   WHERE subject_entity_id = 'calendar_event:354'
-   OR object_entity_id = 'calendar_event:354';
-   Important Tier Doctrine
+### 2. Check dependent references
+#### Prose projections
+```sql
+SELECT *
+FROM prose_projections
+WHERE target_entity_id = 'calendar_event:354';
+```
+
+#### Linked fact references
+```sql
+SELECT *
+FROM entity_linked_facts_global
+WHERE subject_entity_id = 'calendar_event:354'
+OR object_entity_id = 'calendar_event:354';
+```
+Note: calendar_layer_subevent is not currently an extant live table. Do not include it in operational delete checks until it exists in the live schema.
+___
+
+### Important Tier Doctrine
 
 Tier 1 event workflows MUST NOT create topology containers.
 
