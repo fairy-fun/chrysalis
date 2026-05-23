@@ -139,9 +139,9 @@ try {
             cv.label AS classval_label,
 
             COALESCE(
-                NULLIF(cv.label, ''),
-                NULLIF(t.summary, ''),
-                NULLIF(t.notes, ''),
+                NULLIF(TRIM(cv.label), ''),
+                NULLIF(TRIM(t.summary), ''),
+                NULLIF(TRIM(t.notes), ''),
                 CONCAT('Time ', t.time_index)
             ) AS display_label
 
@@ -175,7 +175,31 @@ try {
 
         FROM calendar_events e
 
-        LEFT JOIN prose_projections pp
+        LEFT JOIN (
+            SELECT
+                p1.target_entity_id,
+                p1.id,
+                p1.published_prose_draft_id
+            FROM prose_projections p1
+            INNER JOIN (
+                SELECT
+                    target_entity_id,
+                    MIN(projection_order) AS resolved_projection_order
+                FROM prose_projections
+                WHERE published_prose_draft_id IS NOT NULL
+                  AND projection_order IS NOT NULL
+                  AND role_id = 'prose_projection_role_primary'
+                  AND projection_type_id = 'projection_type_timeline_view'
+                  AND is_export_target = 1
+                GROUP BY target_entity_id
+            ) resolved
+                ON resolved.target_entity_id = p1.target_entity_id
+               AND resolved.resolved_projection_order = p1.projection_order
+            WHERE p1.published_prose_draft_id IS NOT NULL
+              AND p1.role_id = 'prose_projection_role_primary'
+              AND p1.projection_type_id = 'projection_type_timeline_view'
+              AND p1.is_export_target = 1
+        ) pp
             ON pp.target_entity_id = e.entity_id
 
         LEFT JOIN prose_drafts pd
