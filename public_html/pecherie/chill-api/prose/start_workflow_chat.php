@@ -7,37 +7,173 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/bootstrap.php';
 
-function fw_chill_extract_book_week_day_request(string $message): ?array
+function fw_chill_parse_book_number(mixed $value): ?int
 {
-    $bookNumber = null;
-    $weekIndex = null;
-    $dayIndex = null;
-
-    if (preg_match('/\bbook\s+(\d+)\b/i', $message, $matches) === 1) {
-        $bookNumber = (int) $matches[1];
+    if (is_int($value) && $value > 0) {
+        return $value;
     }
 
-    if (preg_match('/\bweek\s+(\d+)\b/i', $message, $matches) === 1) {
-        $weekIndex = (int) $matches[1];
+    if (!is_string($value)) {
+        return null;
     }
 
-    if (preg_match('/\bday\s+(\d+)\b/i', $message, $matches) === 1) {
-        $dayIndex = (int) $matches[1];
-    } else {
-        $dayNames = [
-            'sunday' => 1,
-            'monday' => 2,
-            'tuesday' => 3,
-            'wednesday' => 4,
-            'thursday' => 5,
-            'friday' => 6,
-            'saturday' => 7,
-        ];
+    $value = trim($value);
 
-        foreach ($dayNames as $name => $index) {
-            if (preg_match('/\b' . preg_quote($name, '/') . '\b/i', $message) === 1) {
-                $dayIndex = $index;
-                break;
+    if ($value === '') {
+        return null;
+    }
+
+    if (preg_match('/\bbook\s+(\d+)\b/i', $value, $matches) === 1) {
+        return (int) $matches[1];
+    }
+
+    if (preg_match('/\bBOOK-(\d{1,3})\b/i', $value, $matches) === 1) {
+        return (int) $matches[1];
+    }
+
+    if (ctype_digit($value)) {
+        $number = (int) $value;
+        return $number > 0 ? $number : null;
+    }
+
+    return null;
+}
+
+function fw_chill_parse_week_index(mixed $value): ?int
+{
+    if (is_int($value) && $value > 0) {
+        return $value;
+    }
+
+    if (!is_string($value)) {
+        return null;
+    }
+
+    $value = trim($value);
+
+    if ($value === '') {
+        return null;
+    }
+
+    if (preg_match('/\bweek\s+(\d+)\b/i', $value, $matches) === 1) {
+        return (int) $matches[1];
+    }
+
+    if (ctype_digit($value)) {
+        $number = (int) $value;
+        return $number > 0 ? $number : null;
+    }
+
+    return null;
+}
+
+function fw_chill_parse_day_index(mixed $value): ?int
+{
+    if (is_int($value) && $value > 0) {
+        return $value;
+    }
+
+    if (!is_string($value)) {
+        return null;
+    }
+
+    $value = trim($value);
+
+    if ($value === '') {
+        return null;
+    }
+
+    if (preg_match('/\bday\s+(\d+)\b/i', $value, $matches) === 1) {
+        return (int) $matches[1];
+    }
+
+    $dayNames = [
+        'sunday' => 1,
+        'monday' => 2,
+        'tuesday' => 3,
+        'wednesday' => 4,
+        'thursday' => 5,
+        'friday' => 6,
+        'saturday' => 7,
+    ];
+
+    foreach ($dayNames as $name => $index) {
+        if (preg_match('/\b' . preg_quote($name, '/') . '\b/i', $value) === 1) {
+            return $index;
+        }
+    }
+
+    if (ctype_digit($value)) {
+        $number = (int) $value;
+        return $number > 0 ? $number : null;
+    }
+
+    return null;
+}
+
+function fw_chill_extract_book_week_day_request(
+    string $message,
+    ?array $session = null
+): ?array {
+    $bookNumber = fw_chill_parse_book_number($message);
+    $weekIndex = fw_chill_parse_week_index($message);
+    $dayIndex = fw_chill_parse_day_index($message);
+
+    if ($session !== null) {
+        $context = $session['context'] ?? [];
+
+        if (is_array($context)) {
+            if ($bookNumber === null) {
+                $bookNumber = fw_chill_parse_book_number(
+                    $context['calendar_normalized_input']['projection_code']
+                    ?? $context['projection']['projection_code']
+                    ?? $context['projection_id']
+                    ?? null
+                );
+            }
+
+            if ($weekIndex === null) {
+                $weekIndex = fw_chill_parse_week_index(
+                    $context['calendar_normalized_input']['week_index']
+                    ?? $context['book_week']['week_index']
+                    ?? null
+                );
+            }
+
+            if ($dayIndex === null) {
+                $dayIndex = fw_chill_parse_day_index(
+                    $context['calendar_normalized_input']['day_index']
+                    ?? $context['book_day']['day_index']
+                    ?? null
+                );
+            }
+        }
+
+        $snapshots = $session['snapshots'] ?? [];
+
+        if (is_array($snapshots)) {
+            foreach ($snapshots as $snapshot) {
+                if (!is_array($snapshot)) {
+                    continue;
+                }
+
+                $acceptedInput = $snapshot['accepted_input'] ?? [];
+
+                if (!is_array($acceptedInput)) {
+                    continue;
+                }
+
+                if ($bookNumber === null && array_key_exists('projection_id', $acceptedInput)) {
+                    $bookNumber = fw_chill_parse_book_number($acceptedInput['projection_id']);
+                }
+
+                if ($weekIndex === null && array_key_exists('week_index', $acceptedInput)) {
+                    $weekIndex = fw_chill_parse_week_index($acceptedInput['week_index']);
+                }
+
+                if ($dayIndex === null && array_key_exists('day_index', $acceptedInput)) {
+                    $dayIndex = fw_chill_parse_day_index($acceptedInput['day_index']);
+                }
             }
         }
     }
@@ -59,7 +195,8 @@ function fw_chill_extract_book_week_day_request(string $message): ?array
 
 function fw_chill_maybe_answer_calendar_time_layers(
     PDO $pdo,
-    string $message
+    string $message,
+    ?array $session = null
 ): ?array {
     $lowerMessage = mb_strtolower(trim($message));
 
@@ -81,7 +218,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return null;
     }
 
-    $locality = fw_chill_extract_book_week_day_request($message);
+    $locality = fw_chill_extract_book_week_day_request($message, $session);
 
     if ($locality === null) {
         return null;
@@ -113,6 +250,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return [
             'status' => 'not_found',
             'message' => 'Book projection not found.',
+            'answer' => 'Book projection not found.',
             'locality' => $locality,
         ];
     }
@@ -140,6 +278,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return [
             'status' => 'not_found',
             'message' => 'Book week not found.',
+            'answer' => 'Book week not found.',
             'locality' => $locality,
         ];
     }
@@ -169,6 +308,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
         return [
             'status' => 'not_found',
             'message' => 'Book day not found.',
+            'answer' => 'Book day not found.',
             'locality' => $locality,
         ];
     }
@@ -184,6 +324,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
             t.summary,
             t.notes,
             t.time_label_id,
+            cv.id AS matched_time_label_id,
             cv.label AS time_label,
             COALESCE(
                 NULLIF(TRIM(cv.label), \'\'),
@@ -193,7 +334,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
             ) AS display_label
         FROM calendar_book_times t
         LEFT JOIN calendar_time_label_classvals cv
-            ON cv.id = t.time_label_id
+            ON TRIM(cv.id) = TRIM(t.time_label_id)
         WHERE t.projection_id = :projection_id
           AND t.day_id = :day_id
         ORDER BY t.time_index ASC
@@ -209,6 +350,7 @@ function fw_chill_maybe_answer_calendar_time_layers(
 
     $timeLayers = [];
     $renderedLabels = [];
+    $replyOptions = [];
 
     foreach ($rows as $row) {
         $timeIndex = (int) $row['time_index'];
@@ -222,16 +364,20 @@ function fw_chill_maybe_answer_calendar_time_layers(
             ? $displayLabel
             : sprintf('Time %d — %s', $timeIndex, $displayLabel);
 
+        $replyOption = 'Time ' . $timeIndex;
+
         $timeLayers[] = array_merge(
             $row,
             [
                 'time_index' => $timeIndex,
                 'display_label' => $displayLabel,
                 'render_label' => $renderLabel,
+                'reply_option' => $replyOption,
             ]
         );
 
         $renderedLabels[] = $renderLabel;
+        $replyOptions[] = $replyOption;
     }
 
     $messageLines = [];
@@ -254,12 +400,24 @@ function fw_chill_maybe_answer_calendar_time_layers(
         foreach ($renderedLabels as $label) {
             $messageLines[] = $label;
         }
+
+        $messageLines[] = '';
+        $messageLines[] = 'To continue creating the event, send a separate reply such as: Time 1.';
     }
+
+    $answer = implode("\n", $messageLines);
 
     return [
         'status' => 'ok',
         'operation' => 'calendar_time_layers_read',
-        'message' => implode("\n", $messageLines),
+        'answer' => $answer,
+        'message' => $answer,
+        'time_layer_labels' => $renderedLabels,
+        'recommended_reply_options' => [],
+        'is_informational_read' => true,
+        'do_not_resume_workflow_from_this_response' => true,
+        'next_user_action_required' => true,
+        'display_instruction' => 'Render the values in time_layer_labels exactly; do not synthesize labels from time_index alone. This is an informational read, not a workflow input submission.',
         'locality' => [
             'book_number' => (int) $locality['book_number'],
             'projection_id' => (int) $projection['id'],
@@ -274,6 +432,41 @@ function fw_chill_maybe_answer_calendar_time_layers(
     ];
 }
 
+function fw_chill_resolve_message_from_body(array $body): ?string
+{
+    foreach (['message', 'user_message', 'chat_message', 'prompt', 'input'] as $key) {
+        $value = $body[$key] ?? null;
+
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+    }
+
+    $details = $body['details'] ?? null;
+
+    if (is_string($details) && trim($details) !== '') {
+        return trim($details);
+    }
+
+    if (is_array($details)) {
+        foreach (['message', 'user_message', 'chat_message', 'prompt', 'input', 'request'] as $key) {
+            $value = $details[$key] ?? null;
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+    }
+
+    $request = $body['request'] ?? null;
+
+    if (is_string($request) && trim($request) !== '') {
+        return trim($request);
+    }
+
+    return null;
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 
     respond(405, [
@@ -286,7 +479,7 @@ requireAuth();
 
 $body = getJsonBody();
 
-$userMessage = $body['message'] ?? null;
+$userMessage = fw_chill_resolve_message_from_body($body);
 $sessionId = $body['session_id'] ?? null;
 
 if (!is_string($userMessage) || trim($userMessage) === '') {
@@ -294,6 +487,16 @@ if (!is_string($userMessage) || trim($userMessage) === '') {
     respond(400, [
         'status' => 'error',
         'error' => 'message must be a non-empty string',
+        'accepted_message_fields' => [
+            'message',
+            'user_message',
+            'chat_message',
+            'prompt',
+            'input',
+            'details',
+            'details.message',
+            'request',
+        ],
     ]);
 }
 
@@ -308,9 +511,19 @@ if ($sessionId !== null && !is_string($sessionId)) {
 $pdo = makePdo('write');
 
 try {
+    $session = null;
+
+    if (is_string($sessionId) && trim($sessionId) !== '') {
+        $session = fw_load_workflow_session(
+            $pdo,
+            trim($sessionId)
+        );
+    }
+
     $timeLayerResponse = fw_chill_maybe_answer_calendar_time_layers(
         $pdo,
-        trim($userMessage)
+        trim($userMessage),
+        $session
     );
 
     if (is_array($timeLayerResponse)) {

@@ -57,6 +57,33 @@ function fw_load_workflow_session(
     ];
 }
 
+function fw_reconstruct_workflow_input_from_snapshots(array $snapshots): array
+{
+    $input = [];
+
+    foreach ($snapshots as $snapshot) {
+        if (!is_array($snapshot)) {
+            continue;
+        }
+
+        $acceptedInput = $snapshot['accepted_input'] ?? null;
+
+        if (!is_array($acceptedInput)) {
+            continue;
+        }
+
+        foreach ($acceptedInput as $key => $value) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            $input[$key] = $value;
+        }
+    }
+
+    return $input;
+}
+
 function fw_store_workflow_session(
     PDO    $pdo,
     string $sessionId,
@@ -148,7 +175,11 @@ function fw_start_chat_request(
             ];
         }
 
-        $input = [];
+        $input = fw_reconstruct_workflow_input_from_snapshots(
+            is_array($session['snapshots'] ?? null)
+                ? $session['snapshots']
+                : []
+        );
 
         if (
             is_string($session['expected_input'])

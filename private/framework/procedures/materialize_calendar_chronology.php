@@ -55,12 +55,13 @@ function materialize_calendar_chronology(PDO $pdo, int $projectionId): void
                 )
         WHERE child.layer_id = 'calendar_layer_subevent'
           AND parent.layer_id = 'calendar_layer_event'
-          AND child.projection_id = :projection_id
-          AND parent.projection_id = :projection_id
+          AND child.projection_id = :child_projection_id
+          AND parent.projection_id = :parent_projection_id
     ");
 
     $stmt->execute([
-        ':projection_id' => $projectionId,
+        ':child_projection_id' => $projectionId,
+        ':parent_projection_id' => $projectionId,
     ]);
 
     $validate = $pdo->prepare("
@@ -70,8 +71,8 @@ function materialize_calendar_chronology(PDO $pdo, int $projectionId): void
             ON parent.id = child.parent_event_id
         WHERE child.layer_id = 'calendar_layer_subevent'
           AND parent.layer_id = 'calendar_layer_event'
-          AND child.projection_id = :projection_id
-          AND parent.projection_id = :projection_id
+          AND child.projection_id = :child_projection_id
+          AND parent.projection_id = :parent_projection_id
           AND parent.real_date_start_id IS NOT NULL
           AND (
                 child.real_date_start_id IS NULL
@@ -84,7 +85,8 @@ function materialize_calendar_chronology(PDO $pdo, int $projectionId): void
     ");
 
     $validate->execute([
-        ':projection_id' => $projectionId,
+        ':child_projection_id' => $projectionId,
+        ':parent_projection_id' => $projectionId,
     ]);
 
     $missing = (int)$validate->fetchColumn();

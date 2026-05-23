@@ -202,13 +202,13 @@ return [
                         cv.label AS time_label,
                         COALESCE(
                             NULLIF(TRIM(cv.label), \'\'),
-                            NULLIF(TRIM(t.summary), \'\'),
                             NULLIF(TRIM(t.notes), \'\'),
+                            NULLIF(TRIM(t.summary), \'\'),
                             CONCAT(\'Time \', t.time_index)
                         ) AS display_label
                     FROM calendar_book_times t
                     LEFT JOIN calendar_time_label_classvals cv
-                        ON cv.id = t.time_label_id
+                        ON TRIM(cv.id) = TRIM(t.time_label_id)
                     WHERE t.projection_id = :projection_id
                       AND t.day_id = :day_id
                       AND t.time_index = :time_index
@@ -226,38 +226,8 @@ return [
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'await_summary',
+                'next' => 'create_book_calendar_event',
                 'failure_state' => 'terminal_book_time_not_found',
-            ],
-        ],
-
-        'await_summary' => [
-            'type' => 'input',
-            'prompt' => 'Enter a summary for the event.',
-            'expected_input' => 'summary',
-
-            'transition' => [
-                'driver' => 'match',
-                'value' => '$input.summary',
-                'cases' => [
-                    '' => 'terminal_missing_summary',
-                ],
-                'default' => 'await_optional_event_index',
-            ],
-        ],
-
-        'await_optional_event_index' => [
-            'type' => 'input',
-            'prompt' => 'What event index should this use? Leave blank to use the next available event index.',
-            'expected_input' => 'event_index',
-
-            'transition' => [
-                'driver' => 'match',
-                'value' => '$input.event_index',
-                'cases' => [
-                    '' => 'create_book_calendar_event',
-                ],
-                'default' => 'create_book_calendar_event',
             ],
         ],
 
@@ -271,8 +241,8 @@ return [
                 'payload' => [
                     'projection_id' => '$context.calendar_normalized_input.projection_id',
                     'book_time_id' => '$context.book_time.id',
-                    'event_index' => '$input.event_index',
-                    'summary' => '$input.summary',
+                    'event_index' => '',
+                    'summary' => '[Beat pending]',
                 ],
             ],
 
@@ -285,7 +255,7 @@ return [
 
         'terminal_event_created' => [
             'type' => 'terminal',
-            'message' => 'Calendar event created successfully.',
+            'message' => 'Calendar event shell created successfully. Continue with beat generation for the attached author handoff.',
             'handoff_packet' => '$context.handoff_packet',
         ],
 
@@ -337,11 +307,6 @@ return [
         'terminal_book_time_not_found' => [
             'type' => 'terminal',
             'message' => 'Book time does not exist for this day.',
-        ],
-
-        'terminal_missing_summary' => [
-            'type' => 'terminal',
-            'message' => 'A summary is required.',
         ],
     ],
 

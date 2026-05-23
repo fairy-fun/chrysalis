@@ -4,12 +4,92 @@ require_once __DIR__ . '/calendar_projection_resolver.php';
 require_once __DIR__ . '/calendar_date_resolver.php';
 require_once dirname(__DIR__) . '/procedures/materialize_calendar_chronology.php';
 
+function calendar_projection_build_status(
+    PDO $pdo,
+    array $preferredStatuses
+): string {
+    $schemaStmt = $pdo->query('SELECT DATABASE()');
+    $schemaName = $schemaStmt !== false
+        ? (string)$schemaStmt->fetchColumn()
+        : '';
+
+    if ($schemaName === '') {
+        throw new RuntimeException(
+            'Unable to resolve current database schema for projection build status.'
+        );
+    }
+
+    $stmt = $pdo->prepare(
+        '
+        SELECT COLUMN_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = :schema_name
+          AND TABLE_NAME = :table_name
+          AND COLUMN_NAME = :column_name
+        LIMIT 1
+        '
+    );
+
+    $stmt->execute([
+        ':schema_name' => $schemaName,
+        ':table_name' => 'calendar_projection_builds',
+        ':column_name' => 'status',
+    ]);
+
+    $columnType = $stmt->fetchColumn();
+
+    if (!is_string($columnType) || trim($columnType) === '') {
+        throw new RuntimeException(
+            'Unable to resolve calendar_projection_builds.status column type.'
+        );
+    }
+
+    $columnType = trim($columnType);
+
+    if (!str_starts_with(strtolower($columnType), 'enum(')) {
+        return $preferredStatuses[0];
+    }
+
+    preg_match_all("/'((?:[^'\\\\]|\\\\.)*)'/", $columnType, $matches);
+
+    $allowedStatuses = array_map(
+        static fn (string $value): string => stripcslashes($value),
+        $matches[1] ?? []
+    );
+
+    foreach ($preferredStatuses as $status) {
+        if (in_array($status, $allowedStatuses, true)) {
+            return $status;
+        }
+    }
+
+    throw new RuntimeException(
+        'calendar_projection_builds.status does not support any expected projection build status. Allowed values: '
+        . implode(', ', $allowedStatuses)
+    );
+}
+
 function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
 {
     $buildId = null;
 
     try {
         $pdo->beginTransaction();
+
+        $pendingStatus = calendar_projection_build_status(
+            $pdo,
+            ['pending', 'queued', 'building', 'in_progress', 'running']
+        );
+
+        $buildingStatus = calendar_projection_build_status(
+            $pdo,
+            ['building', 'in_progress', 'running', 'pending', 'queued']
+        );
+
+        $validStatus = calendar_projection_build_status(
+            $pdo,
+            ['valid', 'completed', 'complete', 'success', 'succeeded', 'ready']
+        );
 
         // 1. Create build
         $stmt = $pdo->prepare("
@@ -19,11 +99,12 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             )
             VALUES (
                 :projection_id,
-                'pending'
+                :status
             )
         ");
         $stmt->execute([
             'projection_id' => $projectionId,
+            'status' => $pendingStatus,
         ]);
 
         $buildId = (int)$pdo->lastInsertId();
@@ -31,9 +112,10 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         // 2. Mark build as building
         $pdo->prepare("
             UPDATE calendar_projection_builds
-            SET status = 'building'
+            SET status = :status
             WHERE id = :id
         ")->execute([
+            'status' => $buildingStatus,
             'id' => $buildId,
         ]);
 
@@ -126,10 +208,11 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         // 8. Mark valid
         $pdo->prepare("
             UPDATE calendar_projection_builds
-            SET status = 'valid',
+            SET status = :status,
                 validated_at = NOW()
             WHERE id = :id
         ")->execute([
+            'status' => $validStatus,
             'id' => $buildId,
         ]);
 
@@ -143,11 +226,17 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         }
 
         if ($buildId !== null) {
+            $failedStatus = calendar_projection_build_status(
+                $pdo,
+                ['failed', 'error', 'invalid', 'complete', 'completed']
+            );
+
             $pdo->prepare("
                 UPDATE calendar_projection_builds
-                SET status = 'failed'
+                SET status = :status
                 WHERE id = :id
             ")->execute([
+                'status' => $failedStatus,
                 'id' => $buildId,
             ]);
         }
