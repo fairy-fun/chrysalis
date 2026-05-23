@@ -82,6 +82,58 @@ function fw_execute_workflow_calendar_create_book_event(
     $resolvedEventIndex =
         (int)($event['event_index'] ?? $eventIndex ?? 0);
 
+    $eventEntityId = $event['entity_id'] ?? null;
+
+    $weekIndex = (int)(
+        $context['book_week']['week_index']
+        ?? $context['calendar_normalized_input']['week_index']
+        ?? 0
+    );
+
+    $dayIndex = (int)(
+        $context['book_day']['day_index']
+        ?? $context['calendar_normalized_input']['day_index']
+        ?? 0
+    );
+
+    $timeIndex = (int)(
+        $context['book_time']['time_index']
+        ?? $context['calendar_normalized_input']['time_index']
+        ?? 0
+    );
+
+    $timeLabel = trim((string)(
+        $context['book_time']['display_label']
+        ?? $context['book_time']['time_label']
+        ?? $context['book_time']['summary']
+        ?? ''
+    ));
+
+    if ($timeLabel === '') {
+        $timeLabel = 'Time ' . $timeIndex;
+    }
+
+    $bookLabel = trim((string)(
+        $context['projection']['entity_id']
+        ?? $context['projection']['label']
+        ?? ('projection_id:' . $projectionId)
+    ));
+
+    $localityLabel = sprintf(
+        'Week %d, Day %d, %s',
+        $weekIndex,
+        $dayIndex,
+        $timeLabel
+    );
+
+    $authorHandoffParagraph = sprintf(
+        'Continue from canonical Book event %s in %s, %s, event index %d. This event already exists in the database and has been materialized. Use the stored event as the authority for Book, Week, Day, Time, and event identity. Begin with beat design: structural event intent, scene function, character or system interactions, escalation logic, and author-facing choices before prose drafting. chronology_address is render identity only, and semantic labels must come from canonical Book containers.',
+        (string)$eventEntityId,
+        $bookLabel,
+        $localityLabel,
+        $resolvedEventIndex
+    );
+
     return [
         'success' => true,
 
@@ -93,11 +145,12 @@ function fw_execute_workflow_calendar_create_book_event(
                 'projection_build_id' => $projectionBuildId,
 
                 'handoff_packet' => [
-                    'workflow_stage' => 'event_shell_created',
+                    'workflow_stage' => 'event_created',
+                    'handoff_type' => 'beat_generation_author_handoff',
 
                     'canonical' => [
                         'calendar_event_entity_id'
-                            => $event['entity_id'] ?? null,
+                            => $eventEntityId,
 
                         'projection_id'
                             => $projectionId,
@@ -105,26 +158,59 @@ function fw_execute_workflow_calendar_create_book_event(
                         'book_time_id'
                             => $bookTimeId,
 
+                        'week_index'
+                            => $weekIndex,
+
+                        'day_index'
+                            => $dayIndex,
+
+                        'time_index'
+                            => $timeIndex,
+
+                        'time_label'
+                            => $timeLabel,
+
                         'event_index'
                             => $resolvedEventIndex,
                     ],
 
-                    'next_workflow' => [
-                        'workflow_id'
-                            => 'calendar_event_add_prose',
+                    'author_handoff_paragraph'
+                        => $authorHandoffParagraph,
 
-                        'initial_context' => [
-                            'calendar_event_entity_id'
-                                => $event['entity_id'] ?? null,
-                        ],
+                    'next_operator_handoff' => [
+                        'target_entity_id'
+                            => $eventEntityId,
+
+                        'recommended_action'
+                            => 'generate_beat_design_handoff',
+
+                        'reuse_existing_event'
+                            => true,
+
+                        'use_existing_chronology_locality'
+                            => true,
+
+                        'begin_with_beat_design'
+                            => true,
+                    ],
+
+                    'constraints' => [
+                        'chronology_address_is_render_identity_only',
+                        'semantic_labels_must_come_from_canonical_containers',
+                        'event_creation_is_ontology_first_not_prose_first',
+                        'beat_generation_precedes_prose_authoring',
                     ],
                 ],
 
                 'calendar_book_event_create' => [
                     'projection_id' => $projectionId,
                     'book_time_id' => $bookTimeId,
+                    'week_index' => $weekIndex,
+                    'day_index' => $dayIndex,
+                    'time_index' => $timeIndex,
+                    'time_label' => $timeLabel,
                     'event_index' => $resolvedEventIndex,
-                    'entity_id' => $event['entity_id'] ?? null,
+                    'entity_id' => $eventEntityId,
                     'id' => $event['id'] ?? null,
                     'projection_build_id' => $projectionBuildId,
                 ],
