@@ -103,18 +103,18 @@ Expected result:
 Notes
 
 Do NOT:
-
+```
 reconstruct chronology
 infer topology
 use chronology_address as authority
 traverse recursive ancestry to determine locality
-
+```
 Canonical Book event locality is strictly:
-
+```
 projection_id
 book_time_id
 event_index
-
+```
 Recursive ancestry belongs ONLY to:
 
 calendar_layer_subevent
