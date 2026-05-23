@@ -68,11 +68,12 @@ ___
 Tier 1 event workflows MUST NOT create topology containers.
 
 Therefore normal event cleanup does NOT require touching:
-
+```
 calendar_book_weeks
 calendar_book_days
 calendar_book_times
 calendar_projections
+```
 
 unless the workflow explicitly modified topology.
 
