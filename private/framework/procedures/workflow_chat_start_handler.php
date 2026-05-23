@@ -10,6 +10,27 @@ function fw_resolve_workflow_id_from_chat_message(
     );
 }
 
+function fw_extract_chat_bootstrap_input(
+    string $userMessage
+): array {
+
+    $input = [
+        'user_message' => $userMessage,
+    ];
+
+    if (
+        preg_match(
+            '/\b(calendar_event:\d+)\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        $input['calendar_event_entity_id'] = $matches[1];
+    }
+
+    return $input;
+}
+
 function fw_start_workflow_from_chat(
     PDO $pdo,
     string $userMessage,
@@ -51,9 +72,9 @@ function fw_start_workflow_from_chat(
         $pdo,
         $workflowId,
         $entryState,
-        [
-            'user_message' => $userMessage,
-        ],
+        fw_extract_chat_bootstrap_input(
+            $userMessage
+        ),
         array_merge(
             $initialContext,
             $context
