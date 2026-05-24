@@ -46,6 +46,7 @@ function fw_execute_workflow_driver_operation(
             'create_book_day' => 'fw_execute_workflow_calendar_book_day_create',
             'create_book_time' => 'fw_execute_workflow_calendar_book_time_create',
             'process_attached_prose' => 'fw_execute_workflow_calendar_event_process_attached_prose',
+            'derive_beat_title' => 'fw_execute_workflow_calendar_event_derive_beat_title',
             'display_day_prose' => 'fw_execute_workflow_calendar_display_day_prose',
             'display_week_prose' => 'fw_execute_workflow_calendar_display_week_prose',
             'display_week_day_prose' => 'fw_execute_workflow_calendar_display_week_day_prose',
