@@ -24,7 +24,7 @@ startWorkflowChat show me the existing prose for Week 1, Day 2
 #### Show me the existing prose for [x].[y]
 
 ```text
-startWorkflowChat Show me <text>
+startWorkflowChat show me the existing prose for 1.2
 ```
 
 #### Create an event in the correct projection
