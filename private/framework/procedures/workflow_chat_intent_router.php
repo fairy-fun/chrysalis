@@ -11,7 +11,7 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?existing\\s+prose\\s+for\\s+[0-9]+\\.[0-9]+\\b/',
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+[0-9]+\\.[0-9]+\\b/',
             $message
         ) === 1
     ) {
@@ -20,7 +20,7 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?existing\\s+prose\\s+for\\s+week\\s+[0-9]+\\s*,?\\s*day\\s+[0-9]+\\b/',
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+week\\s+[0-9]+\\s*,?\\s*day\\s+[0-9]+\\b/',
             $message
         ) === 1
     ) {
@@ -29,7 +29,7 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?existing\\s+prose\\s+for\\s+week(\\s+[0-9]+)?\\b/',
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+week(\\s+[0-9]+)?\\b/',
             $message
         ) === 1
     ) {
