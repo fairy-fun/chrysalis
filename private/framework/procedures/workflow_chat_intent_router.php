@@ -9,6 +9,15 @@ function fw_match_chat_workflow(
         trim($message)
     );
 
+    if (
+        preg_match(
+            '/\b(show|display)\s+(me\s+)?(the\s+)?existing\s+prose\s+for\s+week\s+[0-9]+\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_week_display_prose';
+    }
+
     if (preg_match('/\b(continue|resume|use|open)\s+(calendar\s+)?event\s+calendar_event:\d+\b/', $message) === 1) {
         return 'calendar_event_add_prose';
     }
