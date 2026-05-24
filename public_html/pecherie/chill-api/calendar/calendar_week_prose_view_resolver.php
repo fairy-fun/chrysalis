@@ -184,17 +184,15 @@ try {
             INNER JOIN (
                 SELECT
                     target_entity_id,
-                    MIN(projection_order) AS resolved_projection_order
+                    MIN(id) AS resolved_projection_id
                 FROM prose_projections
                 WHERE published_prose_draft_id IS NOT NULL
-                  AND projection_order IS NOT NULL
                   AND role_id = 'prose_projection_role_primary'
                   AND projection_type_id = 'projection_type_timeline_view'
                   AND is_export_target = 1
                 GROUP BY target_entity_id
             ) resolved
-                ON resolved.target_entity_id = p1.target_entity_id
-               AND resolved.resolved_projection_order = p1.projection_order
+                ON resolved.resolved_projection_id = p1.id
             WHERE p1.published_prose_draft_id IS NOT NULL
               AND p1.role_id = 'prose_projection_role_primary'
               AND p1.projection_type_id = 'projection_type_timeline_view'
@@ -212,7 +210,7 @@ try {
             e.event_index ASC,
             e.subevent_index ASC,
             e.sequence_index ASC,
-            e.id ASC
+            e.entity_id ASC
     ");
 
     /*
