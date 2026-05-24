@@ -12,21 +12,36 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 #### Show me all prose for Week [x]
 
 ```text
-startWorkflowChat show existing prose for week
+startWorkflowChat Show me all prose for week 1
 ```
 
 #### Show me published prose for Week [x]
 
-#### Show me the existing prose for Week [x], Day [y]
+```text
+startWorkflowChat Show me published prose for Week 1
+```
+
+#### Show me all prose for Week [x], Day [y]
 
 ```text
 startWorkflowChat show me the existing prose for Week 1, Day 2
 ```
 
-#### Show me the existing prose for [x].[y]
+#### Show me published prose for Week [x], Day [y]
 
 ```text
-startWorkflowChat show me the existing prose for 1.2
+startWorkflowChat Show me published prose for Week 1, Day 2
+```
+#### Show me all prose for Week [x].[y]
+
+```text
+startWorkflowChat Show me all prose for 1.2
+```
+
+#### Show me published prose for [x].[y]
+
+```text
+startWorkflowChat Show me published prose for 1.2
 ```
 
 #### Create an event in the correct projection
