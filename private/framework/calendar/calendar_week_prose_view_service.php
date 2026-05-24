@@ -401,11 +401,32 @@ function render_calendar_week_prose_item_label(
     return $label;
 }
 
+function render_calendar_week_prose_tail(
+    string $proseBody,
+    int $length = 100
+): string {
+
+    $normalised = preg_replace('/\s+/u', ' ', trim($proseBody));
+
+    if (!is_string($normalised) || $normalised === '') {
+        return '';
+    }
+
+    if (mb_strlen($normalised) <= $length) {
+        return $normalised;
+    }
+
+    return '…' . mb_substr(
+        $normalised,
+        -1 * $length
+    );
+}
+
 function render_calendar_week_prose_artifact(
     array $weekTree,
     ?int $dayIndex = null
 ): array {
-    $assembled = [];
+    $tailPreviewLines = [];
     $proseItems = [];
     $eventCount = 0;
     $proseCount = 0;
@@ -444,6 +465,11 @@ function render_calendar_week_prose_artifact(
                     $event
                 );
 
+                $tail = render_calendar_week_prose_tail(
+                    $proseBody,
+                    100
+                );
+
                 $proseItems[] = [
                     'dot_notation' => $dotNotation,
                     'dot_notation_policy'
@@ -462,21 +488,10 @@ function render_calendar_week_prose_artifact(
                     'published_prose_draft_id' => $event['published_prose_draft_id'],
                     'prose_projection_order' => $event['prose_projection_order'],
                     'is_export_target' => $event['is_export_target'],
-                    'prose_body' => $proseBody,
+                    'prose_tail_100' => $tail,
                 ];
 
-                /*
-                |--------------------------------------------------------------------------
-                | Continuous reading text
-                |--------------------------------------------------------------------------
-                |
-                | Item labels remain available in prose_items[]. The assembled prose surface
-                | is deliberately prose-only so "all prose" can be displayed as a continuous
-                | reading/export text without metadata interrupting the draft.
-                |
-                */
-
-                $assembled[] = $proseBody;
+                $tailPreviewLines[] = $label . "\n" . $tail;
             }
         }
     }
@@ -487,8 +502,8 @@ function render_calendar_week_prose_artifact(
             : 'calendar_week_prose',
         'render_identity_policy'
             => 'Use dot_notation and canonical_label for display. Do not use dot_notation as retrieval authority.',
-        'assembled_prose_policy'
-            => 'Continuous reading text assembled from prose_items in canonical event order. Metadata labels are kept in prose_items and are not inserted into assembled_prose.',
+        'preview_policy'
+            => 'Lightweight prose preview only: each prose item includes the last 100 characters of its published prose body. Full prose bodies are intentionally omitted from this workflow artifact to avoid oversized chat responses.',
         'prose_mode' => normalize_calendar_week_prose_mode(
             (string)($renderTree['prose_mode'] ?? 'export')
         ),
@@ -497,7 +512,6 @@ function render_calendar_week_prose_artifact(
         'event_count' => $eventCount,
         'prose_item_count' => $proseCount,
         'prose_items' => $proseItems,
-        'tree' => $renderTree,
-        'assembled_prose' => implode("\n\n", $assembled),
+        'assembled_prose_preview' => implode("\n\n", $tailPreviewLines),
     ];
 }
