@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../calendar/calendar_node_ensurer.php';
 require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
@@ -149,42 +148,6 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         );
     }
 
-    ensure_calendar_node(
-        $pdo,
-        (int)$calendarEvent['projection_id'],
-        'calendar_layer_event',
-        $calendarEvent['parent_event_id'] !== null
-            ? (int)$calendarEvent['parent_event_id']
-            : null,
-        (int)$calendarEvent['sequence_index'],
-        []
-    );
-
-    $updatePayload = filter_calendar_node_payload(
-        'calendar_layer_event',
-        [
-            'summary' => $derivedTitle,
-            'notes' => $derivedBeat,
-        ]
-    );
-
-    assert_calendar_node_payload_invariants(
-        'calendar_layer_event',
-        $updatePayload
-    );
-
-    $sql = 'UP' . 'DATE ' . 'calendar_' . 'events '
-        . 'SET summary = :summary, notes = :notes '
-        . 'WHERE entity_id = :entity_id LIMIT 1';
-
-    $updateStmt = $pdo->prepare($sql);
-
-    $updateStmt->execute([
-        ':summary' => $updatePayload['summary'],
-        ':notes' => $updatePayload['notes'],
-        ':entity_id' => $entityId,
-    ]);
-
     return [
         'success' => true,
         'status' => 'ok',
@@ -200,13 +163,13 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     'prose_projection_id' => (int)$proseRow['prose_projection_id'],
                     'derived_title' => $derivedTitle,
                     'derived_beat' => $derivedBeat,
-                    'calendar_event_update' => [
+                    'proposed_calendar_event_metadata' => [
                         'summary' => $derivedTitle,
                         'notes' => $derivedBeat,
                     ],
                 ],
                 'handoff_packet' => [
-                    'workflow_stage' => 'beat_title_derived',
+                    'workflow_stage' => 'beat_title_derived_pending_apply',
                     'canonical' => [
                         'calendar_event_entity_id' => $entityId,
                         'prose_entity_id' => (string)$proseRow['prose_entity_id'],
@@ -217,6 +180,10 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                         'beat' => $derivedBeat,
                     ],
                     'next_workflow' => [
+                        'workflow_id' => 'calendar_event_apply_beat_title',
+                        'intent' => 'Apply derived beat/title metadata to the parent calendar event.',
+                    ],
+                    'future_workflow' => [
                         'workflow_id' => 'calendar_event_process_attached_prose',
                         'intent' => 'Optionally segment attached prose into calendar subevents later.',
                     ],
