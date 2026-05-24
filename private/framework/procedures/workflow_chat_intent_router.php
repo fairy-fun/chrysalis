@@ -109,19 +109,19 @@ function fw_match_chat_workflow(
         => 'calendar_event_process_attached_prose',
 
         'i want to process attached prose into its beat and title'
-        => 'calendar_event_process_attached_prose',
+            => 'calendar_event_derive_beat_title',
 
         'process attached prose into its beat and title'
-        => 'calendar_event_process_attached_prose',
+            => 'calendar_event_derive_beat_title',
 
         'process attached prose into beat and title'
-        => 'calendar_event_process_attached_prose',
+            => 'calendar_event_derive_beat_title',
 
         'derive beat and title from attached prose'
-        => 'calendar_event_process_attached_prose',
+            => 'calendar_event_derive_beat_title',
 
         'derive the beat and title from attached prose'
-        => 'calendar_event_process_attached_prose',
+            => 'calendar_event_derive_beat_title',
 
         'i want to process attached prose into calendar subevents'
         => 'calendar_event_process_attached_prose',
