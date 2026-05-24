@@ -9,11 +9,13 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 #### I want to create a Book week
 
 ### Tier 1
-#### Show me the existing prose for Week [x]
+#### Show me all prose for Week [x]
 
 ```text
 startWorkflowChat show existing prose for week
 ```
+
+#### Show me published prose for Week [x]
 
 #### Show me the existing prose for Week [x], Day [y]
 
