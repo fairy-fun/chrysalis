@@ -51,7 +51,7 @@ function fw_match_chat_workflow(
 
     if (preg_match('/\\bcalendar_event:\\d+\\b/', $message) === 1
         && str_contains($message, 'beat')) {
-        return 'calendar_event_add_prose';
+        return 'calendar_event_process_attached_prose';
     }
 
     $intentMap = [
@@ -99,6 +99,21 @@ function fw_match_chat_workflow(
         => 'calendar_event_add_prose',
 
         'process calendar prose'
+        => 'calendar_event_process_attached_prose',
+
+        'i want to process attached prose into its beat and title'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose into its beat and title'
+        => 'calendar_event_process_attached_prose',
+
+        'process attached prose into beat and title'
+        => 'calendar_event_process_attached_prose',
+
+        'derive beat and title from attached prose'
+        => 'calendar_event_process_attached_prose',
+
+        'derive the beat and title from attached prose'
         => 'calendar_event_process_attached_prose',
 
         'i want to process attached prose into calendar subevents'
