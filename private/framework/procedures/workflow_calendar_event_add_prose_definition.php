@@ -198,6 +198,27 @@ return [
 
             'message' => 'Prose draft created successfully.',
 
+            'response' => [
+                'summary' => 'Prose attached successfully. The next chat should continue with prose processing and segmentation.',
+
+                'next_chat_handoff' => [
+                    'workflow_id' => 'calendar_event_process_attached_prose',
+
+                    'message' => 'Continue processing attached prose for this calendar event.',
+
+                    'canonical_context' => [
+                        'calendar_event_entity_id'
+                            => '$context.calendar_event.entity_id',
+
+                        'prose_entity_id'
+                            => '$context.created_prose.prose.entity_id',
+
+                        'prose_projection_id'
+                            => '$context.created_prose.projection.id',
+                    ],
+                ],
+            ],
+
             'handoff_packet' => [
                 'workflow_stage' => 'prose_attached',
 
@@ -206,10 +227,10 @@ return [
                         => '$context.calendar_event.entity_id',
 
                     'prose_entity_id'
-                        => '$context.persist_prose_draft.entity_id',
+                        => '$context.created_prose.prose.entity_id',
 
                     'prose_projection_id'
-                        => '$context.persist_prose_draft.projection.id',
+                        => '$context.created_prose.projection.id',
                 ],
 
                 'next_workflow' => [
