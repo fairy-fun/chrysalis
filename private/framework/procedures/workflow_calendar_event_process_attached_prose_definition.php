@@ -3,7 +3,7 @@
 return [
     'workflow_id' => 'calendar_event_process_attached_prose',
     'tier' => 3,
-    'intent' => 'Process attached prose into calendar subevents',
+    'intent' => 'Process attached prose into its beat and title',
 
     'entry_state' => 'await_calendar_event_entity_id',
 
@@ -116,7 +116,7 @@ return [
             'type' => 'terminal',
 
             'message' =>
-                'Subevents already exist for this calendar event.',
+                'Beat and title derivation already exists for this calendar event.',
 
             'handoff_packet' => [
                 'workflow_stage' => 'prose_processing_skipped',
@@ -132,7 +132,7 @@ return [
             'type' => 'terminal',
 
             'message' =>
-                'Calendar prose successfully processed into subevents.',
+                'Attached prose successfully processed into beat and title structure.',
 
             'handoff_packet' => '$context.handoff_packet',
         ],
