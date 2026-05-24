@@ -11,7 +11,16 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
-            '/\b(show|display)\s+(me\s+)?(the\s+)?existing\s+prose\s+for\s+week\s+[0-9]+\b/',
+            '/\b(show|display)\s+(me\s+)?(the\s+)?existing\s+prose\s+for\s+week(\s+[0-9]+)?\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_week_display_prose';
+    }
+
+    if (
+        preg_match(
+            '/\b(show|display|list)\s+(week\s+)?prose\b/',
             $message
         ) === 1
     ) {
