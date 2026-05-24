@@ -22,9 +22,12 @@ function fw_execute_workflow_prose_create_draft(
 
     return [
         'success' => true,
-        'context' => [
-            'created_prose' => $result,
-        ],
+        'context' => array_merge(
+            $context,
+            [
+                'created_prose' => $result,
+            ]
+        ),
     ];
 }
 
@@ -68,8 +71,11 @@ function fw_execute_workflow_prose_segment_subevents(
     return [
         'success' => true,
 
-        'context' => [
-            'artifact' => $artifact,
-        ],
+        'context' => array_merge(
+            $context,
+            [
+                'artifact' => $artifact,
+            ]
+        ),
     ];
 }
