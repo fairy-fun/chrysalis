@@ -77,6 +77,16 @@ ___
 
 ### Tier 3
 
+#### 3A: derive beat/title metadata from attached prose
+
+```text
+Call startWorkflowChat with message: derive beat/title metadata from attached prose
+```
+The runtime will ask for the calendar event entity ID, such as calendar_event:7
+
+Reply with the entity ID.
+
+
 #### Process attached prose into calendar subevents
 
 To process prose already attached to a calendar event into subevents, tell the chat:
@@ -86,7 +96,7 @@ I want to process attached prose into calendar subevents.
 
 or
 
-Call startWorkflowChat with message: I want to process attached prose into calendar subevents.
+Call startWorkflowChat with message: segment prose into calendar subevents
 ```
 The runtime will ask for the calendar event entity ID, such as calendar_event:7
 
