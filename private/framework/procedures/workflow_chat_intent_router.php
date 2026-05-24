@@ -49,9 +49,16 @@ function fw_match_chat_workflow(
         return 'calendar_event_add_prose';
     }
 
-    if (preg_match('/\\bcalendar_event:\\d+\\b/', $message) === 1
-        && str_contains($message, 'beat')) {
+    if (preg_match('/\bcalendar_event:\d+\b/', $message) === 1
+        && str_contains($message, 'subevent')) {
         return 'calendar_event_process_attached_prose';
+    }
+
+    if (
+        str_contains($message, 'beat and title')
+        || str_contains($message, 'derive beat')
+    ) {
+        return 'calendar_event_derive_beat_title';
     }
 
     $intentMap = [
