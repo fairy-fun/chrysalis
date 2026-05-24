@@ -260,6 +260,16 @@ function fw_workflow_terminal_response(
         'snapshots' => $snapshots,
     ];
 
+    if (isset($state['response'])) {
+
+        $response['response'] =
+            fw_resolve_workflow_value(
+                $state['response'],
+                $input,
+                $context
+            );
+    }
+
     if (isset($state['handoff_packet'])) {
 
         $response['handoff_packet'] =
