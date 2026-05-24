@@ -110,7 +110,7 @@ function assert_calendar_event_creation_paths(): void
                 $path !== $allowedInsertFile &&
                 $path !== $allowedChronologyMaterializerFile &&
                 $path !== $allowedMetadataApplierFile &&
-                !str_contains($contents, 'ensure_calendar_node')
+                !preg_match('/\bensure_calendar_node\s*\(/', $contents)
             ) {
                 throw new RuntimeException(
                     "Calendar source table mutation must go through ensure_calendar_node in {$path}"
@@ -177,7 +177,7 @@ function assert_calendar_event_creation_paths(): void
         }
 
         if (
-            str_contains($contents, 'ensure_calendar_node') &&
+            preg_match('/\bensure_calendar_node\s*\(/', $contents) &&
             str_contains($contents, 'calendar_layer_event')
         ) {
             if (
