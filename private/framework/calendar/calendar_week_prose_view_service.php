@@ -254,13 +254,41 @@ function resolve_calendar_week_prose_view(
     return $weekTree;
 }
 
-function render_calendar_week_prose_artifact(array $weekTree): array
-{
+function filter_calendar_week_prose_view_to_day(
+    array $weekTree,
+    int $dayIndex
+): array {
+
+    $filtered = $weekTree;
+
+    $filtered['days'] = array_values(
+        array_filter(
+            $weekTree['days'] ?? [],
+            static function (array $day) use ($dayIndex): bool {
+                return (int)($day['day_index'] ?? 0) === $dayIndex;
+            }
+        )
+    );
+
+    return $filtered;
+}
+
+function render_calendar_week_prose_artifact(
+    array $weekTree,
+    ?int $dayIndex = null
+): array {
     $assembled = [];
     $eventCount = 0;
     $proseCount = 0;
 
-    foreach (($weekTree['days'] ?? []) as $day) {
+    $renderTree = $dayIndex !== null
+        ? filter_calendar_week_prose_view_to_day(
+            $weekTree,
+            $dayIndex
+        )
+        : $weekTree;
+
+    foreach (($renderTree['days'] ?? []) as $day) {
         foreach (($day['times'] ?? []) as $time) {
             foreach (($time['events'] ?? []) as $event) {
                 $eventCount++;
@@ -275,7 +303,7 @@ function render_calendar_week_prose_artifact(array $weekTree): array
 
                 $heading = sprintf(
                     'Week %d, Day %d, %s, Event %d (%s)',
-                    (int)($weekTree['week']['week_index'] ?? 0),
+                    (int)($renderTree['week']['week_index'] ?? 0),
                     (int)($day['day_index'] ?? 0),
                     (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
                     (int)($event['event_index'] ?? 0),
@@ -294,11 +322,14 @@ function render_calendar_week_prose_artifact(array $weekTree): array
     }
 
     return [
-        'type' => 'calendar_week_prose',
-        'week_index' => (int)($weekTree['week']['week_index'] ?? 0),
+        'type' => $dayIndex !== null
+            ? 'calendar_week_day_prose'
+            : 'calendar_week_prose',
+        'week_index' => (int)($renderTree['week']['week_index'] ?? 0),
+        'day_index' => $dayIndex,
         'event_count' => $eventCount,
         'prose_item_count' => $proseCount,
-        'tree' => $weekTree,
+        'tree' => $renderTree,
         'assembled_prose' => implode("\n\n", $assembled),
     ];
 }
