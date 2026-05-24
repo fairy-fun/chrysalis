@@ -92,6 +92,19 @@ The runtime will ask for the calendar event entity ID, such as calendar_event:7
 
 Reply with the entity ID.
 
+#### 3b: I want to tag Characters from an event's attached prose
+
+```text
+startWorkflowChat I want to tag Characters from an event's attached prose
+```
+or
+```text
+startWorkflowChat suggest Characters from attached prose
+```
+The runtime will ask for the calendar event entity ID, such as calendar_event:7 or 7
+
+Reply with the entity ID.
+
 
 #### Process attached prose into calendar subevents
 
