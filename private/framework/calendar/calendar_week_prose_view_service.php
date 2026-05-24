@@ -359,10 +359,19 @@ function render_calendar_week_prose_dot_notation(
         (int)($time['time_index'] ?? 0),
     ];
 
-    foreach (['event_index', 'subevent_index', 'sequence_index'] as $key) {
-        if ($event[$key] !== null) {
-            $parts[] = (int)$event[$key];
-        }
+    if ($event['event_index'] !== null) {
+        $parts[] = (int)$event['event_index'];
+    }
+
+    if ($event['subevent_index'] !== null) {
+        $parts[] = (int)$event['subevent_index'];
+    }
+
+    if (
+        $event['subevent_index'] !== null
+        && $event['sequence_index'] !== null
+    ) {
+        $parts[] = (int)$event['sequence_index'];
     }
 
     return implode('.', $parts);
@@ -501,7 +510,7 @@ function render_calendar_week_prose_artifact(
             ? 'calendar_week_day_prose'
             : 'calendar_week_prose',
         'render_identity_policy'
-            => 'Use dot_notation and canonical_label for display. Do not use dot_notation as retrieval authority.',
+            => 'Use dot_notation and canonical_label for display. Do not use dot_notation as retrieval authority. Parent events render as week.day.time.event; subevent positions are rendered only when subevent indexes exist.',
         'preview_policy'
             => 'Lightweight prose preview only: each prose item includes the last 200 characters of its published prose body. Full prose bodies are intentionally omitted from this workflow artifact to avoid oversized chat responses.',
         'prose_mode' => normalize_calendar_week_prose_mode(
