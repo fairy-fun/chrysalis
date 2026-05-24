@@ -53,6 +53,7 @@ return [
                 'payload' => [
                     'week' => '$input.week',
                     'projection_id' => '$context.projection.id',
+                    'prose_mode' => '$input.prose_mode',
                 ],
             ],
 
