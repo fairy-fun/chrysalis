@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
+require_once __DIR__ . '/../calendar/calendar_event_metadata_applier.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
 function fw_execute_workflow_calendar_event_derive_beat_title(
@@ -115,38 +116,106 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         ]
     );
 
-    $derivedTitle = trim((string)(
-        $metadata['title']
-        ?? $proseRow['prose_title']
-        ?? ''
-    ));
+    $derivationMode = (string)($metadata['derivation_mode'] ?? 'unknown');
 
-    $derivedBeat = trim((string)(
-        $metadata['beat_summary']
-        ?? $metadata['summary']
-        ?? $proseRow['prose_summary']
-        ?? ''
-    ));
+    $derivedTitle = trim((string)($metadata['title'] ?? ''));
+    $derivedBeat = trim((string)($metadata['beat_summary'] ?? ''));
 
-    if ($derivedTitle === '') {
-        $derivedTitle = trim((string)($calendarEvent['summary'] ?? ''));
-    }
-
-    if ($derivedBeat === '') {
-        $derivedBeat = prose_truncated_summary($proseBody, 240) ?? '';
+    if ($derivationMode !== 'semantic_rule') {
+        throw new RuntimeException(
+            'Semantic beat/title derivation did not resolve for calendar event: ' . $entityId
+        );
     }
 
     if ($derivedTitle === '') {
         throw new RuntimeException(
-            'Unable to derive calendar event title from attached prose'
+            'Unable to derive semantic calendar event title from attached prose'
         );
     }
 
     if ($derivedBeat === '') {
         throw new RuntimeException(
-            'Unable to derive calendar event beat from attached prose'
+            'Unable to derive semantic calendar event beat from attached prose'
         );
     }
+
+    $appliedMetadata = apply_calendar_event_metadata(
+        $pdo,
+        $entityId,
+        $derivedTitle,
+        $derivedBeat
+    );
+
+    $characterSuggestionHandoff = [
+        'recommended_next_workflow_family' => 'semantic_suggestions',
+        'recommended_next_workflow' => 'calendar_event_suggest_characters',
+        'recommended_next_user_action' => 'Tag Characters from the attached prose.',
+        'suggestion_target' => [
+            'target_entity_type' => 'calendar_event',
+            'target_entity_id' => $entityId,
+            'source_entity_type' => 'prose_draft',
+            'source_entity_id' => (string)$proseRow['prose_entity_id'],
+            'source_projection_id' => (int)$proseRow['prose_projection_id'],
+        ],
+        'doctrine' => [
+            'derive_* produces semantic metadata.',
+            'suggest_* produces reversible evidence-backed recommendations.',
+            'apply_* is the only persistence boundary.',
+            'Do not collapse semantic suggestion into persistence.',
+        ],
+        'first_pass_scope' => [
+            'suggestion_type' => 'character',
+            'strategy' => 'deterministic_only',
+            'allowed_evidence' => [
+                'exact_names',
+                'aliases',
+                'nicknames',
+                'honorifics',
+                'self_identification',
+            ],
+            'disallowed_evidence' => [
+                'embeddings',
+                'vector_similarity',
+                'ungrounded_fuzzy_inference',
+            ],
+        ],
+        'expected_payload_shape' => [
+            'suggestions' => [
+                'characters' => [
+                    [
+                        'suggestion_type' => 'character',
+                        'entity_id' => 'character:shay_vertue',
+                        'confidence' => 0.99,
+                        'evidence' => [
+                            [
+                                'type' => 'exact_name_match',
+                                'text' => 'Shay',
+                            ],
+                        ],
+                        'offsets' => [
+                            [
+                                'start' => 0,
+                                'end' => 4,
+                            ],
+                        ],
+                        'status' => 'suggested',
+                    ],
+                ],
+            ],
+        ],
+        'likely_character_surface_forms' => [
+            'Shay',
+            'Chloe',
+            'Ms Kingsley',
+            'Lenore Kingsley',
+        ],
+        'safety' => [
+            'suggestions_are_advisory' => true,
+            'suggestions_are_reversible' => true,
+            'suggestions_require_evidence' => true,
+            'mutates_canonical_ontology' => false,
+        ],
+    ];
 
     return [
         'success' => true,
@@ -163,13 +232,17 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     'prose_projection_id' => (int)$proseRow['prose_projection_id'],
                     'derived_title' => $derivedTitle,
                     'derived_beat' => $derivedBeat,
-                    'proposed_calendar_event_metadata' => [
-                        'summary' => $derivedTitle,
-                        'notes' => $derivedBeat,
-                    ],
+                    'derivation_mode' => $derivationMode,
+                    'evidence' => $metadata['evidence'] ?? [],
+                    'applied_calendar_event_metadata' => $appliedMetadata,
                 ],
                 'handoff_packet' => [
-                    'workflow_stage' => 'beat_title_derived_pending_apply',
+                    'workflow_stage' => 'beat_title_derived_and_applied',
+                    'derivation' => [
+                        'workflow_id' => 'calendar_event_derive_beat_title',
+                        'derivation_type' => 'metadata_only',
+                        'derivation_mode' => $derivationMode,
+                    ],
                     'canonical' => [
                         'calendar_event_entity_id' => $entityId,
                         'prose_entity_id' => (string)$proseRow['prose_entity_id'],
@@ -179,14 +252,16 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                         'title' => $derivedTitle,
                         'beat' => $derivedBeat,
                     ],
-                    'next_workflow' => [
-                        'workflow_id' => 'calendar_event_apply_beat_title',
-                        'intent' => 'Apply derived beat/title metadata to the parent calendar event.',
+                    'apply_state' => [
+                        'persisted' => true,
+                        'topology_generated' => false,
+                        'updated_rows' => $appliedMetadata['updated_rows'] ?? null,
                     ],
                     'future_workflow' => [
                         'workflow_id' => 'calendar_event_process_attached_prose',
                         'intent' => 'Optionally segment attached prose into calendar subevents later.',
                     ],
+                    'recommended_next_step' => $characterSuggestionHandoff,
                 ],
             ]
         ),

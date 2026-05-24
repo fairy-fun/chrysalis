@@ -14,6 +14,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_node_ensurer.php'
     );
 
+    $allowedMetadataApplierFile = realpath(
+        $repoRoot . '/private/framework/calendar/calendar_event_metadata_applier.php'
+    );
+
     $allowedChronologyMaterializerFile = realpath(
         $repoRoot . '/private/framework/procedures/materialize_calendar_chronology.php'
     );
@@ -77,7 +81,6 @@ function assert_calendar_event_creation_paths(): void
             throw new RuntimeException("Failed to read file: {$path}");
         }
 
-        // ❌ Block direct INSERT into calendar_events.
         if (
             preg_match('/\bINSERT\s+INTO\s+(?:sxnzlfun_chrysalis\.)?calendar_events\b/i', $contents)
         ) {
@@ -88,9 +91,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ chronology_address is legacy/render-cache state only.
-        // The approved insert primitive must not write it during source event creation.
-        // Book render/export identity is derived later by the projection materializer.
         if (
             $path === $allowedInsertFile &&
             preg_match(
@@ -103,14 +103,14 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ calendar_events writes must stay inside approved source-table boundaries.
         if (
             preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_events\b/i', $contents)
         ) {
             if (
                 $path !== $allowedInsertFile &&
                 $path !== $allowedChronologyMaterializerFile &&
-                !str_contains($contents, 'ensure_calendar_node')
+                $path !== $allowedMetadataApplierFile &&
+                !preg_match('/\bensure_calendar_node\s*\(/', $contents)
             ) {
                 throw new RuntimeException(
                     "Calendar source table mutation must go through ensure_calendar_node in {$path}"
@@ -118,7 +118,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Week topology mutations are restricted to approved Tier 0 surfaces.
         if (
             preg_match(
                 '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_weeks\b/i',
@@ -135,7 +134,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Day topology mutations are restricted to approved Tier 0 surfaces.
         if (
             preg_match(
                 '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_days\b/i',
@@ -152,7 +150,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Time topology mutations are restricted to approved Tier 0 surfaces.
         if (
             preg_match(
                 '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?calendar_book_times\b/i',
@@ -169,7 +166,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Projection/build rows are derived read-model state.
         if (
             preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?(?:calendar_event_projections|calendar_projection_builds)\b/i', $contents)
         ) {
@@ -180,9 +176,8 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Block direct event-layer creation via primitive outside approved boundaries.
         if (
-            str_contains($contents, 'ensure_calendar_node') &&
+            preg_match('/\bensure_calendar_node\s*\(/', $contents) &&
             str_contains($contents, 'calendar_layer_event')
         ) {
             if (
@@ -195,7 +190,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Block deprecated creator usage outside the compatibility shim itself.
         if (
             str_contains($contents, 'create_calendar_event_under_')
         ) {
@@ -204,7 +198,6 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ Block deprecated generic creator usage.
         if (str_contains($contents, 'create_calendar_event(')) {
             throw new RuntimeException(
                 "Deprecated create_calendar_event() usage in {$path}"
@@ -220,7 +213,6 @@ function assert_calendar_event_creation_paths(): void
             }
         }
 
-        // ❌ Tier 1 event creation must not read from or write to chronology_address.
         if (
             $isTierOneEventCreationPath &&
             str_contains($contents, 'chronology_address')
@@ -230,7 +222,6 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ Block legacy chronology-container locality persistence in Tier 1 event creation.
         if (
             $isTierOneEventCreationPath &&
             preg_match(
@@ -255,7 +246,6 @@ function assert_calendar_event_creation_paths(): void
             );
         }
 
-        // ❌ Block old hierarchical creator naming outside deprecated shim comments/defs.
         if (preg_match('/under_.*(?:event|time|day)/i', $contents)) {
             throw new RuntimeException(
                 "Hierarchical creator naming detected in {$path}; use ensure chain"
