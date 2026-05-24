@@ -146,6 +146,77 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         $derivedBeat
     );
 
+    $characterSuggestionHandoff = [
+        'recommended_next_workflow_family' => 'semantic_suggestions',
+        'recommended_next_workflow' => 'calendar_event_suggest_characters',
+        'recommended_next_user_action' => 'Tag Characters from the attached prose.',
+        'suggestion_target' => [
+            'target_entity_type' => 'calendar_event',
+            'target_entity_id' => $entityId,
+            'source_entity_type' => 'prose_draft',
+            'source_entity_id' => (string)$proseRow['prose_entity_id'],
+            'source_projection_id' => (int)$proseRow['prose_projection_id'],
+        ],
+        'doctrine' => [
+            'derive_* produces semantic metadata.',
+            'suggest_* produces reversible evidence-backed recommendations.',
+            'apply_* is the only persistence boundary.',
+            'Do not collapse semantic suggestion into persistence.',
+        ],
+        'first_pass_scope' => [
+            'suggestion_type' => 'character',
+            'strategy' => 'deterministic_only',
+            'allowed_evidence' => [
+                'exact_names',
+                'aliases',
+                'nicknames',
+                'honorifics',
+                'self_identification',
+            ],
+            'disallowed_evidence' => [
+                'embeddings',
+                'vector_similarity',
+                'ungrounded_fuzzy_inference',
+            ],
+        ],
+        'expected_payload_shape' => [
+            'suggestions' => [
+                'characters' => [
+                    [
+                        'suggestion_type' => 'character',
+                        'entity_id' => 'character:shay_vertue',
+                        'confidence' => 0.99,
+                        'evidence' => [
+                            [
+                                'type' => 'exact_name_match',
+                                'text' => 'Shay',
+                            ],
+                        ],
+                        'offsets' => [
+                            [
+                                'start' => 0,
+                                'end' => 4,
+                            ],
+                        ],
+                        'status' => 'suggested',
+                    ],
+                ],
+            ],
+        ],
+        'likely_character_surface_forms' => [
+            'Shay',
+            'Chloe',
+            'Ms Kingsley',
+            'Lenore Kingsley',
+        ],
+        'safety' => [
+            'suggestions_are_advisory' => true,
+            'suggestions_are_reversible' => true,
+            'suggestions_require_evidence' => true,
+            'mutates_canonical_ontology' => false,
+        ],
+    ];
+
     return [
         'success' => true,
         'status' => 'ok',
@@ -190,6 +261,7 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                         'workflow_id' => 'calendar_event_process_attached_prose',
                         'intent' => 'Optionally segment attached prose into calendar subevents later.',
                     ],
+                    'recommended_next_step' => $characterSuggestionHandoff,
                 ],
             ]
         ),
