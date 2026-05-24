@@ -2,51 +2,23 @@
 
 declare(strict_types=1);
 
-header('Content-Type: application/json; charset=utf-8');
+function resolve_calendar_week_prose_view(
+    PDO $pdo,
+    int $projectionId,
+    int $weekIndex
+): ?array {
 
-require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
+    if ($projectionId <= 0) {
+        throw new InvalidArgumentException(
+            'projection_id must be a positive integer'
+        );
+    }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
-    respond(405, [
-        'status' => 'error',
-        'error' => 'Method not allowed',
-    ]);
-}
-
-requireAuth();
-
-$projectionId = isset($_GET['projection_id'])
-    ? (int)$_GET['projection_id']
-    : 0;
-
-$weekIndex = isset($_GET['week_index'])
-    ? (int)$_GET['week_index']
-    : 0;
-
-if ($projectionId <= 0) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'projection_id must be a positive integer',
-    ]);
-}
-
-if ($weekIndex <= 0) {
-    respond(400, [
-        'status' => 'error',
-        'error' => 'week_index must be a positive integer',
-    ]);
-}
-
-$pdo = makePdo('read');
-$expectedDatabase = verifyExpectedDatabase($pdo);
-
-try {
-
-    /*
-    |--------------------------------------------------------------------------
-    | Resolve canonical week container
-    |--------------------------------------------------------------------------
-    */
+    if ($weekIndex <= 0) {
+        throw new InvalidArgumentException(
+            'week_index must be a positive integer'
+        );
+    }
 
     $weekStmt = $pdo->prepare("
         SELECT
@@ -70,18 +42,8 @@ try {
     $week = $weekStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!is_array($week)) {
-        respond(404, [
-            'status' => 'error',
-            'error' => 'Week not found',
-            'database' => $expectedDatabase,
-        ]);
+        return null;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Resolve all days for week
-    |--------------------------------------------------------------------------
-    */
 
     $daysStmt = $pdo->prepare("
         SELECT
@@ -111,18 +73,8 @@ try {
     ];
 
     if (!$days) {
-        respond(200, [
-            'status' => 'ok',
-            'database' => $expectedDatabase,
-            'data' => $weekTree,
-        ]);
+        return $weekTree;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Prepare reusable statements
-    |--------------------------------------------------------------------------
-    */
 
     $timesStmt = $pdo->prepare("
         SELECT
@@ -213,12 +165,6 @@ try {
             e.entity_id ASC
     ");
 
-    /*
-    |--------------------------------------------------------------------------
-    | Build canonical render tree
-    |--------------------------------------------------------------------------
-    */
-
     foreach ($days as $day) {
 
         $timesStmt->execute([
@@ -305,23 +251,54 @@ try {
         ];
     }
 
-    respond(200, [
-        'status' => 'ok',
-        'database' => $expectedDatabase,
+    return $weekTree;
+}
 
-        'canonical' => [
-            'projection_id' => $projectionId,
-            'week_index' => $weekIndex,
-        ],
+function render_calendar_week_prose_artifact(array $weekTree): array
+{
+    $assembled = [];
+    $eventCount = 0;
+    $proseCount = 0;
 
-        'data' => $weekTree,
-    ]);
+    foreach (($weekTree['days'] ?? []) as $day) {
+        foreach (($day['times'] ?? []) as $time) {
+            foreach (($time['events'] ?? []) as $event) {
+                $eventCount++;
 
-} catch (Throwable $e) {
+                $proseBody = trim((string)($event['prose_body'] ?? ''));
 
-    debugRespond(500, [
-        'status' => 'error',
-        'error' => 'Failed to resolve week prose view',
-        'database' => $expectedDatabase,
-    ], $e);
+                if ($proseBody === '') {
+                    continue;
+                }
+
+                $proseCount++;
+
+                $heading = sprintf(
+                    'Week %d, Day %d, %s, Event %d (%s)',
+                    (int)($weekTree['week']['week_index'] ?? 0),
+                    (int)($day['day_index'] ?? 0),
+                    (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
+                    (int)($event['event_index'] ?? 0),
+                    (string)($event['entity_id'] ?? '')
+                );
+
+                $summary = trim((string)($event['summary'] ?? ''));
+
+                if ($summary !== '') {
+                    $heading .= ': ' . $summary;
+                }
+
+                $assembled[] = $heading . "\n" . $proseBody;
+            }
+        }
+    }
+
+    return [
+        'type' => 'calendar_week_prose',
+        'week_index' => (int)($weekTree['week']['week_index'] ?? 0),
+        'event_count' => $eventCount,
+        'prose_item_count' => $proseCount,
+        'tree' => $weekTree,
+        'assembled_prose' => implode("\n\n", $assembled),
+    ];
 }

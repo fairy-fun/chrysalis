@@ -28,6 +28,16 @@ function fw_extract_chat_bootstrap_input(
         $input['calendar_event_entity_id'] = $matches[1];
     }
 
+    if (
+        preg_match(
+            '/\bweek\s+([0-9]+)\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        $input['week'] = $matches[1];
+    }
+
     return $input;
 }
 
