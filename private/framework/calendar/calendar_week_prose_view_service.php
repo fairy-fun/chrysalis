@@ -2,11 +2,41 @@
 
 declare(strict_types=1);
 
+function normalize_calendar_week_prose_mode(
+    ?string $proseMode
+): string {
+
+    $normalised = strtolower(
+        trim((string)($proseMode ?? ''))
+    );
+
+    if ($normalised === '') {
+        return 'export';
+    }
+
+    if ($normalised === 'all') {
+        return 'published';
+    }
+
+    if (!in_array($normalised, ['export', 'published'], true)) {
+        throw new InvalidArgumentException(
+            'Unsupported prose retrieval mode: ' . $normalised
+        );
+    }
+
+    return $normalised;
+}
+
 function resolve_calendar_week_prose_view(
     PDO $pdo,
     int $projectionId,
-    int $weekIndex
+    int $weekIndex,
+    string $proseMode = 'export'
 ): ?array {
+
+    $proseMode = normalize_calendar_week_prose_mode(
+        $proseMode
+    );
 
     if ($projectionId <= 0) {
         throw new InvalidArgumentException(
@@ -68,6 +98,7 @@ function resolve_calendar_week_prose_view(
     $days = $daysStmt->fetchAll(PDO::FETCH_ASSOC);
 
     $weekTree = [
+        'prose_mode' => $proseMode,
         'week' => $week,
         'days' => [],
     ];
@@ -108,6 +139,18 @@ function resolve_calendar_week_prose_view(
         ORDER BY t.time_index ASC
     ");
 
+    $exportPredicate = $proseMode === 'export'
+        ? ' AND is_export_target = 1'
+        : '';
+
+    $exportPredicateP1 = $proseMode === 'export'
+        ? ' AND p1.is_export_target = 1'
+        : '';
+
+    $exportPredicatePOrder = $proseMode === 'export'
+        ? ' AND p_order.is_export_target = 1'
+        : '';
+
     $eventsStmt = $pdo->prepare("
         SELECT
             e.id,
@@ -122,6 +165,8 @@ function resolve_calendar_week_prose_view(
 
             pp.id AS prose_projection_id,
             pp.published_prose_draft_id,
+            pp.projection_order AS prose_projection_order,
+            pp.is_export_target,
 
             pd.prose_body
 
@@ -131,24 +176,42 @@ function resolve_calendar_week_prose_view(
             SELECT
                 p1.target_entity_id,
                 p1.id,
-                p1.published_prose_draft_id
+                p1.published_prose_draft_id,
+                p1.projection_order,
+                p1.is_export_target
             FROM prose_projections p1
             INNER JOIN (
                 SELECT
-                    target_entity_id,
-                    MIN(id) AS resolved_projection_id
-                FROM prose_projections
-                WHERE published_prose_draft_id IS NOT NULL
-                  AND role_id = 'prose_projection_role_primary'
-                  AND projection_type_id = 'projection_type_timeline_view'
-                  AND is_export_target = 1
-                GROUP BY target_entity_id
+                    p_order.target_entity_id,
+                    MIN(p_order.id) AS resolved_projection_id
+                FROM prose_projections p_order
+                INNER JOIN (
+                    SELECT
+                        target_entity_id,
+                        MIN(projection_order) AS resolved_projection_order
+                    FROM prose_projections
+                    WHERE published_prose_draft_id IS NOT NULL
+                      AND projection_order IS NOT NULL
+                      AND role_id = 'prose_projection_role_primary'
+                      AND projection_type_id = 'projection_type_timeline_view'
+                      {$exportPredicate}
+                    GROUP BY target_entity_id
+                ) resolved_order
+                    ON resolved_order.target_entity_id = p_order.target_entity_id
+                   AND resolved_order.resolved_projection_order = p_order.projection_order
+                WHERE p_order.published_prose_draft_id IS NOT NULL
+                  AND p_order.projection_order IS NOT NULL
+                  AND p_order.role_id = 'prose_projection_role_primary'
+                  AND p_order.projection_type_id = 'projection_type_timeline_view'
+                  {$exportPredicatePOrder}
+                GROUP BY p_order.target_entity_id
             ) resolved
                 ON resolved.resolved_projection_id = p1.id
             WHERE p1.published_prose_draft_id IS NOT NULL
+              AND p1.projection_order IS NOT NULL
               AND p1.role_id = 'prose_projection_role_primary'
               AND p1.projection_type_id = 'projection_type_timeline_view'
-              AND p1.is_export_target = 1
+              {$exportPredicateP1}
         ) pp
             ON pp.target_entity_id = e.entity_id
 
@@ -231,6 +294,16 @@ function resolve_calendar_week_prose_view(
                             'published_prose_draft_id'
                                 => $event['published_prose_draft_id'] !== null
                                     ? (int)$event['published_prose_draft_id']
+                                    : null,
+
+                            'prose_projection_order'
+                                => $event['prose_projection_order'] !== null
+                                    ? (int)$event['prose_projection_order']
+                                    : null,
+
+                            'is_export_target'
+                                => $event['is_export_target'] !== null
+                                    ? (int)$event['is_export_target']
                                     : null,
 
                             'prose_body' => $event['prose_body'],
@@ -325,6 +398,9 @@ function render_calendar_week_prose_artifact(
         'type' => $dayIndex !== null
             ? 'calendar_week_day_prose'
             : 'calendar_week_prose',
+        'prose_mode' => normalize_calendar_week_prose_mode(
+            (string)($renderTree['prose_mode'] ?? 'export')
+        ),
         'week_index' => (int)($renderTree['week']['week_index'] ?? 0),
         'day_index' => $dayIndex,
         'event_count' => $eventCount,
