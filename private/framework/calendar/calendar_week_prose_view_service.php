@@ -346,6 +346,28 @@ function filter_calendar_week_prose_view_to_day(
     return $filtered;
 }
 
+function render_calendar_week_prose_dot_notation(
+    array $renderTree,
+    array $day,
+    array $time,
+    array $event
+): string {
+
+    $parts = [
+        (int)($renderTree['week']['week_index'] ?? 0),
+        (int)($day['day_index'] ?? 0),
+        (int)($time['time_index'] ?? 0),
+    ];
+
+    foreach (['event_index', 'subevent_index', 'sequence_index'] as $key) {
+        if ($event[$key] !== null) {
+            $parts[] = (int)$event[$key];
+        }
+    }
+
+    return implode('.', $parts);
+}
+
 function render_calendar_week_prose_item_label(
     array $renderTree,
     array $day,
@@ -353,8 +375,16 @@ function render_calendar_week_prose_item_label(
     array $event
 ): string {
 
+    $dotNotation = render_calendar_week_prose_dot_notation(
+        $renderTree,
+        $day,
+        $time,
+        $event
+    );
+
     $label = sprintf(
-        'Week %d, Day %d, %s, Event %d (%s)',
+        '%s — Week %d, Day %d, %s, Event %d (%s)',
+        $dotNotation,
         (int)($renderTree['week']['week_index'] ?? 0),
         (int)($day['day_index'] ?? 0),
         (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
@@ -400,6 +430,13 @@ function render_calendar_week_prose_artifact(
 
                 $proseCount++;
 
+                $dotNotation = render_calendar_week_prose_dot_notation(
+                    $renderTree,
+                    $day,
+                    $time,
+                    $event
+                );
+
                 $label = render_calendar_week_prose_item_label(
                     $renderTree,
                     $day,
@@ -408,9 +445,13 @@ function render_calendar_week_prose_artifact(
                 );
 
                 $proseItems[] = [
+                    'dot_notation' => $dotNotation,
+                    'dot_notation_policy'
+                        => 'Backend-derived render identity only. Do not use for retrieval authority.',
                     'canonical_label' => $label,
                     'week_index' => (int)($renderTree['week']['week_index'] ?? 0),
                     'day_index' => (int)($day['day_index'] ?? 0),
+                    'time_index' => (int)($time['time_index'] ?? 0),
                     'time_label' => (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
                     'event_index' => $event['event_index'],
                     'subevent_index' => $event['subevent_index'],
@@ -434,7 +475,7 @@ function render_calendar_week_prose_artifact(
             ? 'calendar_week_day_prose'
             : 'calendar_week_prose',
         'render_identity_policy'
-            => 'Use canonical_label for display. Do not surface chronology_address for this workflow.',
+            => 'Use dot_notation and canonical_label for display. Do not use dot_notation as retrieval authority.',
         'prose_mode' => normalize_calendar_week_prose_mode(
             (string)($renderTree['prose_mode'] ?? 'export')
         ),
