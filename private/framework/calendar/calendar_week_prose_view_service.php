@@ -403,7 +403,7 @@ function render_calendar_week_prose_item_label(
 
 function render_calendar_week_prose_tail(
     string $proseBody,
-    int $length = 100
+    int $length = 200
 ): string {
 
     $normalised = preg_replace('/\s+/u', ' ', trim($proseBody));
@@ -467,7 +467,7 @@ function render_calendar_week_prose_artifact(
 
                 $tail = render_calendar_week_prose_tail(
                     $proseBody,
-                    100
+                    200
                 );
 
                 $proseItems[] = [
@@ -488,7 +488,7 @@ function render_calendar_week_prose_artifact(
                     'published_prose_draft_id' => $event['published_prose_draft_id'],
                     'prose_projection_order' => $event['prose_projection_order'],
                     'is_export_target' => $event['is_export_target'],
-                    'prose_tail_100' => $tail,
+                    'prose_tail_200' => $tail,
                 ];
 
                 $tailPreviewLines[] = $label . "\n" . $tail;
@@ -503,7 +503,7 @@ function render_calendar_week_prose_artifact(
         'render_identity_policy'
             => 'Use dot_notation and canonical_label for display. Do not use dot_notation as retrieval authority.',
         'preview_policy'
-            => 'Lightweight prose preview only: each prose item includes the last 100 characters of its published prose body. Full prose bodies are intentionally omitted from this workflow artifact to avoid oversized chat responses.',
+            => 'Lightweight prose preview only: each prose item includes the last 200 characters of its published prose body. Full prose bodies are intentionally omitted from this workflow artifact to avoid oversized chat responses.',
         'prose_mode' => normalize_calendar_week_prose_mode(
             (string)($renderTree['prose_mode'] ?? 'export')
         ),
