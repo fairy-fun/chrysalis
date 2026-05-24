@@ -346,11 +346,37 @@ function filter_calendar_week_prose_view_to_day(
     return $filtered;
 }
 
+function render_calendar_week_prose_item_label(
+    array $renderTree,
+    array $day,
+    array $time,
+    array $event
+): string {
+
+    $label = sprintf(
+        'Week %d, Day %d, %s, Event %d (%s)',
+        (int)($renderTree['week']['week_index'] ?? 0),
+        (int)($day['day_index'] ?? 0),
+        (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
+        (int)($event['event_index'] ?? 0),
+        (string)($event['entity_id'] ?? '')
+    );
+
+    $summary = trim((string)($event['summary'] ?? ''));
+
+    if ($summary !== '') {
+        $label .= ': ' . $summary;
+    }
+
+    return $label;
+}
+
 function render_calendar_week_prose_artifact(
     array $weekTree,
     ?int $dayIndex = null
 ): array {
     $assembled = [];
+    $proseItems = [];
     $eventCount = 0;
     $proseCount = 0;
 
@@ -374,22 +400,31 @@ function render_calendar_week_prose_artifact(
 
                 $proseCount++;
 
-                $heading = sprintf(
-                    'Week %d, Day %d, %s, Event %d (%s)',
-                    (int)($renderTree['week']['week_index'] ?? 0),
-                    (int)($day['day_index'] ?? 0),
-                    (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
-                    (int)($event['event_index'] ?? 0),
-                    (string)($event['entity_id'] ?? '')
+                $label = render_calendar_week_prose_item_label(
+                    $renderTree,
+                    $day,
+                    $time,
+                    $event
                 );
 
-                $summary = trim((string)($event['summary'] ?? ''));
+                $proseItems[] = [
+                    'canonical_label' => $label,
+                    'week_index' => (int)($renderTree['week']['week_index'] ?? 0),
+                    'day_index' => (int)($day['day_index'] ?? 0),
+                    'time_label' => (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
+                    'event_index' => $event['event_index'],
+                    'subevent_index' => $event['subevent_index'],
+                    'sequence_index' => $event['sequence_index'],
+                    'event_entity_id' => (string)($event['entity_id'] ?? ''),
+                    'event_summary' => trim((string)($event['summary'] ?? '')),
+                    'prose_projection_id' => $event['prose_projection_id'],
+                    'published_prose_draft_id' => $event['published_prose_draft_id'],
+                    'prose_projection_order' => $event['prose_projection_order'],
+                    'is_export_target' => $event['is_export_target'],
+                    'prose_body' => $proseBody,
+                ];
 
-                if ($summary !== '') {
-                    $heading .= ': ' . $summary;
-                }
-
-                $assembled[] = $heading . "\n" . $proseBody;
+                $assembled[] = $label . "\n" . $proseBody;
             }
         }
     }
@@ -398,6 +433,8 @@ function render_calendar_week_prose_artifact(
         'type' => $dayIndex !== null
             ? 'calendar_week_day_prose'
             : 'calendar_week_prose',
+        'render_identity_policy'
+            => 'Use canonical_label for display. Do not surface chronology_address for this workflow.',
         'prose_mode' => normalize_calendar_week_prose_mode(
             (string)($renderTree['prose_mode'] ?? 'export')
         ),
@@ -405,6 +442,7 @@ function render_calendar_week_prose_artifact(
         'day_index' => $dayIndex,
         'event_count' => $eventCount,
         'prose_item_count' => $proseCount,
+        'prose_items' => $proseItems,
         'tree' => $renderTree,
         'assembled_prose' => implode("\n\n", $assembled),
     ];
