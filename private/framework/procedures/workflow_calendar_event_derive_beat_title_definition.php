@@ -32,7 +32,7 @@ return [
                 'operation' => 'select_one',
                 'store' => 'calendar_event',
 
-                'sql' => '
+                'sql' => "
                     SELECT
                         id,
                         entity_id,
@@ -44,9 +44,9 @@ return [
                         sequence_index
                     FROM calendar_events
                     WHERE entity_id = :entity_id
-                       OR entity_id = CONCAT(''calendar_event:'', :entity_id)
+                       OR entity_id = CONCAT('calendar_event:', :entity_id)
                     LIMIT 1
-                ',
+                ",
 
                 'bindings' => [
                     'entity_id' => '$input.calendar_event_entity_id',
