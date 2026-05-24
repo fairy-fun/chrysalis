@@ -30,6 +30,19 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
+            '/\\b([0-9]+)\\.([0-9]+)\\b/',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        $input['week'] = $matches[1];
+        $input['day'] = $matches[2];
+
+        return $input;
+    }
+
+    if (
+        preg_match(
             '/\\bweek\\s+([0-9]+)\\b/i',
             $userMessage,
             $matches
