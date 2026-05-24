@@ -9,6 +9,24 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 #### I want to create a Book week
 
 ### Tier 1
+#### Show me the existing prose for Week [x]
+
+```text
+startWorkflowChat Show me <text>
+```
+
+#### Show me the existing prose for Week [x], Day [y]
+
+```text
+startWorkflowChat Show me <text>
+```
+
+#### Show me the existing prose for [x].[y]
+
+```text
+startWorkflowChat Show me <text>
+```
+
 #### Create an event in the correct projection
 
 ##### Create a book event
