@@ -44,6 +44,7 @@ return [
                         sequence_index
                     FROM calendar_events
                     WHERE entity_id = :entity_id
+                       OR entity_id = CONCAT(''calendar_event:'', :entity_id)
                     LIMIT 1
                 ',
 
