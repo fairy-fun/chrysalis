@@ -20,7 +20,7 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
-            '/\b(calendar_event:\d+)\b/i',
+            '/\\b(calendar_event:\\d+)\\b/i',
             $userMessage,
             $matches
         ) === 1
@@ -30,12 +30,22 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
-            '/\bweek\s+([0-9]+)\b/i',
+            '/\\bweek\\s+([0-9]+)\\b/i',
             $userMessage,
             $matches
         ) === 1
     ) {
         $input['week'] = $matches[1];
+    }
+
+    if (
+        preg_match(
+            '/\\bday\\s+([0-9]+)\\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        $input['day'] = $matches[1];
     }
 
     return $input;
