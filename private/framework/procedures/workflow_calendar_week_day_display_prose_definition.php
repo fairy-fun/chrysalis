@@ -94,6 +94,8 @@ return [
                 'Canonical Book week day prose retrieved.',
 
             'response' => [
+                'answer' => '$context.artifact.assembled_prose',
+                'display_instruction' => 'Display answer as the continuous prose body. Do not summarise it. Use artifact.prose_items only for optional metadata or summary mode.',
                 'artifact' => '$context.artifact',
             ],
         ],
