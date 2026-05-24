@@ -465,7 +465,18 @@ function render_calendar_week_prose_artifact(
                     'prose_body' => $proseBody,
                 ];
 
-                $assembled[] = $label . "\n" . $proseBody;
+                /*
+                |--------------------------------------------------------------------------
+                | Continuous reading text
+                |--------------------------------------------------------------------------
+                |
+                | Item labels remain available in prose_items[]. The assembled prose surface
+                | is deliberately prose-only so "all prose" can be displayed as a continuous
+                | reading/export text without metadata interrupting the draft.
+                |
+                */
+
+                $assembled[] = $proseBody;
             }
         }
     }
@@ -476,6 +487,8 @@ function render_calendar_week_prose_artifact(
             : 'calendar_week_prose',
         'render_identity_policy'
             => 'Use dot_notation and canonical_label for display. Do not use dot_notation as retrieval authority.',
+        'assembled_prose_policy'
+            => 'Continuous reading text assembled from prose_items in canonical event order. Metadata labels are kept in prose_items and are not inserted into assembled_prose.',
         'prose_mode' => normalize_calendar_week_prose_mode(
             (string)($renderTree['prose_mode'] ?? 'export')
         ),
