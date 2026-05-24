@@ -12,7 +12,7 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 #### Show me the existing prose for Week [x]
 
 ```text
-startWorkflowChat Show me <text>
+startWorkflowChat show existing prose for week
 ```
 
 #### Show me the existing prose for Week [x], Day [y]
