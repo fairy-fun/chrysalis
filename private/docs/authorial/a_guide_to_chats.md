@@ -24,7 +24,7 @@ startWorkflowChat Show me published prose for Week 1
 #### Show me all prose for Week [x], Day [y]
 
 ```text
-startWorkflowChat show me the existing prose for Week 1, Day 2
+startWorkflowChat show me all prose for Week 1, Day 2
 ```
 
 #### Show me published prose for Week [x], Day [y]
