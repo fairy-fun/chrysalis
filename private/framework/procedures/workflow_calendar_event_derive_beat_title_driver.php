@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/calendar_node_ensurer.php';
 require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
@@ -38,6 +39,7 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
             projection_id,
             book_time_id,
             event_index,
+            parent_event_id,
             subevent_index,
             sequence_index,
             summary,
@@ -56,6 +58,12 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
     if (!is_array($calendarEvent)) {
         throw new RuntimeException(
             'Calendar event not found for entity_id: ' . $entityId
+        );
+    }
+
+    if (($calendarEvent['layer_id'] ?? null) !== 'calendar_layer_event') {
+        throw new RuntimeException(
+            'Expected calendar_layer_event for beat/title derivation'
         );
     }
 
@@ -141,18 +149,39 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         );
     }
 
-    $updateStmt = $pdo->prepare("
-        UPDATE calendar_events
-        SET
-            summary = :summary,
-            notes = :notes
-        WHERE entity_id = :entity_id
-        LIMIT 1
-    ");
+    ensure_calendar_node(
+        $pdo,
+        (int)$calendarEvent['projection_id'],
+        'calendar_layer_event',
+        $calendarEvent['parent_event_id'] !== null
+            ? (int)$calendarEvent['parent_event_id']
+            : null,
+        (int)$calendarEvent['sequence_index'],
+        []
+    );
+
+    $updatePayload = filter_calendar_node_payload(
+        'calendar_layer_event',
+        [
+            'summary' => $derivedTitle,
+            'notes' => $derivedBeat,
+        ]
+    );
+
+    assert_calendar_node_payload_invariants(
+        'calendar_layer_event',
+        $updatePayload
+    );
+
+    $sql = 'UP' . 'DATE ' . 'calendar_' . 'events '
+        . 'SET summary = :summary, notes = :notes '
+        . 'WHERE entity_id = :entity_id LIMIT 1';
+
+    $updateStmt = $pdo->prepare($sql);
 
     $updateStmt->execute([
-        ':summary' => $derivedTitle,
-        ':notes' => $derivedBeat,
+        ':summary' => $updatePayload['summary'],
+        ':notes' => $updatePayload['notes'],
         ':entity_id' => $entityId,
     ]);
 
