@@ -75,6 +75,7 @@ return [
                     'week' => '$input.week',
                     'day' => '$input.day',
                     'projection_id' => '$context.projection.id',
+                    'prose_mode' => '$input.prose_mode',
                 ],
             ],
 
