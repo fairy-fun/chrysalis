@@ -81,7 +81,9 @@ ___
 
 ```text
 startWorkflowChat I want to process attached prose into its beat and title
-
+```
+or
+```text
 Call startWorkflowChat with message: derive beat/title metadata from attached prose
 ```
 The runtime will ask for the calendar event entity ID, such as calendar_event:7
