@@ -18,6 +18,21 @@ function fw_extract_chat_bootstrap_input(
         'user_message' => $userMessage,
     ];
 
+    $normalisedMessage = mb_strtolower(
+        trim($userMessage)
+    );
+
+    if (
+        preg_match(
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(published|all)\\s+prose\\s+for\\b/',
+            $normalisedMessage
+        ) === 1
+    ) {
+        $input['prose_mode'] = 'published';
+    } else {
+        $input['prose_mode'] = 'export';
+    }
+
     if (
         preg_match(
             '/\\b(calendar_event:\\d+)\\b/i',
