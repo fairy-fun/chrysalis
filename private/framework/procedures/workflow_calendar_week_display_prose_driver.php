@@ -51,10 +51,16 @@ function fw_execute_workflow_calendar_display_week_prose(
         ];
     }
 
+    $proseMode = normalize_calendar_week_prose_mode(
+        $payload['prose_mode']
+        ?? 'export'
+    );
+
     $weekTree = resolve_calendar_week_prose_view(
         $pdo,
         $projectionId,
-        $weekIndex
+        $weekIndex,
+        $proseMode
     );
 
     if ($weekTree === null) {
@@ -84,6 +90,9 @@ function fw_execute_workflow_calendar_display_week_prose(
 
         'week_index'
             => $weekIndex,
+
+        'prose_mode'
+            => $proseMode,
 
         'context' => array_merge(
             $context,
