@@ -101,6 +101,7 @@ function persist_semantic_surface_evidence(
 
     $eventId = semantic_surface_required_event_id($context);
     $createdAt = date('Y-m-d H:i:s');
+    $advisoryEvidenceStatus = 'EVIDENCE_STATUS_ADVISORY';
 
     $candidateRow = [
         'surface_text' => $surfaceText,
@@ -112,8 +113,8 @@ function persist_semantic_surface_evidence(
         'span_end' => $context['span_end'] ?? null,
         'source_classval_id' => $context['source_classval_id'] ?? 'SURFACE_SOURCE_SEMANTIC_ALIAS',
         'confidence_classval_id' => $context['confidence_classval_id'] ?? 'CONFIDENCE_MEDIUM',
-        'resolution_status_classval_id' => $context['resolution_status_classval_id'] ?? 'EVIDENCE_STATUS_ADVISORY',
-        'evidence_status_classval_id' => $context['evidence_status_classval_id'] ?? 'EVIDENCE_STATUS_ADVISORY',
+        'resolution_status_classval_id' => $context['resolution_status_classval_id'] ?? 'CONFIDENCE_MEDIUM',
+        'evidence_status_classval_id' => $context['evidence_status_classval_id'] ?? $advisoryEvidenceStatus,
         'resolved_entity_id' => $selectedCandidate['resolved_entity_id'] ?? null,
         'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
         'scoring_notes' => $selectedCandidate['scoring_notes'] ?? null,
@@ -131,6 +132,7 @@ function persist_semantic_surface_evidence(
                 'prose_projection_id' => $context['prose_projection_id'] ?? null,
                 'prose_entity_id' => $context['prose_entity_id'] ?? null,
                 'created_at' => $createdAt,
+                'advisory_evidence_status' => $advisoryEvidenceStatus,
             ],
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
