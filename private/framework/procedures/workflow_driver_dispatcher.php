@@ -44,6 +44,8 @@ function fw_execute_workflow_driver_operation(
             'upsert_calendar_event_reference_label'
                 => 'fw_execute_workflow_prose_upsert_calendar_event_reference_label',
             'segment_subevents' => 'fw_execute_workflow_prose_segment_subevents',
+            'display_by_reference_label'
+                => 'fw_execute_workflow_prose_display_by_reference_label',
         ],
 
         'calendar' => [
