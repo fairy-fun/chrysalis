@@ -57,6 +57,26 @@ function semantic_surface_build_insertable_row(
     return $row;
 }
 
+function semantic_surface_required_event_id(array $context): int
+{
+    $eventId = $context['event_id'] ?? null;
+
+    if ($eventId === null || (int)$eventId < 1) {
+        throw new RuntimeException(
+            'semantic_surface_evidence requires event_id; missing provenance context for workflow=' .
+            (string)($context['workflow'] ?? 'unknown') .
+            ', calendar_event_entity_id=' .
+            (string)($context['calendar_event_entity_id'] ?? 'unknown') .
+            ', prose_projection_id=' .
+            (string)($context['prose_projection_id'] ?? 'unknown') .
+            ', prose_entity_id=' .
+            (string)($context['prose_entity_id'] ?? 'unknown')
+        );
+    }
+
+    return (int)$eventId;
+}
+
 function persist_semantic_surface_evidence(
     PDO $pdo,
     string $surfaceText,
@@ -79,15 +99,12 @@ function persist_semantic_surface_evidence(
         return null;
     }
 
-    $eventId = $context['event_id']
-        ?? $context['calendar_event_id']
-        ?? null;
+    $eventId = semantic_surface_required_event_id($context);
 
     $candidateRow = [
         'surface_text' => $surfaceText,
         'event_id' => $eventId,
         'calendar_event_entity_id' => $context['calendar_event_entity_id'] ?? null,
-        'calendar_event_id' => $context['calendar_event_id'] ?? $eventId,
         'prose_projection_id' => $context['prose_projection_id'] ?? null,
         'prose_entity_id' => $context['prose_entity_id'] ?? null,
         'span_start' => $context['span_start'] ?? null,
@@ -107,6 +124,10 @@ function persist_semantic_surface_evidence(
                 'workflow' => $context['workflow'] ?? null,
                 'suggestion_mode' => 'deterministic_ordered_resolution_candidates',
                 'matched_surface_form' => $surfaceText,
+                'event_id' => $eventId,
+                'calendar_event_entity_id' => $context['calendar_event_entity_id'] ?? null,
+                'prose_projection_id' => $context['prose_projection_id'] ?? null,
+                'prose_entity_id' => $context['prose_entity_id'] ?? null,
             ],
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
@@ -121,9 +142,9 @@ function persist_semantic_surface_evidence(
         return null;
     }
 
-    if (isset($columns['event_id']) && !isset($row['event_id'])) {
+    if (!isset($row['event_id']) || (int)$row['event_id'] < 1) {
         throw new RuntimeException(
-            'semantic_surface_evidence.event_id is required but was not provided by the workflow context'
+            'semantic_surface_evidence requires event_id; insertable provenance row is invalid'
         );
     }
 
