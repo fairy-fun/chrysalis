@@ -11,6 +11,15 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
+            '/\\b(show|display|open)\\s+(me\\s+)?(the\\s+)?prose\\s+for\\s+[0-9]{8}-[a-z]\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'prose_reference_label_display';
+    }
+
+    if (
+        preg_match(
             '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+[0-9]+\\.[0-9]+\\b/',
             $message
         ) === 1
