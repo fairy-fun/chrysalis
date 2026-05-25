@@ -21,7 +21,7 @@ return [
 
         'await_calendar_event_entity_id' => [
             'type' => 'input',
-            'prompt' => 'What is the existing calendar event? You can enter calendar_event:5, 5, a canonical entity_id, a prose-family-scoped reference label, or chronology notation like 1.2.1.3.',
+            'prompt' => 'What is the existing calendar event? You can enter calendar_event:5, 5, a canonical event entity_id, or chronology notation like 1.2.1.3.',
             'expected_input' => 'calendar_event_entity_id',
 
             'transition' => [
