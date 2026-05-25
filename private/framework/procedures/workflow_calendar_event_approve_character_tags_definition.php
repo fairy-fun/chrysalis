@@ -85,7 +85,7 @@ return [
 
         'await_character_tag_approval' => [
             'type' => 'input',
-            'prompt' => 'Approve the resolved character suggestions? Reply yes or no.',
+            'prompt' => 'Approve the resolved character suggestions? Reply yes, no, entity IDs to approve, or exclusions such as all except CHAR-MAIN-1004.',
             'expected_input' => 'character_tag_approval',
 
             'transition' => [
@@ -120,7 +120,7 @@ return [
 
         'terminal_character_tag_approval_rejected' => [
             'type' => 'terminal',
-            'message' => 'Character tag approval was rejected. No participant links were created.',
+            'message' => 'Character tag approval was rejected or no approved subset remained. No participant links were created.',
         ],
 
         'terminal_no_resolved_character_suggestions' => [
