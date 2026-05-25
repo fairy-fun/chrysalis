@@ -34,6 +34,35 @@ function fw_execute_workflow_prose_create_family_draft(
     ];
 }
 
+function fw_execute_workflow_prose_create_calendar_event_family_draft(
+    PDO $pdo,
+    array $action,
+    array $input = [],
+    array $context = []
+): array {
+
+    $payload = fw_resolve_workflow_value(
+        $action['payload'] ?? [],
+        $input,
+        $context
+    );
+
+    $result = create_calendar_event_prose_family_draft(
+        $pdo,
+        $payload
+    );
+
+    return [
+        'success' => true,
+        'context' => array_merge(
+            $context,
+            [
+                'created_prose' => $result,
+            ]
+        ),
+    ];
+}
+
 function fw_execute_workflow_prose_set_projection_published_draft(
     PDO $pdo,
     array $action,
@@ -171,9 +200,9 @@ function prose_family_workflow_resolve_calendar_event(
     }
 
     if (preg_match('/^[0-9]+$/', $reference) === 1) {
-        return prose_family_workflow_fetch_event_by_entity_id(
+        return prose_family_workflow_fetch_event_by_pk(
             $pdo,
-            'calendar_event:' . $reference
+            (int) $reference
         );
     }
 
@@ -184,7 +213,43 @@ function prose_family_workflow_resolve_calendar_event(
         );
     }
 
-    return null;
+    return prose_family_workflow_fetch_event_by_entity_id(
+        $pdo,
+        $reference
+    );
+}
+
+function prose_family_workflow_fetch_event_by_pk(
+    PDO $pdo,
+    int $id
+): ?array {
+
+    if ($id < 1) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT
+            id,
+            entity_id,
+            projection_id,
+            book_time_id,
+            event_index,
+            subevent_index,
+            layer_id,
+            summary
+        FROM calendar_events
+        WHERE id = :id
+        LIMIT 1
+    ');
+
+    $stmt->execute([
+        ':id' => $id,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
 }
 
 function prose_family_workflow_fetch_event_by_entity_id(
