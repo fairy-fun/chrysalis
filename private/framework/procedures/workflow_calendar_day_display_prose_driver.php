@@ -56,7 +56,6 @@ function fw_execute_workflow_calendar_display_day_prose(
         | This workflow performs NO topology authoring.
         |
         | It is a derived prose-display view only.
-        |
         */
 
         'tier' => 2,
@@ -102,6 +101,10 @@ function fw_display_calendar_day_prose(
     |
     | sequence_index is recursive sibling ordering only.
     |
+    | Ontology linkage fields are resolved for display only:
+    |   beat_type_id  -> cvt_calendar_beat_type.id
+    |   class_type_id -> calendar_class_type_classvals.id
+    | Beat classsets are taxonomy/grouping context and are not event values.
     */
 
     $stmt = $pdo->prepare("
@@ -114,6 +117,20 @@ function fw_display_calendar_day_prose(
             child.summary,
             child.prose_body,
             child.notes,
+
+            child.beat_type_id,
+            beat.code AS beat_type_code,
+            beat.label AS beat_type_label,
+            beat.description AS beat_type_description,
+            beat.set_id AS beat_classset_id,
+            beat_set.code AS beat_classset_code,
+            beat_set.label AS beat_classset_label,
+
+            child.class_type_id,
+            class_type.code AS class_type_code,
+            class_type.label AS class_type_label,
+            class_type.requires_member AS class_type_requires_member,
+            class_type.requires_character AS class_type_requires_character,
 
             child.real_date_start_id,
 
@@ -149,6 +166,15 @@ function fw_display_calendar_day_prose(
         LEFT JOIN calendar_events parent
             ON parent.id = child.parent_event_id
            AND child.layer_id = 'calendar_layer_subevent'
+
+        LEFT JOIN cvt_calendar_beat_type beat
+            ON beat.id = child.beat_type_id
+
+        LEFT JOIN calendar_beat_classsets beat_set
+            ON beat_set.id = beat.set_id
+
+        LEFT JOIN calendar_class_type_classvals class_type
+            ON class_type.id = child.class_type_id
 
         WHERE COALESCE(
                 child.real_date_start_id,
@@ -234,6 +260,49 @@ function fw_display_calendar_day_prose(
 
             'summary'
                 => $summary,
+
+            'ontology' => [
+                'beat_type' => [
+                    'id' => $row['beat_type_id'],
+                    'code' => $row['beat_type_code'],
+                    'label' => $row['beat_type_label'],
+                    'description' => $row['beat_type_description'],
+                    'classset' => [
+                        'id' => $row['beat_classset_id'],
+                        'code' => $row['beat_classset_code'],
+                        'label' => $row['beat_classset_label'],
+                    ],
+                ],
+                'class_type' => [
+                    'id' => $row['class_type_id'],
+                    'code' => $row['class_type_code'],
+                    'label' => $row['class_type_label'],
+                    'requires_member' => isset($row['class_type_requires_member'])
+                        ? (int)$row['class_type_requires_member']
+                        : null,
+                    'requires_character' => isset($row['class_type_requires_character'])
+                        ? (int)$row['class_type_requires_character']
+                        : null,
+                ],
+            ],
+
+            'beat_type_id'
+                => $row['beat_type_id'],
+
+            'beat_type_label'
+                => $row['beat_type_label'],
+
+            'beat_classset_id'
+                => $row['beat_classset_id'],
+
+            'beat_classset_label'
+                => $row['beat_classset_label'],
+
+            'class_type_id'
+                => $row['class_type_id'],
+
+            'class_type_label'
+                => $row['class_type_label'],
 
             /*
             |--------------------------------------------------------------------------
