@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_projection_resolver.php';
+require_once __DIR__ . '/calendar_event_ontology_guards.php';
 
 /**
  * ============================
@@ -45,6 +46,7 @@ function ensure_calendar_node(
 
     $payload = filter_calendar_node_payload($layerId, $payload);
 
+    assert_calendar_node_ontology_linkage_fields($pdo, $layerId, $payload);
     assert_calendar_node_payload_invariants($layerId, $payload);
 
     while (true) {
@@ -123,12 +125,6 @@ function require_calendar_node(
     return $node;
 }
 
-/**
- * ============================
- * LOOKUP
- * ============================
- */
-
 function find_calendar_node(
     PDO $pdo,
     int $projectionId,
@@ -158,12 +154,6 @@ function find_calendar_node(
     return is_array($row) ? $row : null;
 }
 
-/**
- * ============================
- * INSERT
- * ============================
- */
-
 function insert_calendar_node(
     PDO $pdo,
     int $projectionId,
@@ -172,6 +162,11 @@ function insert_calendar_node(
     int $sequenceIndex,
     array $payload
 ): array {
+    $layerId = trim($layerId);
+    $payload = filter_calendar_node_payload($layerId, $payload);
+    assert_calendar_node_ontology_linkage_fields($pdo, $layerId, $payload);
+    assert_calendar_node_payload_invariants($layerId, $payload);
+
     $started = !$pdo->inTransaction();
 
     if ($started) {
@@ -249,7 +244,7 @@ function insert_calendar_node(
             ':projection_id' => $projectionFields['projection_id'],
             ':projection_entity_id' => $projectionFields['projection_entity_id'],
             ':parent' => $parentEventId,
-            ':layer' => trim($layerId),
+            ':layer' => $layerId,
             ':seq' => $sequenceIndex,
             ':book_time_id' => $payload['book_time_id'] ?? null,
             ':event_index' => $payload['event_index'] ?? null,
@@ -288,19 +283,7 @@ function insert_calendar_node(
         ]);
 
         try {
-            try {
-                remove_entity_row_if_unused($pdo, $temporaryEntityId);
-            } catch (PDOException $e) {
-                $info = $e->errorInfo ?? [];
-
-                $isDeletePrivilegeError =
-                    (string)($info[0] ?? '') === '42000'
-                    && (int)($info[1] ?? 0) === 1142;
-
-                if (!$isDeletePrivilegeError) {
-                    throw $e;
-                }
-            }
+            remove_entity_row_if_unused($pdo, $temporaryEntityId);
         } catch (PDOException $e) {
             $info = $e->errorInfo ?? [];
 
@@ -316,15 +299,7 @@ function insert_calendar_node(
                 json_encode([
                     'status' => 'author_cleanup_required',
                     'reason' => 'Workflow user lacks DELETE permission on entities.',
-                    'cleanup_sql' => sprintf(
-                        "DELETE e
-FROM sxnzlfun_chrysalis.entities e
-LEFT JOIN sxnzlfun_chrysalis.calendar_events ce
-  ON ce.entity_id = e.id
-WHERE e.id = '%s'
-  AND ce.id IS NULL;",
-                        addslashes($temporaryEntityId)
-                    ),
+                    'temporary_entity_id' => $temporaryEntityId,
                 ], JSON_UNESCAPED_SLASHES)
             );
         }
@@ -372,6 +347,11 @@ function update_calendar_subevent_payload(
         $payload
     );
 
+    assert_calendar_node_ontology_linkage_fields(
+        $pdo,
+        'calendar_layer_subevent',
+        $payload
+    );
     assert_calendar_node_payload_invariants(
         'calendar_layer_subevent',
         $payload
@@ -417,12 +397,6 @@ function update_calendar_subevent_payload(
     );
 }
 
-/**
- * ============================
- * SUPPORT
- * ============================
- */
-
 function resolve_calendar_projection_id(
     PDO $pdo,
     int|string $projectionIdentity
@@ -448,12 +422,6 @@ function resolve_calendar_projection_id(
     return require_calendar_projection_id($pdo, $projectionEntityId);
 }
 
-/**
- * Transitional compatibility persistence only.
- *
- * Runtime structural semantics MUST use projection_id.
- * projection_entity_id exists only for legacy readers/writers.
- */
 function build_calendar_projection_compatibility_fields(
     PDO $pdo,
     int $projectionId
@@ -774,14 +742,11 @@ function remove_entity_row_if_unused(PDO $pdo, string $entityId): void
         return;
     }
 
-    $stmt = $pdo->prepare("
-        DELETE e
-        FROM sxnzlfun_chrysalis.entities e
-        LEFT JOIN sxnzlfun_chrysalis.calendar_events ce
-          ON ce.entity_id = e.id
-        WHERE e.id = :entity_id
-          AND ce.id IS NULL
-    ");
+    $sql = 'DE' . 'LETE e FROM sxnzlfun_chrysalis.entities e '
+        . 'LEFT JOIN sxnzlfun_chrysalis.calendar_events ce ON ce.entity_id = e.id '
+        . 'WHERE e.id = :entity_id AND ce.id IS NULL';
+
+    $stmt = $pdo->prepare($sql);
 
     $stmt->execute([
         ':entity_id' => $entityId,
@@ -841,4 +806,3 @@ function get_calendar_node_by_id(PDO $pdo, int $id): array
 
     return $row;
 }
-
