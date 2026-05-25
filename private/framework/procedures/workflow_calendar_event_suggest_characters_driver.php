@@ -70,6 +70,7 @@ function fw_execute_workflow_calendar_event_suggest_characters(
     }
 
     $suggestions = suggest_prose_characters(
+        $pdo,
         $proseBody,
         [
             'calendar_event_entity_id' => $entityId,
