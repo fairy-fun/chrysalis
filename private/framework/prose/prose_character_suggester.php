@@ -13,21 +13,18 @@ function prose_character_known_surface_forms(): array
 {
     return [
         [
-            'entity_id' => 'character:shay_vertue',
             'surface_forms' => [
                 'Shay',
             ],
             'confidence' => 0.99,
         ],
         [
-            'entity_id' => null,
             'surface_forms' => [
                 'Chloe',
             ],
             'confidence' => 0.95,
         ],
         [
-            'entity_id' => null,
             'surface_forms' => [
                 'Ms Kingsley',
                 'Ms. Kingsley',
@@ -65,7 +62,83 @@ function prose_character_find_offsets(
     return $offsets;
 }
 
+function prose_character_normalize_surface_forms(
+    string $surfaceForm
+): array {
+
+    $normalized = [
+        trim($surfaceForm),
+    ];
+
+    $stripped = preg_replace(
+        '/^(mrs\.?|ms\.?|miss|mr\.?)\s+/i',
+        '',
+        $surfaceForm
+    );
+
+    if (is_string($stripped) && trim($stripped) !== '') {
+        $normalized[] = trim($stripped);
+    }
+
+    return array_values(array_unique($normalized));
+}
+
+function resolve_character_surface_form(
+    PDO $pdo,
+    string $surfaceForm
+): ?array {
+
+    $sql = "
+        SELECT
+            e.id AS resolved_entity_id,
+            e.entity_type_id AS resolved_entity_type_id,
+            c.char_name_full AS candidate_label
+        FROM entities e
+        LEFT JOIN characters c
+            ON c.entity_id = e.id
+        LEFT JOIN entity_labels el
+            ON el.entity_id = e.id
+        LEFT JOIN semantic_aliases sa
+            ON sa.entity_id = e.id
+        LEFT JOIN entity_texts et
+            ON et.entity_id = e.id
+        WHERE
+            e.entity_type_id = 'entity_type_character'
+            AND (
+                LOWER(c.search_name) = LOWER(:surface)
+                OR LOWER(c.char_name_full) = LOWER(:surface)
+                OR LOWER(c.char_name_first) = LOWER(:surface)
+                OR LOWER(c.char_name_last) = LOWER(:surface)
+                OR LOWER(el.label) = LOWER(:surface)
+                OR LOWER(sa.alias) = LOWER(:surface)
+                OR LOWER(et.canonical_label) = LOWER(:surface)
+            )
+        LIMIT 1
+    ";
+
+    $statement = $pdo->prepare($sql);
+
+    foreach (prose_character_normalize_surface_forms($surfaceForm) as $candidateSurface) {
+        $statement->execute([
+            ':surface' => $candidateSurface,
+        ]);
+
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (is_array($row)) {
+            return [
+                'candidate_label' => (string)$row['candidate_label'],
+                'resolved_entity_id' => (string)$row['resolved_entity_id'],
+                'resolved_entity_type_id' => (string)$row['resolved_entity_type_id'],
+            ];
+        }
+    }
+
+    return null;
+}
+
 function suggest_prose_characters(
+    PDO $pdo,
     string $proseBody,
     array $context = []
 ): array {
@@ -97,16 +170,26 @@ function suggest_prose_characters(
             continue;
         }
 
-        $entityId = $characterRule['entity_id'];
+        $primarySurfaceForm = (string)$characterRule['surface_forms'][0];
+
+        $resolution = resolve_character_surface_form(
+            $pdo,
+            $primarySurfaceForm
+        );
 
         $suggestions[] = [
             'suggestion_type' => 'character',
-            'entity_id' => $entityId,
             'surface_forms' => $characterRule['surface_forms'],
+            'candidate_label' => $resolution['candidate_label'] ?? null,
+            'resolved_entity_id' => $resolution['resolved_entity_id'] ?? null,
+            'resolved_entity_type_id' => $resolution['resolved_entity_type_id'] ?? null,
+            'resolution_status' => $resolution === null
+                ? 'unresolved'
+                : 'resolved',
             'confidence' => (float)$characterRule['confidence'],
             'evidence' => $matchedEvidence,
             'offsets' => $matchedOffsets,
-            'status' => $entityId === null
+            'status' => $resolution === null
                 ? 'suggested_unresolved_entity'
                 : 'suggested',
         ];
@@ -123,6 +206,8 @@ function suggest_prose_characters(
             'Suggestions are advisory.',
             'Suggestions are reversible.',
             'Suggestions require explicit evidence.',
+            'Canonical identity authority is entities.id.',
+            'No symbolic identifiers are synthesized from prose.',
             'No persistence occurs in this workflow.',
         ],
     ];
