@@ -55,6 +55,15 @@ function fw_match_chat_workflow(
     }
 
     if (
+        str_contains($message, 'set published prose draft')
+        || str_contains($message, 'set canonical export draft')
+        || str_contains($message, 'elevate prose draft')
+        || str_contains($message, 'change canonical export target')
+    ) {
+        return 'prose_projection_set_published_draft';
+    }
+
+    if (
         str_contains($message, 'add a new prose draft to a prose family')
         || str_contains($message, 'add new prose draft to a prose family')
         || str_contains($message, 'add a prose draft to a prose family')
@@ -115,6 +124,18 @@ function fw_match_chat_workflow(
 
         'create a book event'
         => 'calendar_book_event_create',
+
+        'i want to set the canonical export draft'
+        => 'prose_projection_set_published_draft',
+
+        'set the canonical export draft'
+        => 'prose_projection_set_published_draft',
+
+        'i want to elevate a prose draft'
+        => 'prose_projection_set_published_draft',
+
+        'elevate a prose draft'
+        => 'prose_projection_set_published_draft',
 
         'i want to add a new prose draft to a prose family'
         => 'prose_family_add_draft',
