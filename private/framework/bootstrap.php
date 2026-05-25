@@ -28,6 +28,7 @@ require_once __DIR__ . '/procedures/workflow_transition_dispatcher.php';
 require_once __DIR__ . '/procedures/workflow_driver_dispatcher.php';
 require_once __DIR__ . '/procedures/workflow_db_driver.php';
 require_once __DIR__ . '/procedures/workflow_prose_driver.php';
+require_once __DIR__ . '/procedures/workflow_prose_family_draft_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_create_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_book_week_create_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_book_day_create_driver.php';
