@@ -39,6 +39,8 @@ function fw_execute_workflow_driver_operation(
             'resolve_calendar_event_family' => 'fw_execute_workflow_prose_resolve_calendar_event_family',
             'create_family_draft' => 'fw_execute_workflow_prose_create_family_draft',
             'set_projection_published_draft' => 'fw_execute_workflow_prose_set_projection_published_draft',
+            'upsert_calendar_event_reference_label'
+                => 'fw_execute_workflow_prose_upsert_calendar_event_reference_label',
             'segment_subevents' => 'fw_execute_workflow_prose_segment_subevents',
         ],
 
