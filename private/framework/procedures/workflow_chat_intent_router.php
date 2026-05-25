@@ -55,6 +55,15 @@ function fw_match_chat_workflow(
     }
 
     if (
+        str_contains($message, 'add reference label')
+        || str_contains($message, 'add a reference label')
+        || str_contains($message, 'attach reference label')
+        || str_contains($message, 'assign reference label')
+    ) {
+        return 'calendar_event_add_reference_label';
+    }
+
+    if (
         str_contains($message, 'set published prose draft')
         || str_contains($message, 'set canonical export draft')
         || str_contains($message, 'elevate prose draft')
@@ -161,6 +170,15 @@ function fw_match_chat_workflow(
         'calendar event prose'
         => 'calendar_event_add_prose',
 
+        'i want to add a reference label to an existing prose attachment'
+        => 'calendar_event_add_reference_label',
+
+        'add a reference label to an existing prose attachment'
+        => 'calendar_event_add_reference_label',
+
+        'add reference label to prose attachment'
+        => 'calendar_event_add_reference_label',
+
         'process calendar prose'
         => 'calendar_event_process_attached_prose',
 
@@ -168,78 +186,3 @@ function fw_match_chat_workflow(
             => 'calendar_event_title_narrative_ontology',
 
         'process attached prose into its beat and title'
-            => 'calendar_event_title_narrative_ontology',
-
-        'process attached prose into beat and title'
-            => 'calendar_event_title_narrative_ontology',
-
-        'derive beat and title from attached prose'
-            => 'calendar_event_title_narrative_ontology',
-
-        'derive the beat and title from attached prose'
-            => 'calendar_event_title_narrative_ontology',
-
-        'i want to approve character tags from attached prose'
-            => 'calendar_event_approve_character_tags',
-
-        'approve character tags from attached prose'
-            => 'calendar_event_approve_character_tags',
-
-        'approve character suggestions from attached prose'
-            => 'calendar_event_approve_character_tags',
-
-        'i want to tag characters from an event\'s attached prose'
-            => 'calendar_event_suggest_characters',
-
-        'tag characters from an event\'s attached prose'
-            => 'calendar_event_suggest_characters',
-
-        'i want to suggest characters from attached prose'
-            => 'calendar_event_suggest_characters',
-
-        'suggest characters from attached prose'
-            => 'calendar_event_suggest_characters',
-
-        'i want to process attached prose into calendar subevents'
-        => 'calendar_event_process_attached_prose',
-
-        'process attached prose into calendar subevents'
-        => 'calendar_event_process_attached_prose',
-
-        'process attached prose'
-        => 'calendar_event_process_attached_prose',
-
-        'process prose attached to'
-        => 'calendar_event_process_attached_prose',
-
-        'process attached prose for'
-        => 'calendar_event_process_attached_prose',
-
-        'process prose for'
-        => 'calendar_event_process_attached_prose',
-
-        'show prose for'
-        => 'calendar_day_display_prose',
-
-        'display prose for'
-        => 'calendar_day_display_prose',
-
-        'show all prose for'
-        => 'calendar_day_display_prose',
-
-        'display all prose for'
-        => 'calendar_day_display_prose',
-
-        'show prose on'
-        => 'calendar_day_display_prose',
-    ];
-
-    foreach ($intentMap as $phrase => $workflowId) {
-
-        if (str_contains($message, $phrase)) {
-            return $workflowId;
-        }
-    }
-
-    return null;
-}
