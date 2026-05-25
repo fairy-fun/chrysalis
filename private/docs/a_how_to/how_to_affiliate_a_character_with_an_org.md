@@ -10,7 +10,7 @@ Character identity authority:
 
 ```text
 entities.id
-
+```
 Institution/company authority:
 
 companies.company_id
@@ -215,10 +215,14 @@ with organizational titles.
 
 Verification queries
 Verify affiliation
+```sql
 SELECT *
 FROM company_assignments
 WHERE member_entity_id = 'CHAR-SUP-996';
-Verify role attachment
+```
+#### Verify role attachment
+
+```sql
 SELECT
     car.company_assignment_id,
     cr.role_label,
@@ -228,6 +232,7 @@ JOIN company_roles cr
     ON cr.role_id = car.role_id
 WHERE car.company_assignment_id =
     'COMP-ASSIGN-CHAR-SUP-996-RBDS';
+```
 Expected workflow behavior
 
 After these inserts:
