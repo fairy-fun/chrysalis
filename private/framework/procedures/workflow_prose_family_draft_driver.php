@@ -116,9 +116,15 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
         ];
     }
 
+    $proseFamilyId = prose_family_workflow_extract_family_scope(
+        $payload,
+        $context
+    );
+
     $calendarEvent = prose_family_workflow_resolve_calendar_event(
         $pdo,
-        $eventReference
+        $eventReference,
+        $proseFamilyId
     );
 
     if ($calendarEvent === null) {
@@ -185,12 +191,45 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
     ];
 }
 
+function prose_family_workflow_extract_family_scope(
+    array $payload,
+    array $context
+): ?int {
+
+    $candidates = [
+        $payload['prose_family_id'] ?? null,
+        $context['prose_family']['id'] ?? null,
+        $context['created_prose']['prose_family']['id'] ?? null,
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (is_int($candidate) && $candidate > 0) {
+            return $candidate;
+        }
+
+        if (is_string($candidate) && preg_match('/^[0-9]+$/', $candidate) === 1) {
+            $id = (int) $candidate;
+
+            if ($id > 0) {
+                return $id;
+            }
+        }
+    }
+
+    return null;
+}
+
 function prose_family_workflow_resolve_calendar_event(
     PDO $pdo,
-    string $reference
+    string $reference,
+    ?int $proseFamilyId = null
 ): ?array {
 
     $reference = trim($reference);
+
+    if ($reference === '') {
+        return null;
+    }
 
     if (preg_match('/^calendar_event:[0-9]+$/', $reference) === 1) {
         return prose_family_workflow_fetch_event_by_entity_id(
@@ -206,6 +245,27 @@ function prose_family_workflow_resolve_calendar_event(
         );
     }
 
+    $canonicalEvent = prose_family_workflow_fetch_event_by_entity_id(
+        $pdo,
+        $reference
+    );
+
+    if ($canonicalEvent !== null) {
+        return $canonicalEvent;
+    }
+
+    if ($proseFamilyId !== null) {
+        $labelEvent = resolve_calendar_event_by_reference_label(
+            $pdo,
+            $proseFamilyId,
+            $reference
+        );
+
+        if ($labelEvent !== null) {
+            return $labelEvent;
+        }
+    }
+
     if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/', $reference) === 1) {
         return prose_family_workflow_fetch_event_by_address(
             $pdo,
@@ -213,10 +273,73 @@ function prose_family_workflow_resolve_calendar_event(
         );
     }
 
-    return prose_family_workflow_fetch_event_by_entity_id(
+    return null;
+}
+
+function resolve_calendar_event_by_reference_label(
+    PDO $pdo,
+    int $proseFamilyId,
+    string $referenceLabel
+): ?array {
+
+    if ($proseFamilyId < 1) {
+        throw new InvalidArgumentException('proseFamilyId must be positive');
+    }
+
+    $referenceLabel = trim($referenceLabel);
+
+    if ($referenceLabel === '') {
+        throw new InvalidArgumentException('referenceLabel must be non-empty');
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT
+            ce.id,
+            ce.entity_id,
+            ce.projection_id,
+            ce.book_time_id,
+            ce.event_index,
+            ce.subevent_index,
+            ce.layer_id,
+            ce.summary
+        FROM calendar_event_reference_labels cerl
+        INNER JOIN calendar_events ce
+            ON ce.id = cerl.calendar_event_id
+        WHERE cerl.prose_family_id = :prose_family_id
+          AND cerl.reference_label = :reference_label
+        LIMIT 1
+    ');
+
+    $stmt->execute([
+        ':prose_family_id' => $proseFamilyId,
+        ':reference_label' => $referenceLabel,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
+function require_calendar_event_by_reference_label(
+    PDO $pdo,
+    int $proseFamilyId,
+    string $referenceLabel
+): array {
+
+    $calendarEvent = resolve_calendar_event_by_reference_label(
         $pdo,
-        $reference
+        $proseFamilyId,
+        $referenceLabel
     );
+
+    if ($calendarEvent === null) {
+        throw new RuntimeException(
+            'No calendar event reference label found in prose family scope: ' .
+            $referenceLabel
+        );
+    }
+
+    return $calendarEvent;
 }
 
 function prose_family_workflow_fetch_event_by_pk(
