@@ -100,6 +100,7 @@ function persist_semantic_surface_evidence(
     }
 
     $eventId = semantic_surface_required_event_id($context);
+    $createdAt = date('Y-m-d H:i:s');
 
     $candidateRow = [
         'surface_text' => $surfaceText,
@@ -116,6 +117,7 @@ function persist_semantic_surface_evidence(
         'resolved_entity_id' => $selectedCandidate['resolved_entity_id'] ?? null,
         'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
         'scoring_notes' => $selectedCandidate['scoring_notes'] ?? null,
+        'created_at' => $createdAt,
     ];
 
     if (isset($columns['source_context_json'])) {
@@ -128,6 +130,7 @@ function persist_semantic_surface_evidence(
                 'calendar_event_entity_id' => $context['calendar_event_entity_id'] ?? null,
                 'prose_projection_id' => $context['prose_projection_id'] ?? null,
                 'prose_entity_id' => $context['prose_entity_id'] ?? null,
+                'created_at' => $createdAt,
             ],
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
@@ -145,6 +148,12 @@ function persist_semantic_surface_evidence(
     if (!isset($row['event_id']) || (int)$row['event_id'] < 1) {
         throw new RuntimeException(
             'semantic_surface_evidence requires event_id; insertable provenance row is invalid'
+        );
+    }
+
+    if (isset($columns['created_at']) && !isset($row['created_at'])) {
+        throw new RuntimeException(
+            'semantic_surface_evidence requires created_at; insertable provenance row is invalid'
         );
     }
 
