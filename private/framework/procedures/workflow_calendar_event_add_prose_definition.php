@@ -190,8 +190,49 @@ return [
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'terminal_prose_created',
+                'next' => 'await_optional_reference_label',
                 'failure_state' => 'terminal_prose_persist_failed',
+            ],
+        ],
+
+        'await_optional_reference_label' => [
+            'type' => 'input',
+            'prompt' => 'Optional: enter a prose-family-scoped lookup label for this event, or leave blank to skip.',
+            'expected_input' => 'reference_label',
+
+            'transition' => [
+                'driver' => 'match',
+                'value' => '$input.reference_label',
+                'cases' => [
+                    '' => 'terminal_prose_created',
+                ],
+                'default' => 'persist_reference_label',
+            ],
+        ],
+
+        'persist_reference_label' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'prose',
+                'operation' => 'upsert_calendar_event_reference_label',
+
+                'payload' => [
+                    'prose_family_entity_id'
+                        => '$context.created_prose.prose_family.entity_id',
+
+                    'calendar_event_id'
+                        => '$context.calendar_event.id',
+
+                    'reference_label'
+                        => '$input.reference_label',
+                ],
+            ],
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'terminal_prose_created',
+                'failure_state' => 'terminal_reference_label_failed',
             ],
         ],
 
@@ -250,6 +291,11 @@ return [
         'terminal_prose_persist_failed' => [
             'type' => 'terminal',
             'message' => 'Failed to persist prose draft.',
+        ],
+
+        'terminal_reference_label_failed' => [
+            'type' => 'terminal',
+            'message' => 'Prose draft was created, but reference label persistence failed.',
         ],
 
         'terminal_missing_entity_id' => [
