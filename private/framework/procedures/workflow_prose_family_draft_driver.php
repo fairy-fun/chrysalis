@@ -99,18 +99,28 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
         ];
     }
 
-    $stmt = $pdo->prepare('
+    $stmt = $pdo->prepare("
         SELECT
             pf.id,
             pf.entity_id,
             pp.id AS prose_projection_id,
-            pp.published_prose_draft_id
+            pp.published_prose_draft_id,
+            pp.is_export_target,
+            pp.projection_order,
+            pp.role_id,
+            pp.projection_type_id
         FROM prose_projections pp
         INNER JOIN prose_families pf
             ON pf.id = pp.prose_family_id
         WHERE pp.target_entity_id = :target_entity_id
+          AND pp.is_export_target = 1
+          AND pp.role_id = 'prose_projection_role_primary'
+          AND pp.projection_type_id = 'projection_type_timeline_view'
+        ORDER BY
+            pp.projection_order ASC,
+            pp.id ASC
         LIMIT 1
-    ');
+    ");
 
     $stmt->execute([
         ':target_entity_id' => $calendarEvent['entity_id'],
