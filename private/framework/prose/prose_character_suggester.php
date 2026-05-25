@@ -66,12 +66,14 @@ function prose_character_normalize_surface_forms(
     string $surfaceForm
 ): array {
 
+    $surfaceForm = trim($surfaceForm);
+
     $normalized = [
-        trim($surfaceForm),
+        $surfaceForm,
     ];
 
     $stripped = preg_replace(
-        '/^(mrs\.?|ms\.?|miss|mr\.?)\s+/i',
+        '/^(mrs\.?|ms\.?|miss|mr\.?|sir|lady|lord|dr\.?)\s+/i',
         '',
         $surfaceForm
     );
@@ -80,7 +82,169 @@ function prose_character_normalize_surface_forms(
         $normalized[] = trim($stripped);
     }
 
+    $honorificExpanded = preg_replace(
+        '/^(mrs|ms|mr|dr)\s+/i',
+        '$1. ',
+        $surfaceForm
+    );
+
+    if (is_string($honorificExpanded) && trim($honorificExpanded) !== '') {
+        $normalized[] = trim($honorificExpanded);
+    }
+
+    $honorificCompacted = preg_replace(
+        '/^(mrs|ms|mr|dr)\.\s+/i',
+        '$1 ',
+        $surfaceForm
+    );
+
+    if (is_string($honorificCompacted) && trim($honorificCompacted) !== '') {
+        $normalized[] = trim($honorificCompacted);
+    }
+
     return array_values(array_unique($normalized));
+}
+
+function prose_character_surface_forms_from_label(string $label): array
+{
+    $label = trim($label);
+
+    if ($label === '') {
+        return [];
+    }
+
+    $surfaceForms = prose_character_normalize_surface_forms($label);
+
+    $stripped = preg_replace(
+        '/^(mrs\.?|ms\.?|miss|mr\.?|sir|lady|lord|dr\.?)\s+/i',
+        '',
+        $label
+    );
+
+    if (is_string($stripped) && trim($stripped) !== '') {
+        foreach (prose_character_normalize_surface_forms(trim($stripped)) as $surfaceForm) {
+            $surfaceForms[] = $surfaceForm;
+        }
+    }
+
+    $parts = preg_split('/\s+/', $label);
+
+    if (is_array($parts) && count($parts) >= 2) {
+        $last = trim((string)end($parts));
+
+        if ($last !== '') {
+            $surfaceForms[] = $last;
+        }
+    }
+
+    return array_values(array_unique(array_filter(
+        $surfaceForms,
+        static fn (string $surfaceForm): bool => trim($surfaceForm) !== ''
+    )));
+}
+
+function prose_character_dynamic_surface_rules(PDO $pdo): array
+{
+    $sql = "
+        SELECT
+            e.id AS entity_id,
+            COALESCE(
+                NULLIF(c.char_name_full, ''),
+                NULLIF(et.canonical_label, ''),
+                e.id
+            ) AS candidate_label,
+            c.char_name_full,
+            c.char_name_first,
+            c.char_name_last,
+            et.canonical_label,
+            el.label AS entity_label,
+            sa.alias AS semantic_alias
+        FROM entities e
+        LEFT JOIN characters c
+            ON c.entity_id = e.id
+        LEFT JOIN entity_texts et
+            ON et.entity_id = e.id
+        LEFT JOIN entity_labels el
+            ON el.entity_id = e.id
+        LEFT JOIN semantic_aliases sa
+            ON sa.entity_id = e.id
+        WHERE e.entity_type_id = 'entity_type_character'
+        ORDER BY e.id ASC
+    ";
+
+    $statement = $pdo->query($sql);
+
+    if (!$statement instanceof PDOStatement) {
+        return [];
+    }
+
+    $rulesByEntity = [];
+
+    while (($row = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $entityId = trim((string)($row['entity_id'] ?? ''));
+
+        if ($entityId === '') {
+            continue;
+        }
+
+        if (!isset($rulesByEntity[$entityId])) {
+            $rulesByEntity[$entityId] = [
+                'surface_forms' => [],
+                'confidence' => 0.95,
+                'resolved_entity_id' => $entityId,
+                'candidate_label' => trim((string)($row['candidate_label'] ?? $entityId)),
+            ];
+        }
+
+        foreach ([
+            'char_name_full',
+            'char_name_first',
+            'char_name_last',
+            'canonical_label',
+            'entity_label',
+            'semantic_alias',
+        ] as $field) {
+            $value = trim((string)($row[$field] ?? ''));
+
+            if ($value === '') {
+                continue;
+            }
+
+            foreach (prose_character_surface_forms_from_label($value) as $surfaceForm) {
+                $rulesByEntity[$entityId]['surface_forms'][] = $surfaceForm;
+            }
+        }
+    }
+
+    $rules = [];
+
+    foreach ($rulesByEntity as $rule) {
+        $surfaceForms = array_values(array_unique($rule['surface_forms']));
+
+        if ($surfaceForms === []) {
+            continue;
+        }
+
+        $rule['surface_forms'] = $surfaceForms;
+        $rules[] = $rule;
+    }
+
+    return $rules;
+}
+
+function prose_character_surface_rules(PDO $pdo): array
+{
+    $rules = prose_character_known_surface_forms();
+
+    foreach (prose_character_dynamic_surface_rules($pdo) as $dynamicRule) {
+        $rules[] = $dynamicRule;
+    }
+
+    return $rules;
 }
 
 function resolve_character_surface_form(
@@ -92,7 +256,11 @@ function resolve_character_surface_form(
         SELECT
             e.id AS resolved_entity_id,
             e.entity_type_id AS resolved_entity_type_id,
-            c.char_name_full AS candidate_label
+            COALESCE(
+                NULLIF(c.char_name_full, ''),
+                NULLIF(et.canonical_label, ''),
+                e.id
+            ) AS candidate_label
         FROM entities e
         LEFT JOIN characters c
             ON c.entity_id = e.id
@@ -150,8 +318,9 @@ function suggest_prose_characters(
 ): array {
 
     $suggestions = [];
+    $seenEntityIds = [];
 
-    foreach (prose_character_known_surface_forms() as $characterRule) {
+    foreach (prose_character_surface_rules($pdo) as $characterRule) {
         $matchedEvidence = [];
         $matchedOffsets = [];
 
@@ -178,10 +347,30 @@ function suggest_prose_characters(
 
         $primarySurfaceForm = (string)$characterRule['surface_forms'][0];
 
-        $resolution = resolve_character_surface_form(
-            $pdo,
-            $primarySurfaceForm
-        );
+        $resolution = null;
+
+        if (isset($characterRule['resolved_entity_id'])) {
+            $resolution = [
+                'candidate_label' => (string)($characterRule['candidate_label'] ?? $primarySurfaceForm),
+                'resolved_entity_id' => (string)$characterRule['resolved_entity_id'],
+                'resolved_entity_type_id' => 'entity_type_character',
+            ];
+        } else {
+            $resolution = resolve_character_surface_form(
+                $pdo,
+                $primarySurfaceForm
+            );
+        }
+
+        $resolvedEntityId = $resolution['resolved_entity_id'] ?? null;
+
+        if (is_string($resolvedEntityId) && $resolvedEntityId !== '') {
+            if (isset($seenEntityIds[$resolvedEntityId])) {
+                continue;
+            }
+
+            $seenEntityIds[$resolvedEntityId] = true;
+        }
 
         $suggestions[] = [
             'suggestion_type' => 'character',
