@@ -105,10 +105,28 @@ The runtime will ask for the calendar event entity ID, such as calendar_event:7 
 
 Reply with the entity ID.
 
-#### 3c: I want to tag Characters from an event's attached prose
+#### 3c: I want to approve Characters from an event's attached prose
 ```text
 startWorkflowChat I want to approve character tags from attached prose
 ```
+
+##### Examples now supported:
+```text
+yes
+```
+→ approve all resolved suggestions
+
+all except CHAR-MAIN-1004
+
+→ approve all except that entity
+
+not CHAR-MAIN-1004 or CHAR-MAIN-015
+
+→ approve everything except those two
+
+CHAR-MAIN-001 CHAR-SUP-998 CHAR-SUP-997
+
+→ approve only those entities
 
 #### Process attached prose into calendar subevents
 
