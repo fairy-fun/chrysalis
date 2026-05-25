@@ -11,7 +11,7 @@ return [
 
         'await_calendar_event_entity_id' => [
             'type' => 'input',
-            'prompt' => 'What is the existing calendar event entity ID?',
+            'prompt' => 'What is the existing calendar event? You can enter calendar_event:5, 5, or a supported event entity_id.',
             'expected_input' => 'calendar_event_entity_id',
 
             'transition' => [
@@ -42,6 +42,7 @@ return [
                         event_index
                     FROM calendar_events
                     WHERE entity_id = :entity_id
+                       OR entity_id = CONCAT(\'calendar_event:\', :entity_id)
                     LIMIT 1
                 ',
 
@@ -257,7 +258,7 @@ return [
 
         'terminal_calendar_event_not_found' => [
             'type' => 'terminal',
-            'message' => 'No calendar_event found for that entity_id.',
+            'message' => 'No calendar_event found for that reference.',
         ],
 
         'terminal_calendar_event_already_has_prose' => [
