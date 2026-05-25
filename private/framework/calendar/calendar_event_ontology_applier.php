@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_event_ontology_guards.php';
+require_once __DIR__ . '/calendar_node_ensurer.php';
 
 /**
  * Calendar event ontology applier.
@@ -16,6 +17,10 @@ require_once __DIR__ . '/calendar_event_ontology_guards.php';
  * It must not write semantic text surfaces. Semantic text belongs in:
  * - calendar_events.summary
  * - calendar_events.notes
+ *
+ * Calendar ontology mutations are structurally governed by the protected
+ * calendar node primitive boundary:
+ * ensure_calendar_node()
  */
 function apply_calendar_event_beat_type(
     PDO $pdo,
