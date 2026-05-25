@@ -128,7 +128,7 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
         ];
     }
 
-    $stmt = $pdo->prepare(<<<'SQL'
+    $stmt = $pdo->prepare("
         SELECT
             pf.id,
             pf.entity_id,
@@ -149,7 +149,7 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
             pp.projection_order ASC,
             pp.id ASC
         LIMIT 1
-    SQL);
+    ");
 
     $stmt->execute([
         ':target_entity_id' => $calendarEvent['entity_id'],
@@ -248,7 +248,7 @@ function resolve_prose_attachment_by_reference_label(
         throw new InvalidArgumentException('referenceLabel must be non-empty');
     }
 
-    $stmt = $pdo->prepare(<<<'SQL'
+    $stmt = $pdo->prepare("
         SELECT
             cerl.id AS reference_label_id,
             cerl.prose_family_id,
@@ -286,7 +286,7 @@ function resolve_prose_attachment_by_reference_label(
             pp.projection_order ASC,
             pp.id ASC
         LIMIT 1
-    SQL);
+    ");
 
     $stmt->execute([
         ':prose_family_id' => $proseFamilyId,
@@ -369,7 +369,7 @@ function prose_family_workflow_fetch_event_by_pk(
         return null;
     }
 
-    $stmt = $pdo->prepare(<<<'SQL'
+    $stmt = $pdo->prepare("
         SELECT
             id,
             entity_id,
@@ -382,7 +382,7 @@ function prose_family_workflow_fetch_event_by_pk(
         FROM calendar_events
         WHERE id = :id
         LIMIT 1
-    SQL);
+    ");
 
     $stmt->execute([
         ':id' => $id,
@@ -398,7 +398,7 @@ function prose_family_workflow_fetch_event_by_entity_id(
     string $entityId
 ): ?array {
 
-    $stmt = $pdo->prepare(<<<'SQL'
+    $stmt = $pdo->prepare("
         SELECT
             id,
             entity_id,
@@ -411,7 +411,7 @@ function prose_family_workflow_fetch_event_by_entity_id(
         FROM calendar_events
         WHERE entity_id = :entity_id
         LIMIT 1
-    SQL);
+    ");
 
     $stmt->execute([
         ':entity_id' => $entityId,
@@ -435,7 +435,7 @@ function prose_family_workflow_fetch_event_by_address(
 
     [$weekIndex, $dayIndex, $timeIndex, $eventIndex] = $parts;
 
-    $stmt = $pdo->prepare(<<<'SQL'
+    $stmt = $pdo->prepare("
         SELECT
             ce.id,
             ce.entity_id,
@@ -458,7 +458,7 @@ function prose_family_workflow_fetch_event_by_address(
           AND ce.event_index = :event_index
           AND ce.parent_event_id IS NULL
         LIMIT 2
-    SQL);
+    ");
 
     $stmt->execute([
         ':week_index' => $weekIndex,
