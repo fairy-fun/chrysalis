@@ -3,12 +3,18 @@
 declare(strict_types=1);
 
 /**
- * Calendar event metadata applier.
+ * Calendar event semantic metadata applier.
  *
- * This is an approved narrow mutation boundary for editorial metadata on an
- * existing calendar event. It may update summary / notes only. It must not
- * create calendar rows, generate topology, alter book locality, touch
- * chronology_address, or call ensure_calendar_node.
+ * Approved narrow mutation boundary for semantic narrative text surfaces on an
+ * existing calendar event.
+ *
+ * Writes only:
+ * - calendar_events.summary
+ * - calendar_events.notes
+ *
+ * Does not write ontology linkage fields:
+ * - calendar_events.beat_type_id
+ * - calendar_events.class_type_id
  */
 function apply_calendar_event_metadata(
     PDO $pdo,
@@ -65,6 +71,11 @@ function apply_calendar_event_metadata(
         'calendar_event_entity_id' => $entityId,
         'summary' => $summary,
         'notes' => $notes,
+        'semantic_text_surfaces' => [
+            'calendar_events.summary',
+            'calendar_events.notes',
+        ],
+        'ontology_linkage_fields_touched' => [],
         'updated_rows' => $stmt->rowCount(),
     ];
 }
