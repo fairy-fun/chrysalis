@@ -15,11 +15,103 @@ function fw_workflow_character_tag_approval_status(
         return 'approved';
     }
 
+    if (preg_match('/char-[a-z0-9\-]+/i', $value) === 1) {
+        return 'partial';
+    }
+
+    if (
+        str_contains($value, 'except')
+        || str_contains($value, 'not ')
+        || str_contains($value, 'exclude')
+    ) {
+        return 'partial';
+    }
+
     if (in_array($value, ['no', 'n', 'reject', 'rejected', 'cancel'], true)) {
         return 'rejected';
     }
 
     return 'unrecognised';
+}
+
+function fw_extract_character_entity_ids(string $text): array
+{
+    preg_match_all(
+        '/CHAR-[A-Z0-9\-]+/i',
+        $text,
+        $matches
+    );
+
+    $entityIds = [];
+
+    foreach (($matches[0] ?? []) as $match) {
+        $entityIds[] = strtoupper(trim((string)$match));
+    }
+
+    return array_values(array_unique($entityIds));
+}
+
+function fw_filter_approved_character_suggestions(
+    array $resolvedSuggestions,
+    string $approvalInput
+): array {
+
+    $approvalInput = trim($approvalInput);
+
+    if ($approvalInput === '') {
+        return [];
+    }
+
+    $status = fw_workflow_character_tag_approval_status($approvalInput);
+
+    if ($status === 'approved') {
+        return $resolvedSuggestions;
+    }
+
+    if ($status === 'rejected' || $status === 'unrecognised') {
+        return [];
+    }
+
+    $mentionedEntityIds = fw_extract_character_entity_ids($approvalInput);
+
+    if ($mentionedEntityIds === []) {
+        return [];
+    }
+
+    $isExclusion = (
+        str_contains(mb_strtolower($approvalInput), 'except')
+        || str_contains(mb_strtolower($approvalInput), 'not ')
+        || str_contains(mb_strtolower($approvalInput), 'exclude')
+    );
+
+    $filtered = [];
+
+    foreach ($resolvedSuggestions as $suggestion) {
+        if (!is_array($suggestion)) {
+            continue;
+        }
+
+        $entityId = strtoupper(trim((string)(
+            $suggestion['resolved_entity_id'] ?? ''
+        )));
+
+        if ($entityId === '') {
+            continue;
+        }
+
+        $mentioned = in_array($entityId, $mentionedEntityIds, true);
+
+        if ($isExclusion && !$mentioned) {
+            $filtered[] = $suggestion;
+            continue;
+        }
+
+        if (!$isExclusion && $mentioned) {
+            $filtered[] = $suggestion;
+        }
+    }
+
+    return $filtered;
 }
 
 function fw_resolve_calendar_event_persistence_id(
@@ -220,11 +312,15 @@ function fw_execute_workflow_calendar_event_apply_character_tags(
     array $context = []
 ): array {
 
-    $approval = fw_workflow_character_tag_approval_status(
+    $approvalInput = trim((string)(
         $input['character_tag_approval'] ?? ''
+    ));
+
+    $approval = fw_workflow_character_tag_approval_status(
+        $approvalInput
     );
 
-    if ($approval !== 'approved') {
+    if ($approval === 'rejected' || $approval === 'unrecognised') {
         return [
             'success' => false,
             'status' => $approval,
@@ -263,6 +359,21 @@ function fw_execute_workflow_calendar_event_apply_character_tags(
         throw new RuntimeException('No resolved character suggestions available to approve');
     }
 
+    $approvedSuggestions = fw_filter_approved_character_suggestions(
+        $resolvedSuggestions,
+        $approvalInput
+    );
+
+    if ($approvedSuggestions === []) {
+        return [
+            'success' => false,
+            'status' => 'no_tags_applied',
+            'workflow' => 'calendar_event_approve_character_tags',
+            'transition_reason' => 'empty_approved_subset',
+            'context' => $context,
+        ];
+    }
+
     $insertStmt = $pdo->prepare("
         INSERT IGNORE INTO calendar_event_participants (
             event_id,
@@ -275,7 +386,7 @@ function fw_execute_workflow_calendar_event_apply_character_tags(
 
     $approvedTags = [];
 
-    foreach ($resolvedSuggestions as $suggestion) {
+    foreach ($approvedSuggestions as $suggestion) {
         if (!is_array($suggestion)) {
             continue;
         }
