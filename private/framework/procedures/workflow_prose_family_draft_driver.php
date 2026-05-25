@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_family_draft_creator.php';
+require_once __DIR__ . '/../prose/prose_projection_publisher.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
 function fw_execute_workflow_prose_create_family_draft(
@@ -28,6 +29,35 @@ function fw_execute_workflow_prose_create_family_draft(
             $context,
             [
                 'created_prose' => $result,
+            ]
+        ),
+    ];
+}
+
+function fw_execute_workflow_prose_set_projection_published_draft(
+    PDO $pdo,
+    array $action,
+    array $input = [],
+    array $context = []
+): array {
+
+    $payload = fw_resolve_workflow_value(
+        $action['payload'] ?? [],
+        $input,
+        $context
+    );
+
+    $result = set_projection_published_draft(
+        $pdo,
+        $payload
+    );
+
+    return [
+        'success' => true,
+        'context' => array_merge(
+            $context,
+            [
+                'publication_update' => $result,
             ]
         ),
     ];
