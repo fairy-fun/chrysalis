@@ -116,15 +116,9 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
         ];
     }
 
-    $proseFamilyId = prose_family_workflow_extract_family_scope(
-        $payload,
-        $context
-    );
-
     $calendarEvent = prose_family_workflow_resolve_calendar_event(
         $pdo,
-        $eventReference,
-        $proseFamilyId
+        $eventReference
     );
 
     if ($calendarEvent === null) {
@@ -194,38 +188,9 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
     ];
 }
 
-function prose_family_workflow_extract_family_scope(
-    array $payload,
-    array $context
-): ?int {
-
-    $candidates = [
-        $payload['prose_family_id'] ?? null,
-        $context['prose_family']['id'] ?? null,
-        $context['created_prose']['prose_family']['id'] ?? null,
-    ];
-
-    foreach ($candidates as $candidate) {
-        if (is_int($candidate) && $candidate > 0) {
-            return $candidate;
-        }
-
-        if (is_string($candidate) && preg_match('/^[0-9]+$/', $candidate) === 1) {
-            $id = (int) $candidate;
-
-            if ($id > 0) {
-                return $id;
-            }
-        }
-    }
-
-    return null;
-}
-
 function prose_family_workflow_resolve_calendar_event(
     PDO $pdo,
-    string $reference,
-    ?int $proseFamilyId = null
+    string $reference
 ): ?array {
 
     $reference = trim($reference);
@@ -257,18 +222,6 @@ function prose_family_workflow_resolve_calendar_event(
         return $canonicalEvent;
     }
 
-    if ($proseFamilyId !== null) {
-        $labelEvent = resolve_calendar_event_by_reference_label(
-            $pdo,
-            $proseFamilyId,
-            $reference
-        );
-
-        if ($labelEvent !== null) {
-            return $labelEvent;
-        }
-    }
-
     if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/', $reference) === 1) {
         return prose_family_workflow_fetch_event_by_address(
             $pdo,
@@ -279,7 +232,7 @@ function prose_family_workflow_resolve_calendar_event(
     return null;
 }
 
-function resolve_calendar_event_by_reference_label(
+function resolve_prose_attachment_by_reference_label(
     PDO $pdo,
     int $proseFamilyId,
     string $referenceLabel
@@ -297,19 +250,41 @@ function resolve_calendar_event_by_reference_label(
 
     $stmt = $pdo->prepare('
         SELECT
-            ce.id,
-            ce.entity_id,
-            ce.projection_id,
-            ce.book_time_id,
-            ce.event_index,
-            ce.subevent_index,
-            ce.layer_id,
-            ce.summary
+            cerl.id AS reference_label_id,
+            cerl.prose_family_id,
+            cerl.calendar_event_id,
+            cerl.reference_label,
+            cerl.created_at AS reference_label_created_at,
+            pf.entity_id AS prose_family_entity_id,
+            ce.entity_id AS calendar_event_entity_id,
+            ce.projection_id AS calendar_event_projection_id,
+            ce.book_time_id AS calendar_event_book_time_id,
+            ce.event_index AS calendar_event_index,
+            ce.subevent_index AS calendar_subevent_index,
+            ce.layer_id AS calendar_event_layer_id,
+            ce.summary AS calendar_event_summary,
+            pp.id AS prose_projection_id,
+            pp.published_prose_draft_id,
+            pp.is_export_target,
+            pp.projection_order,
+            pp.role_id AS prose_projection_role_id,
+            pp.projection_type_id AS prose_projection_type_id
         FROM calendar_event_reference_labels cerl
+        INNER JOIN prose_families pf
+            ON pf.id = cerl.prose_family_id
         INNER JOIN calendar_events ce
             ON ce.id = cerl.calendar_event_id
+        LEFT JOIN prose_projections pp
+            ON pp.prose_family_id = cerl.prose_family_id
+           AND pp.target_entity_id = ce.entity_id
+           AND pp.role_id = 'prose_projection_role_primary'
+           AND pp.projection_type_id = 'projection_type_timeline_view'
         WHERE cerl.prose_family_id = :prose_family_id
           AND cerl.reference_label = :reference_label
+        ORDER BY
+            pp.is_export_target DESC,
+            pp.projection_order ASC,
+            pp.id ASC
         LIMIT 1
     ');
 
@@ -320,29 +295,69 @@ function resolve_calendar_event_by_reference_label(
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    return is_array($row) ? $row : null;
+    if (!is_array($row)) {
+        return null;
+    }
+
+    return [
+        'reference_label' => [
+            'id' => (int) $row['reference_label_id'],
+            'prose_family_id' => (int) $row['prose_family_id'],
+            'calendar_event_id' => (int) $row['calendar_event_id'],
+            'reference_label' => $row['reference_label'],
+            'created_at' => $row['reference_label_created_at'],
+        ],
+        'prose_family' => [
+            'id' => (int) $row['prose_family_id'],
+            'entity_id' => $row['prose_family_entity_id'],
+        ],
+        'calendar_event' => [
+            'id' => (int) $row['calendar_event_id'],
+            'entity_id' => $row['calendar_event_entity_id'],
+            'projection_id' => $row['calendar_event_projection_id'],
+            'book_time_id' => $row['calendar_event_book_time_id'],
+            'event_index' => $row['calendar_event_index'],
+            'subevent_index' => $row['calendar_subevent_index'],
+            'layer_id' => $row['calendar_event_layer_id'],
+            'summary' => $row['calendar_event_summary'],
+        ],
+        'prose_projection' => $row['prose_projection_id'] === null
+            ? null
+            : [
+                'id' => (int) $row['prose_projection_id'],
+                'published_prose_draft_id' => $row['published_prose_draft_id'] === null
+                    ? null
+                    : (int) $row['published_prose_draft_id'],
+                'is_export_target' => (int) $row['is_export_target'],
+                'projection_order' => $row['projection_order'] === null
+                    ? null
+                    : (int) $row['projection_order'],
+                'role_id' => $row['prose_projection_role_id'],
+                'projection_type_id' => $row['prose_projection_type_id'],
+            ],
+    ];
 }
 
-function require_calendar_event_by_reference_label(
+function require_prose_attachment_by_reference_label(
     PDO $pdo,
     int $proseFamilyId,
     string $referenceLabel
 ): array {
 
-    $calendarEvent = resolve_calendar_event_by_reference_label(
+    $attachment = resolve_prose_attachment_by_reference_label(
         $pdo,
         $proseFamilyId,
         $referenceLabel
     );
 
-    if ($calendarEvent === null) {
+    if ($attachment === null) {
         throw new RuntimeException(
-            'No calendar event reference label found in prose family scope: ' .
+            'No prose attachment reference label found in prose family scope: ' .
             $referenceLabel
         );
     }
 
-    return $calendarEvent;
+    return $attachment;
 }
 
 function prose_family_workflow_fetch_event_by_pk(
