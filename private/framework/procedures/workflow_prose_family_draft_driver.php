@@ -113,10 +113,10 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
         INNER JOIN prose_families pf
             ON pf.id = pp.prose_family_id
         WHERE pp.target_entity_id = :target_entity_id
-          AND pp.is_export_target = 1
           AND pp.role_id = 'prose_projection_role_primary'
           AND pp.projection_type_id = 'projection_type_timeline_view'
         ORDER BY
+            pp.is_export_target DESC,
             pp.projection_order ASC,
             pp.id ASC
         LIMIT 1
@@ -139,6 +139,10 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
             ),
         ];
     }
+
+    $proseFamily['projection_resolution_notes'] = (int)($proseFamily['is_export_target'] ?? 0) === 1
+        ? 'Resolved existing export-capable primary timeline projection.'
+        : 'Resolved primary timeline projection that is not yet export-capable; publication workflow may explicitly activate export capability.';
 
     return [
         'success' => true,
