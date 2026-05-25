@@ -72,7 +72,7 @@ function fw_match_chat_workflow(
         str_contains($message, 'beat and title')
         || str_contains($message, 'derive beat')
     ) {
-        return 'calendar_event_derive_beat_title';
+        return 'calendar_event_title_narrative_ontology';
     }
 
     $intentMap = [
@@ -123,19 +123,19 @@ function fw_match_chat_workflow(
         => 'calendar_event_process_attached_prose',
 
         'i want to process attached prose into its beat and title'
-            => 'calendar_event_derive_beat_title',
+            => 'calendar_event_title_narrative_ontology',
 
         'process attached prose into its beat and title'
-            => 'calendar_event_derive_beat_title',
+            => 'calendar_event_title_narrative_ontology',
 
         'process attached prose into beat and title'
-            => 'calendar_event_derive_beat_title',
+            => 'calendar_event_title_narrative_ontology',
 
         'derive beat and title from attached prose'
-            => 'calendar_event_derive_beat_title',
+            => 'calendar_event_title_narrative_ontology',
 
         'derive the beat and title from attached prose'
-            => 'calendar_event_derive_beat_title',
+            => 'calendar_event_title_narrative_ontology',
 
         'i want to approve character tags from attached prose'
             => 'calendar_event_approve_character_tags',
