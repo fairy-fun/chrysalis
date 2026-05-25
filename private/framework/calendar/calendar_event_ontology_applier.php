@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_event_ontology_guards.php';
-require_once __DIR__ . '/calendar_node_ensurer.php';
 
 /**
  * Calendar event ontology applier.
@@ -18,9 +17,8 @@ require_once __DIR__ . '/calendar_node_ensurer.php';
  * - calendar_events.summary
  * - calendar_events.notes
  *
- * Calendar ontology mutations are structurally governed by the protected
- * calendar node primitive boundary:
- * ensure_calendar_node()
+ * It must not create calendar nodes, generate topology, alter book locality,
+ * or touch chronology_address.
  */
 function apply_calendar_event_beat_type(
     PDO $pdo,
