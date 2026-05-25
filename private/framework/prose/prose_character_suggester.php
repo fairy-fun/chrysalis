@@ -41,22 +41,35 @@ function prose_character_find_offsets(
     string $surfaceForm
 ): array {
 
+    $surfaceForm = trim($surfaceForm);
+
+    if ($surfaceForm === '') {
+        return [];
+    }
+
+    $escaped = preg_quote($surfaceForm, '/');
+
+    $matched = preg_match_all(
+        '/(?<![\p{L}\p{N}_])' . $escaped . '(?![\p{L}\p{N}_])/iu',
+        $proseBody,
+        $matches,
+        PREG_OFFSET_CAPTURE
+    );
+
+    if ($matched === false || $matched < 1) {
+        return [];
+    }
+
     $offsets = [];
-    $cursor = 0;
 
-    while (true) {
-        $position = mb_stripos($proseBody, $surfaceForm, $cursor);
-
-        if ($position === false) {
-            break;
-        }
+    foreach ($matches[0] as $match) {
+        $matchedText = (string)($match[0] ?? '');
+        $position = (int)($match[1] ?? 0);
 
         $offsets[] = [
             'start' => $position,
-            'end' => $position + mb_strlen($surfaceForm),
+            'end' => $position + strlen($matchedText),
         ];
-
-        $cursor = $position + mb_strlen($surfaceForm);
     }
 
     return $offsets;
