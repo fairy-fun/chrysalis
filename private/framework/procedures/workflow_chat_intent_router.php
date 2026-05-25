@@ -55,6 +55,15 @@ function fw_match_chat_workflow(
     }
 
     if (
+        str_contains($message, 'add a new prose draft to a prose family')
+        || str_contains($message, 'add new prose draft to a prose family')
+        || str_contains($message, 'add a prose draft to a prose family')
+        || str_contains($message, 'new prose draft to a prose family')
+    ) {
+        return 'prose_family_add_draft';
+    }
+
+    if (
         str_contains($message, 'approve character tags')
         || str_contains($message, 'approve character suggestions')
     ) {
@@ -106,6 +115,18 @@ function fw_match_chat_workflow(
 
         'create a book event'
         => 'calendar_book_event_create',
+
+        'i want to add a new prose draft to a prose family'
+        => 'prose_family_add_draft',
+
+        'add a new prose draft to a prose family'
+        => 'prose_family_add_draft',
+
+        'add new prose draft to a prose family'
+        => 'prose_family_add_draft',
+
+        'add a prose draft to a prose family'
+        => 'prose_family_add_draft',
 
         'i want to add prose to an existing calendar event'
         => 'calendar_event_add_prose',
