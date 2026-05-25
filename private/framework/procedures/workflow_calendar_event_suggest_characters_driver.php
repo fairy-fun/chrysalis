@@ -30,6 +30,35 @@ function fw_execute_workflow_calendar_event_suggest_characters(
         );
     }
 
+    $eventStmt = $pdo->prepare("
+        SELECT id
+        FROM calendar_events
+        WHERE entity_id = :entity_id
+           OR entity_id = CONCAT('calendar_event:', :bare_entity_id)
+        LIMIT 1
+    ");
+
+    $eventStmt->execute([
+        ':entity_id' => $entityId,
+        ':bare_entity_id' => $entityId,
+    ]);
+
+    $eventRow = $eventStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($eventRow)) {
+        throw new RuntimeException(
+            'Cannot suggest character tags for missing calendar event: ' . $entityId
+        );
+    }
+
+    $eventId = (int)($eventRow['id'] ?? 0);
+
+    if ($eventId < 1) {
+        throw new RuntimeException(
+            'Calendar event resolved to invalid persistence id: ' . $entityId
+        );
+    }
+
     $proseStmt = $pdo->prepare("
         SELECT
             pp.id AS prose_projection_id,
@@ -74,6 +103,8 @@ function fw_execute_workflow_calendar_event_suggest_characters(
         $proseBody,
         [
             'calendar_event_entity_id' => $entityId,
+            'calendar_event_id' => $eventId,
+            'event_id' => $eventId,
             'prose_projection_id' => (int)$proseRow['prose_projection_id'],
             'prose_entity_id' => (string)$proseRow['prose_entity_id'],
         ]
@@ -88,6 +119,7 @@ function fw_execute_workflow_calendar_event_suggest_characters(
         'context' => array_merge(
             $context,
             [
+                'calendar_event_id' => $eventId,
                 'character_suggestions' => $suggestions,
             ]
         ),
