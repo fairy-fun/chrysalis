@@ -62,10 +62,11 @@ startWorkflowChat create book event
 To add prose to an existing calendar event whose entity ID you already know, tell the chat:
 
 ```text
-I want to add prose to an existing calendar event.
-
+startWorkflowChat I want to add prose to an existing calendar event.
+```
 or 
 
+```text
 Call startWorkflowChat with message: I want to add prose to an existing calendar event.
 ```
 
