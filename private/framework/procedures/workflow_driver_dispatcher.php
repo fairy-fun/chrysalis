@@ -48,6 +48,8 @@ function fw_execute_workflow_driver_operation(
             'process_attached_prose' => 'fw_execute_workflow_calendar_event_process_attached_prose',
             'derive_beat_title' => 'fw_execute_workflow_calendar_event_derive_beat_title',
             'suggest_characters' => 'fw_execute_workflow_calendar_event_suggest_characters',
+            'prepare_character_tag_approval' => 'fw_execute_workflow_calendar_event_prepare_character_tag_approval',
+            'apply_character_tags' => 'fw_execute_workflow_calendar_event_apply_character_tags',
             'display_day_prose' => 'fw_execute_workflow_calendar_display_day_prose',
             'display_week_prose' => 'fw_execute_workflow_calendar_display_week_prose',
             'display_week_day_prose' => 'fw_execute_workflow_calendar_display_week_day_prose',

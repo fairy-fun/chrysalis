@@ -55,6 +55,13 @@ function fw_match_chat_workflow(
     }
 
     if (
+        str_contains($message, 'approve character tags')
+        || str_contains($message, 'approve character suggestions')
+    ) {
+        return 'calendar_event_approve_character_tags';
+    }
+
+    if (
         str_contains($message, 'tag characters')
         || str_contains($message, 'suggest characters')
     ) {
@@ -129,6 +136,15 @@ function fw_match_chat_workflow(
 
         'derive the beat and title from attached prose'
             => 'calendar_event_derive_beat_title',
+
+        'i want to approve character tags from attached prose'
+            => 'calendar_event_approve_character_tags',
+
+        'approve character tags from attached prose'
+            => 'calendar_event_approve_character_tags',
+
+        'approve character suggestions from attached prose'
+            => 'calendar_event_approve_character_tags',
 
         'i want to tag characters from an event\'s attached prose'
             => 'calendar_event_suggest_characters',

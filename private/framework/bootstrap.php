@@ -35,6 +35,7 @@ require_once __DIR__ . '/procedures/workflow_calendar_book_time_create_driver.ph
 require_once __DIR__ . '/procedures/workflow_calendar_event_process_attached_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_derive_beat_title_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_suggest_characters_driver.php';
+require_once __DIR__ . '/procedures/workflow_calendar_event_approve_character_tags_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_day_display_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_week_display_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_week_day_display_prose_driver.php';
@@ -66,6 +67,12 @@ if (!function_exists('fw_execute_workflow_calendar_event_derive_beat_title')) {
 if (!function_exists('fw_execute_workflow_calendar_event_suggest_characters')) {
     throw new RuntimeException(
         'Workflow driver not loaded: fw_execute_workflow_calendar_event_suggest_characters'
+    );
+}
+
+if (!function_exists('fw_execute_workflow_calendar_event_apply_character_tags')) {
+    throw new RuntimeException(
+        'Workflow driver not loaded: fw_execute_workflow_calendar_event_apply_character_tags'
     );
 }
 
