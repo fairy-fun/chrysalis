@@ -113,7 +113,7 @@ function persist_semantic_surface_evidence(
         'span_end' => $context['span_end'] ?? null,
         'source_classval_id' => $context['source_classval_id'] ?? 'SURFACE_SOURCE_SEMANTIC_ALIAS',
         'confidence_classval_id' => $context['confidence_classval_id'] ?? 'CONFIDENCE_MEDIUM',
-        'resolution_status_classval_id' => $context['resolution_status_classval_id'] ?? 'CONFIDENCE_MEDIUM',
+        'resolution_status_classval_id' => $context['resolution_status_classval_id'] ?? $advisoryEvidenceStatus,
         'evidence_status_classval_id' => $context['evidence_status_classval_id'] ?? $advisoryEvidenceStatus,
         'resolved_entity_id' => $selectedCandidate['resolved_entity_id'] ?? null,
         'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
