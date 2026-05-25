@@ -14,7 +14,8 @@ declare(strict_types=1);
  * Important boundary:
  * - extractive metadata may be produced deterministically here;
  * - semantic metadata must be marked as semantic and must not silently
- *   collapse into first-line / truncated-excerpt fallbacks.
+ *   collapse into first-line / truncated-excerpt fallbacks;
+ * - beat_type_id is canonical ontology linkage, not semantic text.
  */
 
 function prose_first_meaningful_line(string $proseBody): ?string
@@ -111,10 +112,6 @@ function derive_known_calendar_event_beat_title(
 
     /**
      * Corpus-specific deterministic rule for Shay's first arrival at RBDS.
-     * This is intentionally evidence-gated by distinctive threshold,
-     * reception, and appointment signals. It does not derive ontology from
-     * prose; it recognises a known corpus fixture and returns semantic
-     * metadata only when the prose evidence is present.
      */
     $hasRbdsThreshold = prose_contains_any($normalized, [
         'four doors of the Royal Ballroom Dance Society',
@@ -163,6 +160,7 @@ function derive_known_calendar_event_beat_title(
         return [
             'title' => 'Shay arrives at RBDS for her appointment with Ms Kingsley',
             'beat_summary' => 'Shay arrives at the Royal Ballroom Dance Society, is admitted through its intimidating front doors by a doorman, and signs in with Mrs Higgins, who registers her as the new movement analyst and Follow #8 before sending her down the founder-lined corridor to Ms Kingsley’s office.',
+            'beat_type_id' => 'BEAT_TRANSITION',
             'derivation_mode' => 'semantic_rule',
             'evidence' => array_values(array_filter([
                 $hasRbdsThreshold ? 'RBDS_threshold' : null,
@@ -175,14 +173,7 @@ function derive_known_calendar_event_beat_title(
     }
 
     /**
-     * Corpus-specific deterministic rule for the current baseline-testing
-     * prose fixture. This is intentionally evidence-gated and returns a
-     * semantic derivation only when the distinctive prose signals are present.
-     *
-     * The fixture can surface as prose, compact workflow context, or edited
-     * prose whose final line says baseline test rather than baseline testing.
-     * So the rule gates by grouped semantic evidence instead of one brittle
-     * exact phrase chain.
+     * Corpus-specific deterministic rule for the current baseline-testing prose fixture.
      */
     $hasInstitutionalSetup = prose_contains_any($normalized, [
         'Narrative Consultant',
@@ -229,6 +220,7 @@ function derive_known_calendar_event_beat_title(
         return [
             'title' => 'Shay is summoned to baseline testing by Chloe',
             'beat_summary' => 'After leaving Ms Kingsley’s office newly appointed as “Narrative Consultant,” Shay is intercepted by Chloe, a coolly indifferent black-clad team member, and led from RBDS’s grand executive corridor down into the functional training-room level for baseline testing, marking her first descent from institutional performance theatre into the physical machinery of the team.',
+            'beat_type_id' => 'BEAT_INSTRUCTION',
             'derivation_mode' => 'semantic_rule',
             'evidence' => array_values(array_filter([
                 $hasInstitutionalSetup ? 'institutional_setup' : null,
@@ -255,6 +247,7 @@ function derive_prose_metadata(
             'title' => $semantic['title'],
             'summary' => prose_truncated_summary($proseBody),
             'beat_summary' => $semantic['beat_summary'],
+            'beat_type_id' => $semantic['beat_type_id'] ?? null,
             'derivation_mode' => $semantic['derivation_mode'],
             'evidence' => $semantic['evidence'] ?? [],
             'projection_recommendations' => [],
@@ -273,6 +266,7 @@ function derive_prose_metadata(
         'extractive_title_candidate' => $suggestedTitle,
         'summary' => prose_truncated_summary($proseBody),
         'beat_summary' => null,
+        'beat_type_id' => null,
         'derivation_mode' => 'extractive_only',
         'evidence' => [],
         'projection_recommendations' => [],
