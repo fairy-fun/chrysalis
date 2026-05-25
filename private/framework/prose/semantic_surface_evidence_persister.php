@@ -102,6 +102,22 @@ function persist_semantic_surface_evidence(
     $eventId = semantic_surface_required_event_id($context);
     $createdAt = date('Y-m-d H:i:s');
     $advisoryEvidenceStatus = 'EVIDENCE_STATUS_ADVISORY';
+    $matchedText = $context['matched_text'] ?? $surfaceText;
+    $normalizedSurfaceText = $context['normalized_surface_text'] ?? null;
+    $resolutionStrategy = $context['resolution_strategy'] ?? null;
+
+    $extractionNotes = json_encode(
+        [
+            'resolution_strategy' => $resolutionStrategy,
+            'matched_text' => $matchedText,
+            'normalized_surface_text' => $normalizedSurfaceText,
+            'selected_resolution_method_classval_id'
+                => $selectedCandidate['resolution_method_classval_id'] ?? null,
+            'selected_candidate_score'
+                => $selectedCandidate['candidate_score'] ?? null,
+        ],
+        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+    );
 
     $candidateRow = [
         'surface_text' => $surfaceText,
@@ -109,8 +125,10 @@ function persist_semantic_surface_evidence(
         'calendar_event_entity_id' => $context['calendar_event_entity_id'] ?? null,
         'prose_projection_id' => $context['prose_projection_id'] ?? null,
         'prose_entity_id' => $context['prose_entity_id'] ?? null,
-        'span_start' => $context['span_start'] ?? null,
-        'span_end' => $context['span_end'] ?? null,
+        'source_offset_start' => $context['source_offset_start'] ?? $context['span_start'] ?? null,
+        'source_offset_end' => $context['source_offset_end'] ?? $context['span_end'] ?? null,
+        'normalized_surface_text' => $normalizedSurfaceText,
+        'extraction_notes' => $extractionNotes,
         'source_classval_id' => $context['source_classval_id'] ?? 'SURFACE_SOURCE_SEMANTIC_ALIAS',
         'confidence_classval_id' => $context['confidence_classval_id'] ?? 'CONFIDENCE_MEDIUM',
         'resolution_status_classval_id' => $context['resolution_status_classval_id'] ?? $advisoryEvidenceStatus,
@@ -127,10 +145,15 @@ function persist_semantic_surface_evidence(
                 'workflow' => $context['workflow'] ?? null,
                 'suggestion_mode' => 'deterministic_ordered_resolution_candidates',
                 'matched_surface_form' => $surfaceText,
+                'matched_text' => $matchedText,
+                'normalized_surface_text' => $normalizedSurfaceText,
+                'resolution_strategy' => $resolutionStrategy,
                 'event_id' => $eventId,
                 'calendar_event_entity_id' => $context['calendar_event_entity_id'] ?? null,
                 'prose_projection_id' => $context['prose_projection_id'] ?? null,
                 'prose_entity_id' => $context['prose_entity_id'] ?? null,
+                'source_offset_start' => $candidateRow['source_offset_start'],
+                'source_offset_end' => $candidateRow['source_offset_end'],
                 'created_at' => $createdAt,
                 'advisory_evidence_status' => $advisoryEvidenceStatus,
             ],
