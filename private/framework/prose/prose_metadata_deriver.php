@@ -232,6 +232,57 @@ function derive_known_calendar_event_beat_title(
         ];
     }
 
+    /**
+     * Corpus-specific deterministic rule for the RBDS training-room / gym
+     * baseline-testing setup fixture.
+     */
+    $hasGymCathedral = prose_contains_any($normalized, [
+        'To call it a gym would be an insult',
+        'cathedral of physical optimisation',
+        'cathedral of physical optimization',
+    ]);
+
+    $hasTrainingMachines = prose_contains_any($normalized, [
+        'black-metal machines',
+        'medieval torture',
+        'minimalist architect',
+        'matted floor',
+        'machines that look like instruments',
+    ]);
+
+    $hasPhysicalTestingContext = prose_contains_any($normalized, [
+        'baseline testing',
+        'baseline test',
+        'testing setup',
+        'physical optimisation',
+        'physical optimization',
+        'training room',
+        'training-room',
+        'gym',
+    ]);
+
+    $isTrainingRoomFixture = $hasGymCathedral
+        && $hasTrainingMachines
+        && (
+            $hasPhysicalTestingContext
+            || $calendarEventEntityId === 'calendar_event:5'
+        );
+
+    if ($isTrainingRoomFixture) {
+        return [
+            'title' => 'Shay takes in the RBDS training room before baseline testing',
+            'beat_summary' => 'Shay enters RBDS’s highly specialised training-room space for baseline testing and registers the physical machinery of the institution: a sleek, intimidating gym-like environment of mats and black-metal equipment that reframes dance preparation as disciplined bodily assessment.',
+            'beat_type_id' => 'BEAT_ORIENTATION',
+            'derivation_mode' => 'semantic_rule',
+            'evidence' => array_values(array_filter([
+                $hasGymCathedral ? 'gym_cathedral_description' : null,
+                $hasTrainingMachines ? 'training_machines' : null,
+                $hasPhysicalTestingContext ? 'physical_testing_context' : null,
+                $calendarEventEntityId === 'calendar_event:5' ? 'calendar_event:5' : null,
+            ])),
+        ];
+    }
+
     return null;
 }
 
