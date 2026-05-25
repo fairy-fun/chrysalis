@@ -33,6 +33,28 @@ function assert_calendar_node_ontology_linkage_fields(
     }
 }
 
+function assert_semantic_narrative_surface(string $field, mixed $value): void
+{
+    if ($value === null) {
+        return;
+    }
+
+    $text = trim((string)$value);
+
+    if ($text === '') {
+        return;
+    }
+
+    if (
+        str_starts_with($text, 'BEAT_')
+        || str_starts_with($text, 'CLASSSET-')
+    ) {
+        throw new InvalidArgumentException(
+            'Ontology identifier leaked into semantic narrative field: ' . $field
+        );
+    }
+}
+
 function assert_calendar_class_type_id(PDO $pdo, mixed $value): void
 {
     if ($value === null) {
@@ -44,6 +66,16 @@ function assert_calendar_class_type_id(PDO $pdo, mixed $value): void
     if ($id === '') {
         throw new InvalidArgumentException(
             'calendar_events.class_type_id cannot be an empty string'
+        );
+    }
+
+    if (
+        str_contains($id, ' ')
+        || str_contains($id, '.')
+        || str_contains($id, ',')
+    ) {
+        throw new InvalidArgumentException(
+            'Semantic prose detected in ontology linkage field: class_type_id'
         );
     }
 
@@ -81,6 +113,16 @@ function assert_calendar_beat_type_id(PDO $pdo, mixed $value): void
         );
     }
 
+    if (
+        str_contains($id, ' ')
+        || str_contains($id, '.')
+        || str_contains($id, ',')
+    ) {
+        throw new InvalidArgumentException(
+            'Semantic prose detected in ontology linkage field: beat_type_id'
+        );
+    }
+
     $classsetStmt = $pdo->prepare(""
         . "SELECT id\n"
         . "FROM sxnzlfun_chrysalis.calendar_beat_classsets\n"
@@ -97,6 +139,12 @@ function assert_calendar_beat_type_id(PDO $pdo, mixed $value): void
     if (is_string($classsetId) && trim($classsetId) !== '') {
         throw new InvalidArgumentException(
             'calendar_events.beat_type_id must store a concrete cvt_calendar_beat_type.id, not a calendar_beat_classsets.id: ' . $id
+        );
+    }
+
+    if (!str_starts_with($id, 'BEAT_')) {
+        throw new InvalidArgumentException(
+            'calendar_events.beat_type_id must resolve to a canonical BEAT_* ontology id: ' . $id
         );
     }
 
