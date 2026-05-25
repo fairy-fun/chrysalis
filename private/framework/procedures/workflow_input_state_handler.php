@@ -16,6 +16,101 @@ function fw_workflow_render_input_prompt(
     }
 
     if (
+        ($workflow['workflow_id'] ?? null) === 'prose_projection_set_published_draft'
+        && $stateName === 'await_draft_id'
+    ) {
+        $familyId = (int)(
+            $context['prose_family']['id']
+            ?? 0
+        );
+
+        if ($familyId < 1) {
+            return $prompt;
+        }
+
+        $stmt = $pdo->prepare('
+            SELECT
+                id,
+                entity_id,
+                title,
+                summary,
+                draft_status_id,
+                created_at,
+                updated_at
+            FROM prose_drafts
+            WHERE prose_family_id = :prose_family_id
+            ORDER BY
+                created_at DESC,
+                id DESC
+        ');
+
+        $stmt->execute([
+            ':prose_family_id' => $familyId,
+        ]);
+
+        $drafts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($drafts === []) {
+            return $prompt
+                . "\n\nNo drafts were found in this prose family.";
+        }
+
+        $publishedDraftId = $context['prose_family']['published_prose_draft_id'] ?? null;
+        $lines = [];
+
+        foreach ($drafts as $draft) {
+            $id = (int)($draft['id'] ?? 0);
+
+            if ($id < 1) {
+                continue;
+            }
+
+            $title = trim((string)($draft['title'] ?? ''));
+
+            if ($title === '') {
+                $title = 'Untitled prose draft';
+            }
+
+            $summary = trim((string)($draft['summary'] ?? ''));
+            $createdAt = trim((string)($draft['created_at'] ?? ''));
+            $status = trim((string)($draft['draft_status_id'] ?? ''));
+            $marker = ((string)$publishedDraftId !== '' && (int)$publishedDraftId === $id)
+                ? ' [current export]'
+                : '';
+
+            $line = sprintf(
+                'ID %d%s — %s',
+                $id,
+                $marker,
+                $title
+            );
+
+            if ($createdAt !== '') {
+                $line .= ' — created ' . $createdAt;
+            }
+
+            if ($status !== '') {
+                $line .= ' — status ' . $status;
+            }
+
+            if ($summary !== '') {
+                $line .= ' — ' . $summary;
+            }
+
+            $lines[] = $line;
+        }
+
+        if ($lines === []) {
+            return $prompt;
+        }
+
+        return $prompt
+            . "\n\nDrafts in this prose family, newest first:\n"
+            . implode("\n", $lines)
+            . "\n\nReply with the exact prose_drafts.id. Do not reply with 'most recent'; publication must be an explicit author selection.";
+    }
+
+    if (
         ($workflow['workflow_id'] ?? null) !== 'calendar_book_event_create'
         || $stateName !== 'await_time_index'
     ) {
