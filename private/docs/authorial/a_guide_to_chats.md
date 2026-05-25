@@ -77,6 +77,11 @@ ___
 
 ### Tier 3
 
+#### add a new prose draft to a family
+
+#### publish a selected draft
+
+
 #### 3A: derive beat/title metadata from attached prose
 
 ```text
@@ -171,3 +176,4 @@ Show me the prose for week 1 day 2
 
 #### Retrieve real-time calendar events
 Show me projection_id = 5; for a given time-span
+
