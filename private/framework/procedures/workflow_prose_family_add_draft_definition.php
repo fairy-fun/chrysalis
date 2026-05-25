@@ -18,49 +18,37 @@ return [
         ],
     ],
 
-    'entry_state' => 'await_prose_family_entity_id',
+    'entry_state' => 'await_calendar_event_reference',
 
     'states' => [
 
-        'await_prose_family_entity_id' => [
+        'await_calendar_event_reference' => [
             'type' => 'input',
-            'prompt' => 'What is the prose family entity ID?',
-            'expected_input' => 'prose_family_entity_id',
+            'prompt' => 'What calendar event is this prose attached to? You can enter calendar_event:3, 3, or 1.2.1.3.',
+            'expected_input' => 'calendar_event_reference',
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'validate_prose_family',
+                'next' => 'resolve_calendar_event_family',
             ],
         ],
 
-        'validate_prose_family' => [
+        'resolve_calendar_event_family' => [
             'type' => 'action',
 
             'action' => [
-                'driver' => 'db',
-                'operation' => 'select_one',
-                'store' => 'prose_family',
+                'driver' => 'prose',
+                'operation' => 'resolve_calendar_event_family',
 
-                'sql' => '
-                    SELECT
-                        id,
-                        entity_id
-                    FROM prose_families
-                    WHERE entity_id = :entity_id
-                    LIMIT 1
-                ',
-
-                'bindings' => [
-                    'entity_id' => '$input.prose_family_entity_id',
+                'payload' => [
+                    'calendar_event_reference' => '$input.calendar_event_reference',
                 ],
             ],
-
-            'success_if' => 'row_exists',
 
             'transition' => [
                 'driver' => 'boolean',
                 'next' => 'await_prose_text',
-                'failure_state' => 'terminal_prose_family_not_found',
+                'failure_state' => 'terminal_calendar_event_family_not_found',
             ],
         ],
 
@@ -84,7 +72,7 @@ return [
 
                 'payload' => [
                     'entity_id' => 'prose:' . uniqid(),
-                    'prose_family_entity_id' => '$context.prose_family.entity_id',
+                    'prose_family_id' => '$context.prose_family.id',
                     'title' => 'Workflow prose draft',
                     'prose_body' => '$input.prose_body',
                     'draft_status_id' => 'prose_status_draft',
@@ -101,12 +89,12 @@ return [
         'terminal_draft_created' => [
             'type' => 'terminal',
 
-            'message' => 'Sibling prose draft created successfully within the prose family.',
+            'message' => 'Sibling prose draft created successfully within the prose family. No projection publication or export authority was changed.',
         ],
 
-        'terminal_prose_family_not_found' => [
+        'terminal_calendar_event_family_not_found' => [
             'type' => 'terminal',
-            'message' => 'No prose family found for that entity ID.',
+            'message' => 'No attached prose family could be resolved for that calendar event.',
         ],
 
         'terminal_draft_creation_failed' => [
