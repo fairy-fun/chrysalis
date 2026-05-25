@@ -105,13 +105,13 @@ function resolve_character_surface_form(
         WHERE
             e.entity_type_id = 'entity_type_character'
             AND (
-                LOWER(c.search_name) = LOWER(:surface)
-                OR LOWER(c.char_name_full) = LOWER(:surface)
-                OR LOWER(c.char_name_first) = LOWER(:surface)
-                OR LOWER(c.char_name_last) = LOWER(:surface)
-                OR LOWER(el.label) = LOWER(:surface)
-                OR LOWER(sa.alias) = LOWER(:surface)
-                OR LOWER(et.canonical_label) = LOWER(:surface)
+                LOWER(c.search_name) = LOWER(?)
+                OR LOWER(c.char_name_full) = LOWER(?)
+                OR LOWER(c.char_name_first) = LOWER(?)
+                OR LOWER(c.char_name_last) = LOWER(?)
+                OR LOWER(el.label) = LOWER(?)
+                OR LOWER(sa.alias) = LOWER(?)
+                OR LOWER(et.canonical_label) = LOWER(?)
             )
         LIMIT 1
     ";
@@ -120,7 +120,13 @@ function resolve_character_surface_form(
 
     foreach (prose_character_normalize_surface_forms($surfaceForm) as $candidateSurface) {
         $statement->execute([
-            ':surface' => $candidateSurface,
+            $candidateSurface,
+            $candidateSurface,
+            $candidateSurface,
+            $candidateSurface,
+            $candidateSurface,
+            $candidateSurface,
+            $candidateSurface,
         ]);
 
         $row = $statement->fetch(PDO::FETCH_ASSOC);
