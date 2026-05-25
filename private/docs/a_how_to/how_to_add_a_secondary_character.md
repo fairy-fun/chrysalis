@@ -285,3 +285,110 @@ CHAR-SUP-997
 without synthesizing identifiers.
 
 No ontology mutation should occur automatically from extraction alone.
+
+### Organizational roles are institutional ontology, not honorific ontology
+
+Institutional titles MUST be modeled through:
+
+- `company_roles`
+- `company_assignments`
+- `company_assignment_roles`
+
+Do NOT place organizational titles into:
+
+- `entity_labels`
+- `semantic_aliases`
+- honorific systems
+- character canonical labels
+
+Example:
+
+`Executive Administrator`
+
+belongs in:
+
+`company_roles.role_label`
+
+NOT:
+
+```text
+Mrs Executive Administrator Higgins
+```
+
+or:
+
+`entity_labels.label
+`
+
+Recommended canonical organizational role insertion pattern:
+
+```sql
+INSERT INTO company_roles (
+    role_id,
+    role_code,
+    role_label
+)
+SELECT
+    'ROLE-EXEC-ADMIN',
+    'executive_administrator',
+    'Executive Administrator'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM company_roles
+    WHERE role_id = 'ROLE-EXEC-ADMIN'
+);
+```
+
+Recommended canonical company affiliation:
+
+```sql
+INSERT INTO company_assignments (
+    company_assignment_id,
+    member_entity_id,
+    company_id,
+    status_id
+)
+SELECT
+    'COMPASSIGN-CHAR-SUP-997-RBDS',
+    'CHAR-SUP-997',
+    'COMP-001',
+    'status_active'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM company_assignments
+    WHERE company_assignment_id = 'COMPASSIGN-CHAR-SUP-997-RBDS'
+);
+```
+
+Recommended assignment-role linkage:
+
+```sql
+INSERT INTO company_assignment_roles (
+    company_assignment_id,
+    role_id,
+    is_primary
+)
+SELECT
+    'COMPASSIGN-CHAR-SUP-997-RBDS',
+    'ROLE-EXEC-ADMIN',
+    1
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM company_assignment_roles
+    WHERE company_assignment_id = 'COMPASSIGN-CHAR-SUP-997-RBDS'
+      AND role_id = 'ROLE-EXEC-ADMIN'
+);
+```
+
+Recommended canonical lookup authority:
+
+- `company_roles.role_id`
+- `company_roles.role_code`
+
+Avoid joining on:
+
+
+`role_label
+`
+
+because labels are mutable presentation surfaces.
