@@ -165,11 +165,14 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
 
     if (!is_array($proseFamily)) {
         return [
-            'success' => false,
+            'success' => true,
             'context' => array_merge(
                 $context,
                 [
                     'calendar_event' => $calendarEvent,
+                    'prose_family' => null,
+                    'prose_family_resolution_notes'
+                        => 'No prose family projection exists yet; the add-prose workflow may create the initial prose family and projection.',
                 ]
             ),
         ];
