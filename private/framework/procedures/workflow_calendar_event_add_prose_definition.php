@@ -2,8 +2,18 @@
 
 return [
     'workflow_id' => 'calendar_event_add_prose',
-    'tier' => 2,
-    'intent' => 'Add prose to an existing calendar_event',
+    'tier' => 3,
+    'intent' => 'Add prose to an existing calendar_event through prose-family-aware projection topology',
+
+    'initial_context' => [
+        'workflow_doctrine' => [
+            'prose_family_is_container' => true,
+            'drafts_are_sibling_variants' => true,
+            'draft_creation_is_not_publication' => true,
+            'projection_controls_export_authority' => true,
+            'reference_labels_are_retrieval_affordances' => true,
+        ],
+    ],
 
     'entry_state' => 'await_calendar_event_entity_id',
 
@@ -11,7 +21,7 @@ return [
 
         'await_calendar_event_entity_id' => [
             'type' => 'input',
-            'prompt' => 'What is the existing calendar event? You can enter calendar_event:5, 5, or a supported event entity_id.',
+            'prompt' => 'What is the existing calendar event? You can enter calendar_event:5, 5, a canonical entity_id, a prose-family-scoped reference label, or chronology notation like 1.2.1.3.',
             'expected_input' => 'calendar_event_entity_id',
 
             'transition' => [
@@ -20,137 +30,27 @@ return [
                 'cases' => [
                     '' => 'terminal_missing_entity_id',
                 ],
-                'default' => 'validate_calendar_event_entity',
+                'default' => 'resolve_calendar_event_family',
             ],
         ],
 
-        'validate_calendar_event_entity' => [
+        'resolve_calendar_event_family' => [
             'type' => 'action',
 
             'action' => [
-                'driver' => 'db',
-                'operation' => 'select_one',
-                'store' => 'calendar_event',
+                'driver' => 'prose',
+                'operation' => 'resolve_calendar_event_family',
 
-                'sql' => '
-                    SELECT
-                        id,
-                        entity_id,
-                        layer_id,
-                        projection_id,
-                        book_time_id,
-                        event_index
-                    FROM calendar_events
-                    WHERE entity_id = :entity_id
-                       OR entity_id = CONCAT(\'calendar_event:\', :bare_entity_id)
-                    LIMIT 1
-                ',
-
-                'bindings' => [
-                    'entity_id' => '$input.calendar_event_entity_id',
-                    'bare_entity_id' => '$input.calendar_event_entity_id',
+                'payload' => [
+                    'calendar_event_reference'
+                        => '$input.calendar_event_entity_id',
                 ],
             ],
-
-            'success_if' => 'row_exists',
 
             'transition' => [
                 'driver' => 'boolean',
-                'next' => 'inspect_calendar_event_prose',
-                'failure_state' => 'terminal_calendar_event_not_found',
-            ],
-        ],
-
-        'inspect_calendar_event_prose' => [
-            'type' => 'action',
-
-            'action' => [
-                'driver' => 'db',
-                'operation' => 'select_one',
-                'store' => 'calendar_event_prose',
-
-                'sql' => '
-                    SELECT
-                        prose_body,
-                        notes
-                    FROM calendar_events
-                    WHERE entity_id = :entity_id
-                    AND (
-                        prose_body IS NOT NULL
-                        OR notes IS NOT NULL
-                    )
-                    LIMIT 1
-                ',
-
-                'bindings' => [
-                    'entity_id' => '$context.calendar_event.entity_id',
-                ],
-            ],
-
-            'success_if' => 'row_exists',
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'terminal_calendar_event_already_has_prose',
-                'failure_state' => 'inspect_calendar_subevent_prose',
-            ],
-        ],
-
-        'inspect_calendar_subevent_prose' => [
-            'type' => 'action',
-
-            'action' => [
-                'driver' => 'db',
-                'operation' => 'select_one',
-                'store' => 'calendar_subevent_prose',
-
-                'sql' => '
-                    SELECT
-                        id,
-                        entity_id,
-                        prose_body,
-                        notes
-                    FROM calendar_events
-                    WHERE parent_event_id = :event_id
-                    AND (
-                        prose_body IS NOT NULL
-                        OR notes IS NOT NULL
-                    )
-                    LIMIT 1
-                ',
-
-                'bindings' => [
-                    'event_id' => '$context.calendar_event.id',
-                ],
-            ],
-
-            'success_if' => 'row_exists',
-
-            'transition' => [
-                'driver' => 'boolean',
-                'next' => 'terminal_calendar_subevent_has_prose',
-                'failure_state' => 'route_calendar_event_layer',
-            ],
-        ],
-
-        'route_calendar_event_layer' => [
-            'type' => 'action',
-
-            'assert' => [
-                'left' => '$context.calendar_event.layer_id',
-                'operator' => 'is_not_null',
-            ],
-
-            'transition' => [
-                'driver' => 'match',
-                'value' => '$context.calendar_event.layer_id',
-
-                'cases' => [
-                    'calendar_layer_event' => 'await_prose_text',
-                    'calendar_layer_subevent' => 'await_prose_text',
-                ],
-
-                'default' => 'terminal_wrong_layer',
+                'next' => 'await_prose_text',
+                'failure_state' => 'await_prose_text',
             ],
         ],
 
@@ -170,21 +70,22 @@ return [
 
             'action' => [
                 'driver' => 'prose',
-                'operation' => 'create_draft',
+                'operation' => 'create_calendar_event_family_draft',
 
                 'payload' => [
                     'entity_id' => 'prose:' . uniqid(),
+                    'calendar_event_entity_id'
+                        => '$context.calendar_event.entity_id',
                     'title' => 'Workflow prose draft',
                     'prose_body' => '$input.prose',
                     'draft_status_id' => 'prose_status_draft',
-
-                    'projection' => [
-                        'projection_classval_id' => 'projection_type_timeline_view',
-                        'projection_type_id' => 'projection_type_timeline_view',
-                        'target_entity_id' => '$context.calendar_event.entity_id',
-                        'role_id' => 'prose_projection_role_primary',
-                        'projection_order' => 1,
-                    ],
+                    'projection_classval_id'
+                        => 'projection_type_timeline_view',
+                    'projection_type_id'
+                        => 'projection_type_timeline_view',
+                    'role_id'
+                        => 'prose_projection_role_primary',
+                    'projection_order' => 1,
                 ],
             ],
 
@@ -239,10 +140,10 @@ return [
         'terminal_prose_created' => [
             'type' => 'terminal',
 
-            'message' => 'Prose draft created successfully.',
+            'message' => 'Prose draft created successfully within prose-family-aware projection topology.',
 
             'response' => [
-                'summary' => 'Prose attached successfully. The next chat should continue with prose processing and segmentation.',
+                'summary' => 'Prose attached successfully. Draft creation did not mutate publication authority or export authority.',
 
                 'next_chat_handoff' => [
                     'workflow_id' => 'calendar_event_process_attached_prose',
@@ -258,6 +159,9 @@ return [
 
                         'prose_projection_id'
                             => '$context.created_prose.projection.id',
+
+                        'prose_family_entity_id'
+                            => '$context.created_prose.prose_family.entity_id',
                     ],
                 ],
             ],
@@ -274,6 +178,9 @@ return [
 
                     'prose_projection_id'
                         => '$context.created_prose.projection.id',
+
+                    'prose_family_entity_id'
+                        => '$context.created_prose.prose_family.entity_id',
                 ],
 
                 'next_workflow' => [
@@ -300,27 +207,7 @@ return [
 
         'terminal_missing_entity_id' => [
             'type' => 'terminal',
-            'message' => 'A calendar_event entity_id is required.',
-        ],
-
-        'terminal_calendar_event_not_found' => [
-            'type' => 'terminal',
-            'message' => 'No calendar_event found for that reference.',
-        ],
-
-        'terminal_calendar_event_already_has_prose' => [
-            'type' => 'terminal',
-            'message' => 'This calendar event already has prose attached.',
-        ],
-
-        'terminal_calendar_subevent_has_prose' => [
-            'type' => 'terminal',
-            'message' => 'A subevent under this calendar event already has prose attached.',
-        ],
-
-        'terminal_wrong_layer' => [
-            'type' => 'terminal',
-            'message' => 'Entity exists but is not a supported prose layer.',
+            'message' => 'A calendar_event reference is required.',
         ],
     ],
 ];
