@@ -128,7 +128,7 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
         ];
     }
 
-    $stmt = $pdo->prepare("
+    $stmt = $pdo->prepare(<<<'SQL'
         SELECT
             pf.id,
             pf.entity_id,
@@ -149,7 +149,7 @@ function fw_execute_workflow_prose_resolve_calendar_event_family(
             pp.projection_order ASC,
             pp.id ASC
         LIMIT 1
-    ");
+    SQL);
 
     $stmt->execute([
         ':target_entity_id' => $calendarEvent['entity_id'],
@@ -369,7 +369,20 @@ function prose_family_workflow_fetch_event_by_pk(
         return null;
     }
 
-    $stmt = $pdo->prepare('\n        SELECT\n            id,\n            entity_id,\n            projection_id,\n            book_time_id,\n            event_index,\n            subevent_index,\n            layer_id,\n            summary\n        FROM calendar_events\n        WHERE id = :id\n        LIMIT 1\n    ');
+    $stmt = $pdo->prepare(<<<'SQL'
+        SELECT
+            id,
+            entity_id,
+            projection_id,
+            book_time_id,
+            event_index,
+            subevent_index,
+            layer_id,
+            summary
+        FROM calendar_events
+        WHERE id = :id
+        LIMIT 1
+    SQL);
 
     $stmt->execute([
         ':id' => $id,
@@ -385,7 +398,20 @@ function prose_family_workflow_fetch_event_by_entity_id(
     string $entityId
 ): ?array {
 
-    $stmt = $pdo->prepare('\n        SELECT\n            id,\n            entity_id,\n            projection_id,\n            book_time_id,\n            event_index,\n            subevent_index,\n            layer_id,\n            summary\n        FROM calendar_events\n        WHERE entity_id = :entity_id\n        LIMIT 1\n    ');
+    $stmt = $pdo->prepare(<<<'SQL'
+        SELECT
+            id,
+            entity_id,
+            projection_id,
+            book_time_id,
+            event_index,
+            subevent_index,
+            layer_id,
+            summary
+        FROM calendar_events
+        WHERE entity_id = :entity_id
+        LIMIT 1
+    SQL);
 
     $stmt->execute([
         ':entity_id' => $entityId,
@@ -409,7 +435,30 @@ function prose_family_workflow_fetch_event_by_address(
 
     [$weekIndex, $dayIndex, $timeIndex, $eventIndex] = $parts;
 
-    $stmt = $pdo->prepare('\n        SELECT\n            ce.id,\n            ce.entity_id,\n            ce.projection_id,\n            ce.book_time_id,\n            ce.event_index,\n            ce.subevent_index,\n            ce.layer_id,\n            ce.summary\n        FROM calendar_events ce\n        INNER JOIN calendar_book_times cbt\n            ON cbt.id = ce.book_time_id\n        INNER JOIN calendar_book_days cbd\n            ON cbd.id = cbt.day_id\n        INNER JOIN calendar_book_weeks cbw\n            ON cbw.id = cbd.week_id\n        WHERE cbw.week_index = :week_index\n          AND cbd.day_index = :day_index\n          AND cbt.time_index = :time_index\n          AND ce.event_index = :event_index\n          AND ce.parent_event_id IS NULL\n        LIMIT 2\n    ');
+    $stmt = $pdo->prepare(<<<'SQL'
+        SELECT
+            ce.id,
+            ce.entity_id,
+            ce.projection_id,
+            ce.book_time_id,
+            ce.event_index,
+            ce.subevent_index,
+            ce.layer_id,
+            ce.summary
+        FROM calendar_events ce
+        INNER JOIN calendar_book_times cbt
+            ON cbt.id = ce.book_time_id
+        INNER JOIN calendar_book_days cbd
+            ON cbd.id = cbt.day_id
+        INNER JOIN calendar_book_weeks cbw
+            ON cbw.id = cbd.week_id
+        WHERE cbw.week_index = :week_index
+          AND cbd.day_index = :day_index
+          AND cbt.time_index = :time_index
+          AND ce.event_index = :event_index
+          AND ce.parent_event_id IS NULL
+        LIMIT 2
+    SQL);
 
     $stmt->execute([
         ':week_index' => $weekIndex,
