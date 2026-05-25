@@ -183,6 +183,17 @@ function fw_match_chat_workflow(
         => 'calendar_event_process_attached_prose',
 
         'i want to process attached prose into its beat and title'
-            => 'calendar_event_title_narrative_ontology',
+        => 'calendar_event_title_narrative_ontology',
 
         'process attached prose into its beat and title'
+        => 'calendar_event_title_narrative_ontology',
+    ];
+
+    foreach ($intentMap as $needle => $workflowKey) {
+        if (str_contains($message, $needle)) {
+            return $workflowKey;
+        }
+    }
+
+    return null;
+}
