@@ -121,22 +121,36 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
     $derivedTitle = trim((string)($metadata['title'] ?? ''));
     $derivedBeat = trim((string)($metadata['beat_summary'] ?? ''));
 
-    if ($derivationMode !== 'semantic_rule') {
-        throw new RuntimeException(
-            'Semantic beat/title derivation did not resolve for calendar event: ' . $entityId
-        );
-    }
-
-    if ($derivedTitle === '') {
-        throw new RuntimeException(
-            'Unable to derive semantic calendar event title from attached prose'
-        );
-    }
-
-    if ($derivedBeat === '') {
-        throw new RuntimeException(
-            'Unable to derive semantic calendar event beat from attached prose'
-        );
+    if (
+        $derivationMode !== 'semantic_rule'
+        || $derivedTitle === ''
+        || $derivedBeat === ''
+    ) {
+        return [
+            'success' => false,
+            'status' => 'semantic_derivation_unresolved',
+            'workflow' => 'calendar_event_derive_beat_title',
+            'tier' => 3,
+            'entity_id' => $entityId,
+            'transition_reason' => 'semantic_rule_not_matched',
+            'context' => array_merge(
+                $context,
+                [
+                    'beat_title_derivation' => [
+                        'calendar_event_entity_id' => $entityId,
+                        'prose_entity_id' => (string)$proseRow['prose_entity_id'],
+                        'prose_projection_id' => (int)$proseRow['prose_projection_id'],
+                        'derivation_mode' => $derivationMode,
+                        'semantic_resolved' => false,
+                        'extractive_title_candidate' => $metadata['extractive_title_candidate'] ?? null,
+                        'extractive_summary' => $metadata['summary'] ?? null,
+                        'evidence' => $metadata['evidence'] ?? [],
+                        'applied_calendar_event_metadata' => null,
+                        'diagnostic' => 'No deterministic semantic beat/title rule matched this attached prose. Calendar metadata was not mutated.',
+                    ],
+                ]
+            ),
+        ];
     }
 
     $appliedMetadata = apply_calendar_event_metadata(
@@ -184,7 +198,7 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                 'characters' => [
                     [
                         'suggestion_type' => 'character',
-                        'entity_id' => 'character:shay_vertue',
+                        'resolved_entity_id' => 'CHAR-MAIN-001',
                         'confidence' => 0.99,
                         'evidence' => [
                             [
