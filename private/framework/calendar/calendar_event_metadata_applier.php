@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/calendar_event_ontology_guards.php';
+
 /**
  * Calendar event semantic metadata applier.
  *
@@ -44,6 +46,16 @@ function apply_calendar_event_metadata(
             'Missing calendar event notes for metadata apply'
         );
     }
+
+    assert_semantic_narrative_surface(
+        'calendar_events.summary',
+        $summary
+    );
+
+    assert_semantic_narrative_surface(
+        'calendar_events.notes',
+        $notes
+    );
 
     $stmt = $pdo->prepare("
         UPDATE calendar_events
