@@ -98,7 +98,7 @@ return [
 
         'await_optional_reference_label' => [
             'type' => 'input',
-            'prompt' => 'Optional: enter a prose-family-scoped lookup label for this event, or leave blank to skip.',
+            'prompt' => 'Optional: enter a short lookup label for this event (for example: 20250121-z). Leave blank to skip.',
             'expected_input' => 'reference_label',
 
             'transition' => [
