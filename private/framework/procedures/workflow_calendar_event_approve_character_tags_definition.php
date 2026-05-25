@@ -20,7 +20,46 @@ return [
                 'cases' => [
                     '' => 'terminal_missing_entity_id',
                 ],
-                'default' => 'prepare_character_tag_approval',
+                'default' => 'validate_calendar_event_entity',
+            ],
+        ],
+
+        'validate_calendar_event_entity' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'db',
+                'operation' => 'select_one',
+                'store' => 'calendar_event',
+
+                'sql' => "
+                    SELECT
+                        id,
+                        entity_id,
+                        layer_id,
+                        projection_id,
+                        book_time_id,
+                        event_index,
+                        subevent_index,
+                        sequence_index
+                    FROM calendar_events
+                    WHERE entity_id = :entity_id
+                       OR entity_id = CONCAT('calendar_event:', :bare_entity_id)
+                    LIMIT 1
+                ",
+
+                'bindings' => [
+                    'entity_id' => '$input.calendar_event_entity_id',
+                    'bare_entity_id' => '$input.calendar_event_entity_id',
+                ],
+            ],
+
+            'success_if' => 'row_exists',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'prepare_character_tag_approval',
+                'failure_state' => 'terminal_calendar_event_not_found',
             ],
         ],
 
@@ -33,7 +72,7 @@ return [
 
                 'payload' => [
                     'calendar_event_entity_id'
-                        => '$input.calendar_event_entity_id',
+                        => '$context.calendar_event.entity_id',
                 ],
             ],
 
@@ -87,6 +126,11 @@ return [
         'terminal_no_resolved_character_suggestions' => [
             'type' => 'terminal',
             'message' => 'No resolved ontology-backed character suggestions were available to approve.',
+        ],
+
+        'terminal_calendar_event_not_found' => [
+            'type' => 'terminal',
+            'message' => 'No calendar_event found for that entity_id.',
         ],
 
         'terminal_missing_entity_id' => [
