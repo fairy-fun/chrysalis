@@ -79,10 +79,15 @@ function persist_semantic_surface_evidence(
         return null;
     }
 
+    $eventId = $context['event_id']
+        ?? $context['calendar_event_id']
+        ?? null;
+
     $candidateRow = [
         'surface_text' => $surfaceText,
+        'event_id' => $eventId,
         'calendar_event_entity_id' => $context['calendar_event_entity_id'] ?? null,
-        'calendar_event_id' => $context['calendar_event_id'] ?? null,
+        'calendar_event_id' => $context['calendar_event_id'] ?? $eventId,
         'prose_projection_id' => $context['prose_projection_id'] ?? null,
         'prose_entity_id' => $context['prose_entity_id'] ?? null,
         'span_start' => $context['span_start'] ?? null,
@@ -114,6 +119,12 @@ function persist_semantic_surface_evidence(
 
     if (!isset($row['surface_text'])) {
         return null;
+    }
+
+    if (isset($columns['event_id']) && !isset($row['event_id'])) {
+        throw new RuntimeException(
+            'semantic_surface_evidence.event_id is required but was not provided by the workflow context'
+        );
     }
 
     $fieldNames = array_keys($row);
