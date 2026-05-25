@@ -55,6 +55,13 @@ function fw_match_chat_workflow(
     }
 
     if (
+        str_contains($message, 'tag characters')
+        || str_contains($message, 'suggest characters')
+    ) {
+        return 'calendar_event_suggest_characters';
+    }
+
+    if (
         str_contains($message, 'beat and title')
         || str_contains($message, 'derive beat')
     ) {
@@ -122,6 +129,18 @@ function fw_match_chat_workflow(
 
         'derive the beat and title from attached prose'
             => 'calendar_event_derive_beat_title',
+
+        'i want to tag characters from an event\'s attached prose'
+            => 'calendar_event_suggest_characters',
+
+        'tag characters from an event\'s attached prose'
+            => 'calendar_event_suggest_characters',
+
+        'i want to suggest characters from attached prose'
+            => 'calendar_event_suggest_characters',
+
+        'suggest characters from attached prose'
+            => 'calendar_event_suggest_characters',
 
         'i want to process attached prose into calendar subevents'
         => 'calendar_event_process_attached_prose',
