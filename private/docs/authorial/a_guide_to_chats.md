@@ -84,7 +84,13 @@ startWorkflowChat I want to add a new prose draft to a prose family
 ```
 
 #### publish a selected draft
+```text
+startWorkflowChat set published prose draft
 
+“set canonical export draft”
+“elevate prose draft”
+“change canonical export target”
+```
 
 #### 3A: derive beat/title metadata from attached prose
 
