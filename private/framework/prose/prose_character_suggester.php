@@ -136,7 +136,7 @@ function prose_character_resolve_surface_form(
                     $candidates[$entityId] = [
                         'resolved_entity_id' => $entityId,
                         'candidate_label' => $row['candidate_label'] ?? $surfaceForm,
-                        'resolution_method_classval_id' => 'RESOLUTION_METHOD_SEMANTIC_ALIAS',
+                        'resolution_method_classval_id' => 'RESOLUTION_METHOD_EXACT_ALIAS',
                         'candidate_score' => 0.95,
                         'scoring_notes' => 'Matched deterministic semantic alias surface form.',
                     ];
@@ -173,7 +173,7 @@ function prose_character_resolve_surface_form(
                     $candidates[$entityId] = [
                         'resolved_entity_id' => $entityId,
                         'candidate_label' => $row['candidate_label'] ?? $surfaceForm,
-                        'resolution_method_classval_id' => 'RESOLUTION_METHOD_ENTITY_LABEL',
+                        'resolution_method_classval_id' => 'RESOLUTION_METHOD_EXACT_ALIAS',
                         'candidate_score' => 0.9,
                         'scoring_notes' => 'Matched deterministic entity label surface form.',
                     ];
@@ -213,7 +213,7 @@ function prose_character_resolve_surface_form(
                 $candidates[$entityId] = [
                     'resolved_entity_id' => $entityId,
                     'candidate_label' => $row['candidate_label'] ?? $surfaceForm,
-                    'resolution_method_classval_id' => 'RESOLUTION_METHOD_ENTITY_CANONICAL_LABEL',
+                    'resolution_method_classval_id' => 'RESOLUTION_METHOD_EXACT_CANONICAL_LABEL',
                     'candidate_score' => 0.85,
                     'scoring_notes' => 'Matched deterministic character entity canonical surface form.',
                 ];
