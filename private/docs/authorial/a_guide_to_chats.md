@@ -79,6 +79,10 @@ ___
 
 #### add a new prose draft to a family
 
+```text
+startWorkflowChat I want to add a new prose draft to a prose family
+```
+
 #### publish a selected draft
 
 
