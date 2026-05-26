@@ -12,6 +12,27 @@ require_once __DIR__ . '/story_surface_contract.php';
  * - subtree prefix match
  */
 
+function prose_chronology_build_display_address(array $event): string
+{
+    $chronologyAddress = trim((string)(
+        $event['chronology_address'] ?? ''
+    ));
+
+    $referenceLabel = trim((string)(
+        $event['reference_label'] ?? ''
+    ));
+
+    if ($referenceLabel === '') {
+        return $chronologyAddress;
+    }
+
+    if ($chronologyAddress === '') {
+        return $referenceLabel;
+    }
+
+    return $referenceLabel . ' — ' . $chronologyAddress;
+}
+
 function resolve_prose_by_chronology_address(
     PDO $pdo,
     int $projectionId,
@@ -36,7 +57,9 @@ function resolve_prose_by_chronology_address(
             ce.entity_id,
             ce.summary,
             ce.notes,
-            ce.layer_id
+            ce.layer_id,
+
+            cerl.reference_label
 
         FROM calendar_event_projections cep
 
@@ -45,6 +68,9 @@ function resolve_prose_by_chronology_address(
 
         INNER JOIN calendar_events ce
             ON ce.id = cep.calendar_event_id
+
+        LEFT JOIN calendar_event_reference_labels cerl
+            ON cerl.calendar_event_id = ce.id
 
         WHERE cep.calendar_projection_id = :projection_id
           AND (
@@ -117,7 +143,8 @@ function resolve_prose_by_chronology_address(
             event: $event,
             publishedProse: $publishedProse !== [] ? $publishedProse : null,
             meta: [
-                'chronology_address' => $event['chronology_address'],
+                'chronology_address' => prose_chronology_build_display_address($event),
+                'reference_label' => $event['reference_label'] ?? null,
             ]
         );
     }
@@ -172,7 +199,9 @@ function resolve_prose_by_week_day(
             ce.week_index,
             ce.day_index,
             ce.time_index,
-            ce.event_index
+            ce.event_index,
+
+            cerl.reference_label
 
         FROM calendar_event_projections cep
 
@@ -181,6 +210,9 @@ function resolve_prose_by_week_day(
 
         INNER JOIN calendar_events ce
             ON ce.id = cep.calendar_event_id
+
+        LEFT JOIN calendar_event_reference_labels cerl
+            ON cerl.calendar_event_id = ce.id
 
         WHERE cep.calendar_projection_id = :projection_id
           AND ce.week_index = :week_index
@@ -260,7 +292,8 @@ function resolve_prose_by_week_day(
             event: $event,
             publishedProse: $publishedProse,
             meta: [
-                'chronology_address' => $event['chronology_address'],
+                'chronology_address' => prose_chronology_build_display_address($event),
+                'reference_label' => $event['reference_label'] ?? null,
             ]
         );
     }
