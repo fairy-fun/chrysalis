@@ -54,7 +54,39 @@ function fw_match_chat_workflow(
         return 'calendar_week_display_prose';
     }
 
-    if (preg_match('/\\b(continue|resume|use|open)\\s+(calendar\\s+)?event\\s+calendar_event:\\d+\\b/', $message) === 1) {
+    if (
+        preg_match(
+            '/\\b(continue|resume|use|open|attach)\\s+(calendar\\s+)?event\\s+calendar_event:\\d+\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_event_add_prose';
+    }
+
+    if (
+        preg_match(
+            '/\\b(add\\s+prose\\s+to|attach\\s+prose\\s+to)\\s+calendar_event:\\d+\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_event_add_prose';
+    }
+
+    if (
+        preg_match(
+            '/\\b(add\\s+prose\\s+to|attach\\s+prose\\s+to)\\s+(an\\s+)?existing\\s+event\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_event_add_prose';
+    }
+
+    if (
+        preg_match(
+            '/\\b(attach\\s+prose\\s+to|add\\s+prose\\s+to)\\s+event\\s+\\d+\\b/',
+            $message
+        ) === 1
+    ) {
         return 'calendar_event_add_prose';
     }
 
@@ -171,6 +203,24 @@ function fw_match_chat_workflow(
         => 'calendar_event_add_prose',
 
         'add prose to an existing calendar event'
+        => 'calendar_event_add_prose',
+
+        'attach prose to an existing event'
+        => 'calendar_event_add_prose',
+
+        'attach prose to an existing calendar event'
+        => 'calendar_event_add_prose',
+
+        'attach prose to event'
+        => 'calendar_event_add_prose',
+
+        'add prose to event'
+        => 'calendar_event_add_prose',
+
+        'add prose to calendar_event'
+        => 'calendar_event_add_prose',
+
+        'attach prose to calendar_event'
         => 'calendar_event_add_prose',
 
         'add prose to a calendar event'
