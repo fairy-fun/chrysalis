@@ -8,6 +8,8 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 
 #### I want to create a Book week
 
+#### I want to create a character
+
 ### Tier 1
 #### Show me all prose for Week [x]
 

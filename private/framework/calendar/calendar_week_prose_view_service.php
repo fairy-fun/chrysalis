@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_week_prose_label_formatter.php';
 require_once __DIR__ . '/calendar_week_prose_item_hydrator.php';
+require_once __DIR__ . '/calendar_week_prose_query.php';
 
 function normalize_calendar_week_prose_mode(
     ?string $proseMode
@@ -53,28 +54,13 @@ function resolve_calendar_week_prose_view(
         );
     }
 
-    $weekStmt = $pdo->prepare("
-        SELECT
-            w.id,
-            w.entity_id,
-            w.projection_id,
-            w.week_index,
-            w.summary,
-            w.notes
-        FROM calendar_book_weeks w
-        WHERE w.projection_id = :projection_id
-          AND w.week_index = :week_index
-        LIMIT 1
-    ");
+    $week = query_calendar_week(
+        $pdo,
+        $projectionId,
+        $weekIndex
+    );
 
-    $weekStmt->execute([
-        ':projection_id' => $projectionId,
-        ':week_index' => $weekIndex,
-    ]);
-
-    $week = $weekStmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!is_array($week)) {
+    if ($week === null) {
         return null;
     }
 
