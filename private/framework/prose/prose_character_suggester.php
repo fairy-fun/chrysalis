@@ -15,6 +15,9 @@ require_once __DIR__
 require_once __DIR__
     . '/../entity/entity_surface_inventory_provider.php';
 
+require_once __DIR__
+    . '/semantic_resolution_persister.php';
+
 function prose_character_build_candidate_identity_key(array $candidate): string
 {
     return implode('|', [
