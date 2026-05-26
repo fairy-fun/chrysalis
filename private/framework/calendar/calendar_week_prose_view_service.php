@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_week_prose_label_formatter.php';
+require_once __DIR__ . '/calendar_week_prose_item_hydrator.php';
 
 function normalize_calendar_week_prose_mode(
     ?string $proseMode
