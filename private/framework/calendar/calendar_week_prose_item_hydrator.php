@@ -82,7 +82,7 @@ function hydrate_calendar_week_prose_item(
             => $row['class_type_label'],
 
         'chronology_address'
-            => $row['chronology_address'],
+            => (string)($row['chronology_address'] ?? ''),
 
         'real_date_start_id'
             => $row['real_date_start_id'],
@@ -109,7 +109,7 @@ function hydrate_calendar_week_prose_item(
             => $row['sequence_index'],
 
         'reference_label'
-            => $row['reference_label'] ?? null,
+            => (string)($row['reference_label'] ?? ''),
 
         'prose_body'
             => $proseBody,
