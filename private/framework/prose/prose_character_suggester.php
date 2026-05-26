@@ -8,6 +8,8 @@ require_once __DIR__
     . '/../entity/entity_resolution_candidate_factory.php';
 require_once __DIR__
     . '/resolution/resolve_token_decomposition.php';
+require_once __DIR__
+    . '/arbitration/semantic_candidate_arbitrator.php';
 
 function prose_character_known_surface_forms(): array
 {
@@ -119,9 +121,16 @@ function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): ar
         prose_character_try_token_decomposition($pdo, $surfaceForm)
     );
 
-    usort($candidates, static fn (array $a, array $b): int => (float)$b['candidate_score'] <=> (float)$a['candidate_score']);
+    $arbitration =
+        semantic_candidate_arbitrator_run(
+            $candidates,
+            [
+                'arbitration_stage' =>
+                    'prose_character_resolution',
+            ]
+        );
 
-    return array_values($candidates);
+    return $arbitration['all_candidates'] ?? [];
 }
 
 function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = []): array
@@ -140,7 +149,23 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
             }
 
             $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
-            $selectedCandidate = $candidates[0] ?? null;
+            $selectedCandidate = null;
+
+            foreach ($candidates as $candidate) {
+
+                if (!is_array($candidate)) {
+                    continue;
+                }
+
+                if ((int)(
+                    $candidate['is_selected'] ?? 0
+                ) !== 1) {
+                    continue;
+                }
+
+                $selectedCandidate = $candidate;
+                break;
+            }
 
             if (is_array($selectedCandidate)) {
                 $entityId = (string)($selectedCandidate['resolved_entity_id'] ?? '');
