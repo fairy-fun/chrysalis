@@ -113,6 +113,11 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 // authority level
         ['prose_annotation_spans', 'authority_level_classval_id', 'CLASSVAL'],
 
+// semantic surface evidence
+        ['semantic_surface_evidence', 'confidence_classval_id', 'CLASSVAL'],
+        ['semantic_surface_evidence', 'resolution_method_classval_id', 'CLASSVAL'],
+        ['semantic_surface_evidence', 'resolution_status_classval_id', 'CLASSVAL'],
+        ['semantic_surface_evidence', 'source_classval_id', 'CLASSVAL'],
 
         // classval references
         ['attribute_type_layer_map', 'layer_classval_id', 'CLASSVAL'],
