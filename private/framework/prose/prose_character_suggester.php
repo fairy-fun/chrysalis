@@ -12,22 +12,8 @@ require_once __DIR__
     . '/arbitration/semantic_candidate_arbitrator.php';
 require_once __DIR__
     . '/semantic_surface_transform_pipeline.php';
-
-function prose_character_known_surface_forms(): array
-{
-    return [
-        [
-            'surface_forms' => [
-                'Shay',
-                'Shay Vertue',
-                'Chloe',
-                'Mr Fruean',
-                'Fruean',
-            ],
-            'confidence' => 0.99,
-        ],
-    ];
-}
+require_once __DIR__
+    . '/../entity/entity_surface_inventory_provider.php';
 
 function prose_character_build_candidate_identity_key(array $candidate): string
 {
@@ -114,8 +100,20 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
     $suggestionsByEntity = [];
     $unresolved = [];
 
-    foreach (prose_character_known_surface_forms() as $surfaceSet) {
-        foreach (($surfaceSet['surface_forms'] ?? []) as $surfaceForm) {
+    foreach (
+        entity_surface_inventory_provider_fetch_character_surfaces(
+            $pdo
+        )
+        as $surfaceRecord
+    ) {
+
+        $surfaceForm = trim((string)(
+            $surfaceRecord['surface'] ?? ''
+        ));
+
+        if ($surfaceForm === '') {
+            continue;
+        }
             if (!is_string($surfaceForm) || trim($surfaceForm) === '') {
                 continue;
             }
