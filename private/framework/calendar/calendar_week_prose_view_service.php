@@ -64,27 +64,11 @@ function resolve_calendar_week_prose_view(
         return null;
     }
 
-    $daysStmt = $pdo->prepare("
-        SELECT
-            d.id,
-            d.entity_id,
-            d.projection_id,
-            d.week_id,
-            d.day_index,
-            d.summary,
-            d.notes
-        FROM calendar_book_days d
-        WHERE d.projection_id = :projection_id
-          AND d.week_id = :week_id
-        ORDER BY d.day_index ASC
-    ");
-
-    $daysStmt->execute([
-        ':projection_id' => $projectionId,
-        ':week_id' => (int)$week['id'],
-    ]);
-
-    $days = $daysStmt->fetchAll(PDO::FETCH_ASSOC);
+    $days = query_calendar_week_days(
+        $pdo,
+        $projectionId,
+        (int)$week['id']
+    );
 
     $weekTree = [
         'prose_mode' => $proseMode,

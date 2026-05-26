@@ -33,3 +33,32 @@ function query_calendar_week(
         ? $week
         : null;
 }
+
+function query_calendar_week_days(
+    PDO $pdo,
+    int $projectionId,
+    int $weekId
+): array {
+
+    $stmt = $pdo->prepare("
+        SELECT
+            d.id,
+            d.entity_id,
+            d.projection_id,
+            d.week_id,
+            d.day_index,
+            d.summary,
+            d.notes
+        FROM calendar_book_days d
+        WHERE d.projection_id = :projection_id
+          AND d.week_id = :week_id
+        ORDER BY d.day_index ASC
+    ");
+
+    $stmt->execute([
+        ':projection_id' => $projectionId,
+        ':week_id' => $weekId,
+    ]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
