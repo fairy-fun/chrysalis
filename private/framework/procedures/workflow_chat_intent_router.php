@@ -50,7 +50,8 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
-'/\\b(show|display|open)\\s+(me\\s+)?(the\\s+)?(existing|published|all)?\\s*prose\\s+for\\s+[0-9]{8}-[a-z]+\\b/i'            $message
+            '/\\b(show|display|open)\\s+(me\\s+)?(the\\s+)?(existing|published|all)?\\s*prose\\s+for\\s+[0-9]{8}-[a-z]+\\b/i',
+            $message
         ) === 1
     ) {
         return 'prose_reference_label_display';
