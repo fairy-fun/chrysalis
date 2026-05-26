@@ -117,56 +117,51 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
         if ($surfaceForm === '') {
             continue;
         }
-        if (!is_string($surfaceForm) || trim($surfaceForm) === '') {
-                continue;
-        }
 
         if (mb_stripos($proseBody, $surfaceForm) === false) {
-                continue;
+            continue;
         }
 
-            $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
-            $selectedCandidate = null;
+        $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
+        $selectedCandidate = null;
 
         foreach ($candidates as $candidate) {
-
             if (!is_array($candidate)) {
-                    continue;
+                continue;
             }
 
             if ((int)(
-                    $candidate['is_selected'] ?? 0
-                ) !== 1) {
-                    continue;
-                }
+                $candidate['is_selected'] ?? 0
+            ) !== 1) {
+                continue;
+            }
 
-                $selectedCandidate = $candidate;
-                break;
+            $selectedCandidate = $candidate;
+            break;
+        }
 
+        if (is_array($selectedCandidate)) {
+            $entityId = (string)($selectedCandidate['resolved_entity_id'] ?? '');
 
-            if (is_array($selectedCandidate)) {
-                $entityId = (string)($selectedCandidate['resolved_entity_id'] ?? '');
-
-                if ($entityId !== '') {
-                    $suggestionsByEntity[$entityId] = [
-                        'resolution_status' => 'resolved',
-                        'resolved_entity_id' => $entityId,
-                        'candidate_label' => $selectedCandidate['candidate_label'] ?? $surfaceForm,
-                        'surface_forms' => [$surfaceForm],
-                        'candidate_score' => (float)($selectedCandidate['candidate_score'] ?? 0.0),
-                        'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
-                    ];
-                }
-            } else {
-                $unresolved[$surfaceForm] = [
-                    'resolution_status' => 'unresolved',
-                    'resolved_entity_id' => null,
-                    'candidate_label' => $surfaceForm,
+            if ($entityId !== '') {
+                $suggestionsByEntity[$entityId] = [
+                    'resolution_status' => 'resolved',
+                    'resolved_entity_id' => $entityId,
+                    'candidate_label' => $selectedCandidate['candidate_label'] ?? $surfaceForm,
                     'surface_forms' => [$surfaceForm],
-                    'candidate_score' => 0.0,
-                    'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
+                    'candidate_score' => (float)($selectedCandidate['candidate_score'] ?? 0.0),
+                    'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
                 ];
             }
+        } else {
+            $unresolved[$surfaceForm] = [
+                'resolution_status' => 'unresolved',
+                'resolved_entity_id' => null,
+                'candidate_label' => $surfaceForm,
+                'surface_forms' => [$surfaceForm],
+                'candidate_score' => 0.0,
+                'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
+            ];
         }
     }
 
