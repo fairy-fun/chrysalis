@@ -114,24 +114,24 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
         if ($surfaceForm === '') {
             continue;
         }
-            if (!is_string($surfaceForm) || trim($surfaceForm) === '') {
+        if (!is_string($surfaceForm) || trim($surfaceForm) === '') {
                 continue;
-            }
+        }
 
-            if (mb_stripos($proseBody, $surfaceForm) === false) {
+        if (mb_stripos($proseBody, $surfaceForm) === false) {
                 continue;
-            }
+        }
 
             $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
             $selectedCandidate = null;
 
-            foreach ($candidates as $candidate) {
+        foreach ($candidates as $candidate) {
 
-                if (!is_array($candidate)) {
+            if (!is_array($candidate)) {
                     continue;
-                }
+            }
 
-                if ((int)(
+            if ((int)(
                     $candidate['is_selected'] ?? 0
                 ) !== 1) {
                     continue;
@@ -139,7 +139,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
 
                 $selectedCandidate = $candidate;
                 break;
-            }
+
 
             if (is_array($selectedCandidate)) {
                 $entityId = (string)($selectedCandidate['resolved_entity_id'] ?? '');
@@ -164,7 +164,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
                     'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
                 ];
             }
-
+        }
     }
 
     return [
