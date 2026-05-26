@@ -183,8 +183,6 @@ function resolve_calendar_week_prose_view(
             (int)$day['id']
         );
 
-        $times = $timesStmt->fetchAll(PDO::FETCH_ASSOC);
-
         $hydratedTimes = [];
 
         foreach ($times as $time) {
