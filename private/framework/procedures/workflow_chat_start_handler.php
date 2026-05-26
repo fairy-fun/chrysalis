@@ -45,6 +45,20 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
+            '/\\b(\\d{8}-[a-z]+)\\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        $input['reference_label'] = strtolower(
+            trim($matches[1])
+        );
+
+        return $input;
+    }
+
+    if (
+        preg_match(
             '/\\b([0-9]+)\\.([0-9]+)\\b/',
             $userMessage,
             $matches
