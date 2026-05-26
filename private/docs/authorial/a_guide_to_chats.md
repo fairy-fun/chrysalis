@@ -66,7 +66,7 @@ startWorkflowChat create book event
 
 ### Tier 2
 
-#### Add prose to an existing event
+#### 2.1 Add prose to an existing event
 
 To add prose to an existing calendar event whose entity ID you already know, tell the chat:
 

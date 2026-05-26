@@ -530,3 +530,4 @@ function render_calendar_week_prose_artifact(
         'assembled_prose_preview' => implode("\n\n", $tailPreviewLines),
     ];
 }
+
