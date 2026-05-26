@@ -93,6 +93,48 @@ function fw_extract_chat_bootstrap_input(
     return $input;
 }
 
+function fw_resolve_reference_label_selector(
+    PDO $pdo,
+    array $input
+): array {
+
+    if (isset($input['calendar_event_entity_id'])) {
+        return $input;
+    }
+
+    $referenceLabel = $input['reference_label'] ?? null;
+
+    if (!is_string($referenceLabel) || trim($referenceLabel) === '') {
+        return $input;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT
+            ce.entity_id AS calendar_event_entity_id
+        FROM calendar_event_reference_labels cerl
+        INNER JOIN calendar_events ce
+            ON ce.id = cerl.calendar_event_id
+        WHERE cerl.reference_label = :reference_label
+        LIMIT 1
+    ');
+
+    $stmt->execute([
+        ':reference_label' => strtolower(
+            trim($referenceLabel)
+        ),
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($row)) {
+        return $input;
+    }
+
+    $input['calendar_event_entity_id'] = $row['calendar_event_entity_id'];
+
+    return $input;
+}
+
 function fw_start_workflow_from_chat(
     PDO $pdo,
     string $userMessage,
@@ -130,13 +172,20 @@ function fw_start_workflow_from_chat(
         $initialContext = [];
     }
 
+    $input = fw_extract_chat_bootstrap_input(
+        $userMessage
+    );
+
+    $input = fw_resolve_reference_label_selector(
+        $pdo,
+        $input
+    );
+
     return fw_resume_workflow(
         $pdo,
         $workflowId,
         $entryState,
-        fw_extract_chat_bootstrap_input(
-            $userMessage
-        ),
+        $input,
         array_merge(
             $initialContext,
             $context
