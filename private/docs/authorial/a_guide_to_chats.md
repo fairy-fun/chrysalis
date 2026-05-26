@@ -74,6 +74,16 @@ The runtime will ask for the calendar event entity ID.
 
 Reply with the entity ID.
 
+#### Add a label to existing prose
+
+##### Examples now routed correctly:
+```text
+“add reference label”
+“attach reference label”
+“assign reference label”
+startWorkflowChat I want to add a reference label to an existing prose attachment
+```
+
 ___
 
 ### Tier 3
@@ -173,11 +183,21 @@ To retrieve prose already attached to a calendar event or subevent by chronology
 
 ```text
 Show me the prose for 1.2.1.3
-
+```
 or
+```text
 
 Show me the prose for 1.2.1.3.1
 ```
+
+#### Retrieve prose by label
+
+To retrieve prose already attached to a calendar event by label, tell the chat:
+
+```text
+startWorkflowChat Show me the prose for 20250120-a
+```
+
 
 #### Retrieve prose by week/day position
 
