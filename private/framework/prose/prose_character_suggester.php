@@ -2,119 +2,11 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/semantic_surface_evidence_persister.php';
-require_once __DIR__ . '/semantic_surface_candidate_persister.php';
-require_once __DIR__
-    . '/../entity/entity_resolution_candidate_factory.php';
-require_once __DIR__
-    . '/resolution/resolve_token_decomposition.php';
-require_once __DIR__
-    . '/semantic_surface_transform_pipeline.php';
 require_once __DIR__
     . '/../entity/entity_surface_inventory_provider.php';
-require_once __DIR__
-    . '/../semantic_resolution/semantic_resolution_workflow_runner.php';
 
 require_once __DIR__
-    . '/semantic_resolution_persister.php';
-
-function prose_character_build_candidate_identity_key(array $candidate): string
-{
-    return implode('|', [
-        trim((string)($candidate['resolved_entity_id'] ?? '')),
-        trim((string)($candidate['resolution_method_classval_id'] ?? '')),
-        trim((string)($candidate['matched_lookup_surface'] ?? '')),
-        trim((string)($candidate['normalized_lookup_surface'] ?? '')),
-        json_encode(array_values(is_array($candidate['transform_chain'] ?? null) ? $candidate['transform_chain'] : []), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        trim((string)($candidate['resolver_stage'] ?? '')),
-        trim((string)($candidate['arbitration_stage'] ?? '')),
-    ]);
-}
-
-function prose_character_append_candidate(array &$candidates, array $candidate): void
-{
-    $identityKey = prose_character_build_candidate_identity_key($candidate);
-    $candidates[$identityKey] = $candidate;
-}
-
-function prose_character_try_exact_alias(
-    PDO $pdo,
-    string $surfaceForm
-): array {
-
-    return entity_resolution_candidate_factory_from_surface(
-        $pdo,
-        $surfaceForm,
-        [
-            'entity_type_id' =>
-                'entity_type_character',
-
-            'resolution_method_classval_id' =>
-                'RESOLUTION_METHOD_EXACT_ALIAS',
-
-            'resolver_context' =>
-                __FUNCTION__,
-        ]
-    );
-}
-
-function prose_character_try_token_decomposition(
-    PDO $pdo,
-    string $surfaceForm
-): array {
-
-    return resolve_token_decomposition(
-        $pdo,
-        $surfaceForm,
-        [
-            'entity_type_id' =>
-                'entity_type_character',
-
-            'resolution_method_classval_id' =>
-                'RESOLUTION_METHOD_TOKEN_DECOMPOSITION',
-
-            'resolver_stage' =>
-                __FUNCTION__,
-        ]
-    );
-}
-
-function prose_character_run_resolution_workflow(
-    PDO $pdo,
-    string $surfaceForm
-): array {
-
-    return semantic_resolution_workflow_runner_run(
-        $pdo,
-        [
-            [
-                'resolver_stage' =>
-                    'prose_character_try_exact_alias',
-
-                'candidates' =>
-                    prose_character_try_exact_alias(
-                        $pdo,
-                        $surfaceForm
-                    ),
-            ],
-
-            [
-                'resolver_stage' =>
-                    'prose_character_try_token_decomposition',
-
-                'candidates' =>
-                    prose_character_try_token_decomposition(
-                        $pdo,
-                        $surfaceForm
-                    ),
-            ],
-        ],
-        [
-            'arbitration_stage' =>
-                'prose_character_resolution',
-        ]
-    );
-}
+    . '/prose_character_resolution_workflow.php';
 
 function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = []): array
 {
@@ -140,7 +32,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
             continue;
         }
 
-        $resolution = prose_character_run_resolution_workflow(
+        $resolution = prose_character_resolution_workflow_run(
             $pdo,
             $surfaceForm
         );
