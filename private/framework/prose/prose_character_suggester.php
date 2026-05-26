@@ -61,6 +61,28 @@ function prose_character_normalize_surface(string $surfaceForm): string
     return preg_replace('/\s+/u', ' ', $surfaceForm) ?? $surfaceForm;
 }
 
+function prose_character_build_candidate_identity_key(array $candidate): string
+{
+    $transformChain = $candidate['transform_chain'] ?? [];
+
+    if (!is_array($transformChain)) {
+        $transformChain = [];
+    }
+
+    return implode('|', [
+        trim((string)($candidate['resolved_entity_id'] ?? '')),
+        trim((string)($candidate['resolution_method_classval_id'] ?? '')),
+        trim((string)($candidate['matched_lookup_surface'] ?? '')),
+        trim((string)($candidate['normalized_lookup_surface'] ?? '')),
+        json_encode(
+            array_values($transformChain),
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        ),
+        trim((string)($candidate['resolver_stage'] ?? '')),
+        trim((string)($candidate['arbitration_stage'] ?? '')),
+    ]);
+}
+
 function prose_character_find_surface_spans(
     string $proseBody,
     string $surfaceForm
@@ -487,6 +509,10 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
             $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
             $selectedCandidate = $candidates[0] ?? null;
 
+            $selectedCandidateIdentityKey = is_array($selectedCandidate)
+                ? prose_character_build_candidate_identity_key($selectedCandidate)
+                : null;
+
             foreach ($spans as $span) {
                 $evidenceContext = array_merge(
                     $context,
@@ -516,9 +542,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
                         $pdo,
                         $evidenceId,
                         $candidates,
-                        is_array($selectedCandidate)
-                            ? (string)$selectedCandidate['resolved_entity_id']
-                            : null
+                        $selectedCandidateIdentityKey
                     );
                 }
             }
