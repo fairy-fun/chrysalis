@@ -15,36 +15,36 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 startWorkflowChat Show me all prose for week 1
 ```
 
-#### Show me published prose for Week [x]
+#### 1.1 Show me published prose for Week [x]
 
 ```text
 startWorkflowChat Show me published prose for Week 1
 ```
 
-#### Show me all prose for Week [x], Day [y]
+#### 1.2 Show me all prose for Week [x], Day [y]
 
 ```text
 startWorkflowChat show me all prose for Week 1, Day 2
 ```
 
-#### Show me published prose for Week [x], Day [y]
+#### 1.3 Show me published prose for Week [x], Day [y]
 
 ```text
 startWorkflowChat Show me published prose for Week 1, Day 2
 ```
-#### Show me all prose for Week [x].[y]
+#### 1.4 Show me all prose for Week [x].[y]
 
 ```text
 startWorkflowChat Show me all prose for 1.2
 ```
 
-#### Show me published prose for `[x].[y]`
+#### 1.5 Show me published prose for `[x].[y]`
 
 ```text
 startWorkflowChat Show me published prose for 1.2
 ```
 
-#### Show me published prose for `[year][month][day]-[x]`
+#### 1.6 Show me published prose for `[year][month][day]-[x]`
 
 ```text
 startWorkflowChat Show me all prose for 20250122-e
@@ -53,15 +53,15 @@ Expected output:
 
 _1.2.1.2 — Week 1, Day 2, Morning, 20250120-a (calendar_event:2)_
 
-#### Create an event in the correct projection
+#### 1.7 Create an event in the correct projection
 
-##### Create a book event
+##### 1.7.1 Create a book event
 Write: 
 ```text
 startWorkflowChat create book event
 ```
 
-##### Create an event that only attaches to the real-time calendar
+##### 1.7.2 Create an event that only attaches to the real-time calendar
 
 
 ### Tier 2
