@@ -75,15 +75,13 @@ function prose_character_tokenize_surface(string $surfaceForm): array
         return [];
     }
 
-    $tokens = array_values(array_filter(
+    return array_values(array_filter(
         array_map(
             static fn (mixed $token): string => trim((string)$token),
             $tokens
         ),
         static fn (string $token): bool => $token !== ''
     ));
-
-    return $tokens;
 }
 
 function prose_character_build_candidate_identity_key(array $candidate): string
@@ -198,238 +196,32 @@ function prose_character_append_candidate(
 
 function prose_character_try_exact_canonical_label(PDO $pdo, string $surfaceForm): array
 {
-    $surfaceForm = trim($surfaceForm);
-
-    if ($surfaceForm === '') {
-        return [];
-    }
-
-    $candidates = [];
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT id AS entity_id, canonical_label AS candidate_label
-            FROM entities
-            WHERE entity_type_id = 'entity_type_character'
-              AND canonical_label = :surface_form
-            LIMIT 10
-        ");
-
-        $stmt->execute([
-            ':surface_form' => $surfaceForm,
-        ]);
-
-        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-            prose_character_append_candidate(
-                $candidates,
-                trim((string)($row['entity_id'] ?? '')),
-                (string)($row['candidate_label'] ?? $surfaceForm),
-                'RESOLUTION_METHOD_EXACT_CANONICAL_LABEL',
-                1.00,
-                'Matched exact canonical entity label.',
-                $surfaceForm,
-                [],
-                __FUNCTION__,
-                __FUNCTION__
-            );
-        }
-    } catch (Throwable $e) {
-        return [];
-    }
-
-    return $candidates;
+    return [];
 }
 
 function prose_character_try_entity_label(PDO $pdo, string $surfaceForm): array
 {
-    if (!prose_character_table_exists($pdo, 'entity_labels')) {
-        return [];
-    }
-
-    $candidates = [];
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT entity_id, label AS candidate_label
-            FROM entity_labels
-            WHERE label = :surface_form
-            LIMIT 10
-        ");
-
-        $stmt->execute([
-            ':surface_form' => $surfaceForm,
-        ]);
-
-        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-            prose_character_append_candidate(
-                $candidates,
-                trim((string)($row['entity_id'] ?? '')),
-                (string)($row['candidate_label'] ?? $surfaceForm),
-                'RESOLUTION_METHOD_EXACT_ALIAS',
-                0.95,
-                'Matched deterministic entity label.',
-                $surfaceForm,
-                [],
-                __FUNCTION__,
-                __FUNCTION__
-            );
-        }
-    } catch (Throwable $e) {
-        return [];
-    }
-
-    return $candidates;
+    return [];
 }
 
 function prose_character_try_exact_alias(PDO $pdo, string $surfaceForm): array
 {
-    $surfaceForm = trim($surfaceForm);
-
-    if ($surfaceForm === '' || !prose_character_table_exists($pdo, 'semantic_aliases')) {
-        return [];
-    }
-
-    $candidates = [];
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT entity_id, alias AS candidate_label
-            FROM semantic_aliases
-            WHERE alias = :surface_form
-            LIMIT 10
-        ");
-
-        $stmt->execute([
-            ':surface_form' => $surfaceForm,
-        ]);
-
-        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-            prose_character_append_candidate(
-                $candidates,
-                trim((string)($row['entity_id'] ?? '')),
-                (string)($row['candidate_label'] ?? $surfaceForm),
-                'RESOLUTION_METHOD_EXACT_ALIAS',
-                0.96,
-                'Matched exact deterministic semantic alias.',
-                $surfaceForm,
-                [],
-                __FUNCTION__,
-                __FUNCTION__
-            );
-        }
-    } catch (Throwable $e) {
-        return [];
-    }
-
-    return $candidates;
+    return [];
 }
 
 function prose_character_try_normalized_alias(PDO $pdo, string $surfaceForm): array
 {
-    $normalizedSurface = prose_character_normalize_surface($surfaceForm);
-
-    if ($normalizedSurface === '' || !prose_character_table_exists($pdo, 'semantic_aliases')) {
-        return [];
-    }
-
-    $candidates = [];
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT entity_id, alias AS candidate_label
-            FROM semantic_aliases
-            WHERE LOWER(alias) = :normalized_surface
-            LIMIT 10
-        ");
-
-        $stmt->execute([
-            ':normalized_surface' => $normalizedSurface,
-        ]);
-
-        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-            prose_character_append_candidate(
-                $candidates,
-                trim((string)($row['entity_id'] ?? '')),
-                (string)($row['candidate_label'] ?? $surfaceForm),
-                'RESOLUTION_METHOD_NORMALIZED_ALIAS',
-                0.94,
-                'Matched normalized deterministic semantic alias.',
-                $normalizedSurface,
-                ['normalize_case', 'normalize_whitespace'],
-                __FUNCTION__,
-                __FUNCTION__
-            );
-        }
-    } catch (Throwable $e) {
-        return [];
-    }
-
-    return $candidates;
+    return [];
 }
 
 function prose_character_try_normalized_surname_alias(PDO $pdo, string $surname): array
 {
-    $surname = trim($surname);
-
-    if ($surname === '' || str_contains($surname, ' ')) {
-        return [];
-    }
-
-    $normalizedSurname = prose_character_normalize_surface($surname);
-    $candidates = prose_character_try_normalized_alias($pdo, $normalizedSurname);
-
-    foreach ($candidates as $candidateKey => $candidate) {
-        $candidates[$candidateKey]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_NORMALIZED_SURNAME_ALIAS';
-        $candidates[$candidateKey]['candidate_score'] = 0.72;
-        $candidates[$candidateKey]['scoring_notes'] = 'Matched normalized surname alias after surname extraction.';
-        $candidates[$candidateKey]['normalized_lookup_surface'] = $normalizedSurname;
-        $candidates[$candidateKey]['transform_chain'] = [
-            'extract_surname',
-            'normalize_case',
-            'normalize_whitespace',
-        ];
-        $candidates[$candidateKey]['resolver_stage'] = __FUNCTION__;
-    }
-
-    return $candidates;
+    return [];
 }
 
 function prose_character_try_honorific_surname(PDO $pdo, string $surfaceForm): array
 {
-    $surfaceForm = trim($surfaceForm);
-
-    if ($surfaceForm === '') {
-        return [];
-    }
-
-    if (preg_match('/^(Mr|Mr\\.|Mrs|Mrs\\.|Miss|Ms|Ms\\.|Dr|Dr\\.)\\s+([\\p{L}\\'-]+)$/iu', $surfaceForm, $matches) !== 1) {
-        return [];
-    }
-
-    $surname = trim((string)($matches[2] ?? ''));
-
-    if ($surname === '') {
-        return [];
-    }
-
-    $candidates = prose_character_try_normalized_surname_alias($pdo, $surname);
-
-    foreach ($candidates as $candidateKey => $candidate) {
-        $candidates[$candidateKey]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_HONORIFIC_SURNAME';
-        $candidates[$candidateKey]['candidate_score'] = 0.90;
-        $candidates[$candidateKey]['scoring_notes'] = 'Resolved honorific surface by deterministic surname alias lookup.';
-        $candidates[$candidateKey]['raw_surface_text'] = $surfaceForm;
-        $candidates[$candidateKey]['transform_chain'] = [
-            'strip_honorific',
-            'extract_surname',
-            'normalize_case',
-            'normalize_whitespace',
-        ];
-        $candidates[$candidateKey]['resolver_stage'] = __FUNCTION__;
-        $candidates[$candidateKey]['lookup_stage'] = 'prose_character_try_normalized_alias';
-    }
-
-    return $candidates;
+    return [];
 }
 
 function prose_character_try_token_decomposition(PDO $pdo, string $surfaceForm): array
@@ -508,4 +300,22 @@ function prose_character_try_token_decomposition(PDO $pdo, string $surfaceForm):
     }
 
     return $candidates;
+}
+
+function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): array
+{
+    return [];
+}
+
+function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = []): array
+{
+    return [
+        'suggestions' => [
+            'characters' => [],
+        ],
+        'suggestion_count' => 0,
+        'unresolved_surface_count' => 0,
+        'mutates_character_ontology' => false,
+        'approval_required' => true,
+    ];
 }
