@@ -129,22 +129,24 @@ function prose_character_append_candidate(
         return;
     }
 
-    if (
-        !isset($candidates[$entityId])
-        || (float)$candidateScore > (float)$candidates[$entityId]['candidate_score']
-    ) {
-        $candidates[$entityId] = [
-            'resolved_entity_id' => $entityId,
-            'candidate_label' => $candidateLabel,
-            'resolution_method_classval_id' => $resolutionMethodClassvalId,
-            'candidate_score' => $candidateScore,
-            'scoring_notes' => $scoringNotes,
-            'matched_lookup_surface' => $matchedLookupSurface,
-            'transform_chain' => $transformChain,
-            'resolver_stage' => $resolverStage,
-            'lookup_stage' => $lookupStage,
-        ];
-    }
+    $candidateIdentityKey = implode('|', [
+        $entityId,
+        $resolutionMethodClassvalId,
+        $resolverStage ?? '',
+        json_encode($transformChain),
+    ]);
+
+    $candidates[$candidateIdentityKey] = [
+        'resolved_entity_id' => $entityId,
+        'candidate_label' => $candidateLabel,
+        'resolution_method_classval_id' => $resolutionMethodClassvalId,
+        'candidate_score' => $candidateScore,
+        'scoring_notes' => $scoringNotes,
+        'matched_lookup_surface' => $matchedLookupSurface,
+        'transform_chain' => $transformChain,
+        'resolver_stage' => $resolverStage,
+        'lookup_stage' => $lookupStage,
+    ];
 }
 
 function prose_character_try_exact_canonical_label(PDO $pdo, string $surfaceForm): array
@@ -329,17 +331,17 @@ function prose_character_try_normalized_surname_alias(PDO $pdo, string $surname)
     $normalizedSurname = prose_character_normalize_surface($surname);
     $candidates = prose_character_try_normalized_alias($pdo, $normalizedSurname);
 
-    foreach ($candidates as $entityId => $candidate) {
-        $candidates[$entityId]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_NORMALIZED_SURNAME_ALIAS';
-        $candidates[$entityId]['candidate_score'] = 0.72;
-        $candidates[$entityId]['scoring_notes'] = 'Matched normalized surname alias after surname extraction.';
-        $candidates[$entityId]['normalized_lookup_surface'] = $normalizedSurname;
-        $candidates[$entityId]['transform_chain'] = [
+    foreach ($candidates as $candidateKey => $candidate) {
+        $candidates[$candidateKey]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_NORMALIZED_SURNAME_ALIAS';
+        $candidates[$candidateKey]['candidate_score'] = 0.72;
+        $candidates[$candidateKey]['scoring_notes'] = 'Matched normalized surname alias after surname extraction.';
+        $candidates[$candidateKey]['normalized_lookup_surface'] = $normalizedSurname;
+        $candidates[$candidateKey]['transform_chain'] = [
             'extract_surname',
             'normalize_case',
             'normalize_whitespace',
         ];
-        $candidates[$entityId]['resolver_stage'] = __FUNCTION__;
+        $candidates[$candidateKey]['resolver_stage'] = __FUNCTION__;
     }
 
     return $candidates;
@@ -365,19 +367,19 @@ function prose_character_try_honorific_surname(PDO $pdo, string $surfaceForm): a
 
     $candidates = prose_character_try_normalized_surname_alias($pdo, $surname);
 
-    foreach ($candidates as $entityId => $candidate) {
-        $candidates[$entityId]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_HONORIFIC_SURNAME';
-        $candidates[$entityId]['candidate_score'] = 0.90;
-        $candidates[$entityId]['scoring_notes'] = 'Resolved honorific surface by deterministic surname alias lookup.';
-        $candidates[$entityId]['raw_surface_text'] = $surfaceForm;
-        $candidates[$entityId]['transform_chain'] = [
+    foreach ($candidates as $candidateKey => $candidate) {
+        $candidates[$candidateKey]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_HONORIFIC_SURNAME';
+        $candidates[$candidateKey]['candidate_score'] = 0.90;
+        $candidates[$candidateKey]['scoring_notes'] = 'Resolved honorific surface by deterministic surname alias lookup.';
+        $candidates[$candidateKey]['raw_surface_text'] = $surfaceForm;
+        $candidates[$candidateKey]['transform_chain'] = [
             'strip_honorific',
             'extract_surname',
             'normalize_case',
             'normalize_whitespace',
         ];
-        $candidates[$entityId]['resolver_stage'] = __FUNCTION__;
-        $candidates[$entityId]['lookup_stage'] = 'prose_character_try_normalized_alias';
+        $candidates[$candidateKey]['resolver_stage'] = __FUNCTION__;
+        $candidates[$candidateKey]['lookup_stage'] = 'prose_character_try_normalized_alias';
     }
 
     return $candidates;
@@ -414,7 +416,7 @@ function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): ar
             continue;
         }
 
-        foreach ($stageCandidates as $entityId => $candidate) {
+        foreach ($stageCandidates as $candidateKey => $candidate) {
             $candidate['arbitration_stage'] = $resolverStage;
 
             if (
@@ -424,7 +426,7 @@ function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): ar
                 $candidate['resolver_stage'] = $resolverStage;
             }
 
-            $candidates[$entityId] = $candidate;
+            $candidates[] = $candidate;
         }
 
         $topCandidate = reset($stageCandidates);
@@ -437,7 +439,7 @@ function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): ar
         }
     }
 
-    uasort(
+    usort(
         $candidates,
         static fn (array $a, array $b): int => (float)$b['candidate_score'] <=> (float)$a['candidate_score']
     );
