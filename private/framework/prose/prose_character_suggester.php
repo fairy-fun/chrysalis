@@ -97,6 +97,37 @@ function prose_character_table_exists(PDO $pdo, string $tableName): bool
         && is_array($stmt->fetch(PDO::FETCH_NUM));
 }
 
+function prose_character_append_candidate(
+    array &$candidates,
+    string $entityId,
+    string $candidateLabel,
+    string $resolutionMethodClassvalId,
+    float $candidateScore,
+    string $scoringNotes,
+    string $matchedLookupSurface
+): void {
+
+    $entityId = trim($entityId);
+
+    if ($entityId === '') {
+        return;
+    }
+
+    if (
+        !isset($candidates[$entityId])
+        || (float)$candidateScore > (float)$candidates[$entityId]['candidate_score']
+    ) {
+        $candidates[$entityId] = [
+            'resolved_entity_id' => $entityId,
+            'candidate_label' => $candidateLabel,
+            'resolution_method_classval_id' => $resolutionMethodClassvalId,
+            'candidate_score' => $candidateScore,
+            'scoring_notes' => $scoringNotes,
+            'matched_lookup_surface' => $matchedLookupSurface,
+        ];
+    }
+}
+
 function prose_character_exact_lookup(
     PDO $pdo,
     string $surfaceForm,
@@ -120,7 +151,9 @@ function prose_character_exact_lookup(
                     entity_id,
                     alias AS candidate_label
                 FROM semantic_aliases
-                WHERE alias = :surface_form
+                WHERE
+                    alias = :surface_form
+                    OR LOWER(alias) = LOWER(:surface_form)
                 LIMIT 10
             ");
 
@@ -135,16 +168,15 @@ function prose_character_exact_lookup(
 
                 $entityId = trim((string)($row['entity_id'] ?? ''));
 
-                if ($entityId !== '') {
-                    $candidates[$entityId] = [
-                        'resolved_entity_id' => $entityId,
-                        'candidate_label' => $row['candidate_label'] ?? $surfaceForm,
-                        'resolution_method_classval_id' => $resolutionMethodClassvalId,
-                        'candidate_score' => $candidateScore,
-                        'scoring_notes' => $scoringNotes,
-                        'matched_lookup_surface' => $surfaceForm,
-                    ];
-                }
+                prose_character_append_candidate(
+                    $candidates,
+                    $entityId,
+                    (string)($row['candidate_label'] ?? $surfaceForm),
+                    $resolutionMethodClassvalId,
+                    $candidateScore,
+                    $scoringNotes,
+                    $surfaceForm
+                );
             }
         } catch (Throwable $e) {
             // Fall through to other deterministic lookup surfaces.
@@ -158,7 +190,9 @@ function prose_character_exact_lookup(
                     entity_id,
                     label AS candidate_label
                 FROM entity_labels
-                WHERE label = :surface_form
+                WHERE
+                    label = :surface_form
+                    OR LOWER(label) = LOWER(:surface_form)
                 LIMIT 10
             ");
 
@@ -173,16 +207,15 @@ function prose_character_exact_lookup(
 
                 $entityId = trim((string)($row['entity_id'] ?? ''));
 
-                if ($entityId !== '' && !isset($candidates[$entityId])) {
-                    $candidates[$entityId] = [
-                        'resolved_entity_id' => $entityId,
-                        'candidate_label' => $row['candidate_label'] ?? $surfaceForm,
-                        'resolution_method_classval_id' => $resolutionMethodClassvalId,
-                        'candidate_score' => $candidateScore - 0.05,
-                        'scoring_notes' => $scoringNotes,
-                        'matched_lookup_surface' => $surfaceForm,
-                    ];
-                }
+                prose_character_append_candidate(
+                    $candidates,
+                    $entityId,
+                    (string)($row['candidate_label'] ?? $surfaceForm),
+                    $resolutionMethodClassvalId,
+                    $candidateScore - 0.05,
+                    $scoringNotes,
+                    $surfaceForm
+                );
             }
         } catch (Throwable $e) {
             // Fall through to entity id / canonical label lookup.
@@ -198,6 +231,7 @@ function prose_character_exact_lookup(
             WHERE entity_type_id = 'entity_type_character'
               AND (
                     canonical_label = :surface_form
+                 OR LOWER(canonical_label) = LOWER(:surface_form)
                  OR id = :surface_form
               )
             LIMIT 10
@@ -214,16 +248,15 @@ function prose_character_exact_lookup(
 
             $entityId = trim((string)($row['entity_id'] ?? ''));
 
-            if ($entityId !== '' && !isset($candidates[$entityId])) {
-                $candidates[$entityId] = [
-                    'resolved_entity_id' => $entityId,
-                    'candidate_label' => $row['candidate_label'] ?? $surfaceForm,
-                    'resolution_method_classval_id' => 'RESOLUTION_METHOD_EXACT_CANONICAL_LABEL',
-                    'candidate_score' => min($candidateScore - 0.1, 0.85),
-                    'scoring_notes' => 'Matched deterministic character entity canonical surface form.',
-                    'matched_lookup_surface' => $surfaceForm,
-                ];
-            }
+            prose_character_append_candidate(
+                $candidates,
+                $entityId,
+                (string)($row['candidate_label'] ?? $surfaceForm),
+                'RESOLUTION_METHOD_EXACT_CANONICAL_LABEL',
+                min($candidateScore - 0.1, 0.85),
+                'Matched deterministic character entity canonical surface form.',
+                $surfaceForm
+            );
         }
     } catch (Throwable $e) {
         // If entity shape differs, return whichever earlier candidates were found.
