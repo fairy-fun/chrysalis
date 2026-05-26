@@ -62,3 +62,49 @@ function query_calendar_week_days(
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+function query_calendar_day_times(
+    PDO $pdo,
+    int $projectionId,
+    int $dayId
+): array {
+
+    $stmt = $pdo->prepare("
+        SELECT
+            t.id,
+            t.entity_id,
+            t.projection_id,
+            t.day_id,
+            t.time_index,
+            t.summary,
+            t.notes,
+            t.time_label_id,
+
+            cv.id AS matched_time_label_id,
+            cv.label AS classval_label,
+
+            COALESCE(
+                NULLIF(TRIM(cv.label), ''),
+                NULLIF(TRIM(t.summary), ''),
+                NULLIF(TRIM(t.notes), ''),
+                CONCAT('Time ', t.time_index)
+            ) AS display_label
+
+        FROM calendar_book_times t
+
+        LEFT JOIN calendar_time_label_classvals cv
+            ON TRIM(cv.id) = TRIM(t.time_label_id)
+
+        WHERE t.projection_id = :projection_id
+          AND t.day_id = :day_id
+
+        ORDER BY t.time_index ASC
+    ");
+
+    $stmt->execute([
+        ':projection_id' => $projectionId,
+        ':day_id' => $dayId,
+    ]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
