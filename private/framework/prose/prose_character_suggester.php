@@ -9,7 +9,7 @@ require_once __DIR__
 require_once __DIR__
     . '/resolution/resolve_token_decomposition.php';
 require_once __DIR__
-    . '/arbitration/semantic_candidate_arbitrator.php';
+    . '/../semantic_resolution/semantic_candidate_arbitrator.php';
 require_once __DIR__
     . '/semantic_surface_transform_pipeline.php';
 require_once __DIR__
