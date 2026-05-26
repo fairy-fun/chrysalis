@@ -257,6 +257,7 @@ function fw_execute_workflow_calendar_event_prepare_character_tag_approval(
         [
             'calendar_event_entity_id' => $calendarEventEntityId,
             'calendar_event_id' => $eventId,
+            'event_id' => $eventId,
             'prose_projection_id' => (int)$proseRow['prose_projection_id'],
             'prose_entity_id' => (string)$proseRow['prose_entity_id'],
         ]
