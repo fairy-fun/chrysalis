@@ -164,7 +164,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
                     'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
                 ];
             }
-        }
+
     }
 
     return [
