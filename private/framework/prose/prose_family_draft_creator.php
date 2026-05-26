@@ -187,6 +187,9 @@ function create_calendar_event_prose_family_draft(PDO $pdo, array $body): array
                 : null,
             'is_export_target' => (int) ($existingProjection['is_export_target'] ?? 0),
         ];
+        $result['calendar_event_entity_id'] = $calendarEventEntityId;
+        $result['prose_family_id'] = (int) $existingProjection['prose_family_id'];
+
         $result['projection_created'] = false;
         $result['publication_changed'] = false;
         $result['export_authority_changed'] = false;
@@ -239,15 +242,20 @@ function create_calendar_event_prose_family_draft(PDO $pdo, array $body): array
     }
 
     return [
+        'calendar_event_entity_id' => $calendarEventEntityId,
+        'prose_family_id' => $proseFamilyId,
+
         'prose_family' => [
             'id' => $proseFamilyId,
             'entity_id' => $proseFamilyEntityId,
         ],
+
         'prose' => [
             'id' => $proseDraftId,
             'entity_id' => $entityId,
             'title' => $title,
         ],
+
         'projection' => [
             'id' => $projectionId,
             'target_entity_id' => $calendarEventEntityId,
@@ -256,6 +264,7 @@ function create_calendar_event_prose_family_draft(PDO $pdo, array $body): array
             'published_prose_draft_id' => $proseDraftId,
             'is_export_target' => 0,
         ],
+
         'projection_created' => true,
         'publication_changed' => false,
         'export_authority_changed' => false,

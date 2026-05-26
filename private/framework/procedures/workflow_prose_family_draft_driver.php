@@ -56,6 +56,26 @@ function fw_execute_workflow_prose_create_calendar_event_family_draft(
     );
 
     if (
+        isset($result['calendar_event_entity_id'])
+        && isset($result['prose_family_id'])
+    ) {
+
+        $calendarEvent = prose_family_workflow_fetch_event_by_entity_id(
+            $pdo,
+            $result['calendar_event_entity_id']
+        );
+
+        if ($calendarEvent !== null) {
+
+            update_calendar_event_prose_surface(
+                $pdo,
+                (int) $calendarEvent['id'],
+                (int) $result['prose_family_id']
+            );
+        }
+    }
+
+    if (
         isset($result['calendar_event_id'])
         && isset($result['prose_family_id'])
     ) {
