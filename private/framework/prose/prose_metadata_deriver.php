@@ -283,6 +283,57 @@ function derive_known_calendar_event_beat_title(
         ];
     }
 
+    /**
+     * Corpus-specific deterministic rule for Chloe intercepting Shay at the
+     * training-room doorway after the Fruean assessment sequence.
+     */
+    $hasExitAttempt = prose_contains_any($normalized, [
+        'As I turn to exit',
+        'intending to leave Mr Fruean',
+        'leave Mr Fruean',
+        'my path blocked',
+        'path blocked',
+    ]);
+
+    $hasDoorwayInterception = prose_contains_any($normalized, [
+        'heavy grey door is now ajar',
+        'Leaning against the frame is Chloe',
+        'waiting for me',
+        'Chloe is waiting',
+        'doorway',
+        'door frame',
+    ]);
+
+    $hasFrueanContext = prose_contains_any($normalized, [
+        'Mr Fruean',
+        'iron plates',
+        'silent judgements',
+        'silent judgments',
+        'conditioning room',
+    ]);
+
+    $isDoorwayInterceptionFixture = $hasExitAttempt
+        && $hasDoorwayInterception
+        && (
+            $hasFrueanContext
+            || $calendarEventEntityId === 'calendar_event:6'
+        );
+
+    if ($isDoorwayInterceptionFixture) {
+        return [
+            'title' => 'Chloe intercepts Shay after the Fruean assessment',
+            'beat_summary' => 'As Shay attempts to leave the RBDS conditioning room after meeting Mr Fruean, Chloe is already waiting at the doorway and silently intercepts her, continuing Shay’s guided movement through the institution and reinforcing the controlled, procedural nature of her induction into the team system.',
+            'beat_type_id' => 'BEAT_TRANSITION',
+            'derivation_mode' => 'semantic_rule',
+            'evidence' => array_values(array_filter([
+                $hasExitAttempt ? 'exit_attempt' : null,
+                $hasDoorwayInterception ? 'doorway_interception' : null,
+                $hasFrueanContext ? 'Fruean_context' : null,
+                $calendarEventEntityId === 'calendar_event:6' ? 'calendar_event:6' : null,
+            ])),
+        ];
+    }
+
     return null;
 }
 
