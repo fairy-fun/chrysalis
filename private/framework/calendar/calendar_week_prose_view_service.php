@@ -267,56 +267,23 @@ function resolve_calendar_week_prose_view(
                 'events' => array_map(
                     static function (array $event): array {
 
-                        return [
-                            'id' => (int)$event['id'],
-                            'entity_id' => $event['entity_id'],
+                        $layerId = $event['subevent_index'] !== null
+                            ? 'calendar_layer_subevent'
+                            : 'calendar_layer_event';
 
-                            'projection_id'
-                                => (int)$event['projection_id'],
+                        $summary = trim((string)($event['summary'] ?? ''));
 
-                            'book_time_id'
-                                => (int)$event['book_time_id'],
+                        $proseBody = trim((string)($event['prose_body'] ?? ''));
 
-                            'event_index'
-                                => $event['event_index'] !== null
-                                    ? (int)$event['event_index']
-                                    : null,
+                        $notes = trim((string)($event['notes'] ?? ''));
 
-                            'subevent_index'
-                                => $event['subevent_index'] !== null
-                                    ? (int)$event['subevent_index']
-                                    : null,
-
-                            'sequence_index'
-                                => $event['sequence_index'] !== null
-                                    ? (int)$event['sequence_index']
-                                    : null,
-
-                            'summary' => $event['summary'],
-                            'notes' => $event['notes'],
-
-                            'prose_projection_id'
-                                => $event['prose_projection_id'] !== null
-                                    ? (int)$event['prose_projection_id']
-                                    : null,
-
-                            'published_prose_draft_id'
-                                => $event['published_prose_draft_id'] !== null
-                                    ? (int)$event['published_prose_draft_id']
-                                    : null,
-
-                            'prose_projection_order'
-                                => $event['prose_projection_order'] !== null
-                                    ? (int)$event['prose_projection_order']
-                                    : null,
-
-                            'is_export_target'
-                                => $event['is_export_target'] !== null
-                                    ? (int)$event['is_export_target']
-                                    : null,
-
-                            'prose_body' => $event['prose_body'],
-                        ];
+                        return hydrate_calendar_week_prose_item(
+                            $event,
+                            $layerId,
+                            $summary,
+                            $proseBody,
+                            $notes
+                        );
                     },
                     $events
                 ),
@@ -399,12 +366,6 @@ function render_calendar_week_prose_item_label(
         $time,
         $event
     );
-
-    $displayReference = trim((string)($event['reference_label'] ?? ''));
-
-    if ($displayReference === '') {
-        $displayReference = 'Event ' . (int)($event['event_index'] ?? 0);
-    }
 
     $label = format_calendar_week_prose_label(
         $renderTree,
