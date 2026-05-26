@@ -118,6 +118,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['semantic_surface_evidence', 'resolution_method_classval_id', 'CLASSVAL'],
         ['semantic_surface_evidence', 'resolution_status_classval_id', 'CLASSVAL'],
         ['semantic_surface_evidence', 'source_classval_id', 'CLASSVAL'],
+        ['semantic_surface_evidence_candidates', 'resolution_method_classval_id', 'CLASSVAL'],
 
         // classval references
         ['attribute_type_layer_map', 'layer_classval_id', 'CLASSVAL'],
