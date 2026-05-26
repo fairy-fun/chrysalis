@@ -391,13 +391,19 @@ function render_calendar_week_prose_item_label(
         $event
     );
 
+    $displayReference = trim((string)($event['reference_label'] ?? ''));
+
+    if ($displayReference === '') {
+        $displayReference = 'Event ' . (int)($event['event_index'] ?? 0);
+    }
+
     $label = sprintf(
-        '%s — Week %d, Day %d, %s, Event %d (%s)',
+        '%s — Week %d, Day %d, %s, %s (%s)',
         $dotNotation,
         (int)($renderTree['week']['week_index'] ?? 0),
         (int)($day['day_index'] ?? 0),
         (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
-        (int)($event['event_index'] ?? 0),
+        $displayReference,
         (string)($event['entity_id'] ?? '')
     );
 
