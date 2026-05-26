@@ -6,7 +6,7 @@ function persist_semantic_surface_resolution_candidates(
     PDO $pdo,
     int $semanticSurfaceEvidenceId,
     array $candidates,
-    ?string $selectedEntityId = null
+    ?string $selectedCandidateIdentityKey = null
 ): array {
 
     if ($semanticSurfaceEvidenceId < 1) {
@@ -61,6 +61,16 @@ function persist_semantic_surface_resolution_candidates(
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
 
+        $candidateIdentityKey = implode('|', [
+            $candidateEntityId,
+            $resolutionMethod,
+            trim((string)($candidate['matched_lookup_surface'] ?? '')),
+            trim((string)($candidate['normalized_lookup_surface'] ?? '')),
+            (string)$transformChainJson,
+            trim((string)($candidate['resolver_stage'] ?? '')),
+            trim((string)($candidate['arbitration_stage'] ?? '')),
+        ]);
+
         $candidateKey = implode('|', [
             $candidateEntityId,
             $resolutionMethod,
@@ -76,9 +86,9 @@ function persist_semantic_surface_resolution_candidates(
         $seenCandidateKeys[$candidateKey] = true;
 
         $isSelected = (
-            $selectedEntityId !== null
-            && $selectedEntityId !== ''
-            && $candidateEntityId === $selectedEntityId
+            $selectedCandidateIdentityKey !== null
+            && $selectedCandidateIdentityKey !== ''
+            && $candidateIdentityKey === $selectedCandidateIdentityKey
         ) ? 1 : 0;
 
         $candidateRow = [
