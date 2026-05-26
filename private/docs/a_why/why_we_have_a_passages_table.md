@@ -1,5 +1,11 @@
 # Calendar Event Passage Doctrine
 
+Now the determining factor becomes:
+
+does this row materially carry narrative state?
+
+That’s a fundamentally better doctrine.
+
 ## Purpose
 
 This document formalizes the extraction of narrative continuation semantics out of chronology addressing and into a dedicated relational structure.
@@ -197,3 +203,264 @@ calendar_event_passages
 ```
 
 This separation prevents chronology from carrying multiplexed semantic responsibilities and dramatically simplifies future normalization and migration work.
+
+I think the eventual doctrine probably becomes:
+calendar_events
+
+Owns ONLY:
+
+temporal placement
+identity
+scheduling semantics
+calendar_event_passages
+
+Owns:
+
+ordered narrative structure
+prose_families
+
+Owns:
+
+semantic continuity of prose
+prose_drafts
+
+Owns:
+
+actual mutable prose realizations
+
+And critically:
+
+prose_body inside events stops being canonical
+
+That’s the huge simplification.
+
+New prose_body Doctrine
+
+calendar_events.prose_body is:
+
+a denormalized operator-visible narrative projection
+
+NOT:
+
+canonical prose storage
+
+Canonical narrative authority becomes:
+
+calendar_event_passages
+-> prose_families
+-> prose_drafts
+
+while:
+
+calendar_events.prose_body
+
+exists for:
+
+GPT discoverability
+operator continuity
+semantic visibility
+searchability
+lightweight rendering
+indexing
+quick inspection
+The implementation strategy should be:
+Phase 1 — Stabilize semantics
+
+Do NOT remove prose_body.
+
+Instead:
+
+prose_body becomes rebuildable cache state
+
+That is psychologically and operationally safer.
+
+Phase 2 — Introduce projection generation
+
+You need a deterministic way to rebuild:
+
+calendar_events.prose_body
+
+from passages.
+
+Probably:
+
+event
+-> ordered passages
+-> current prose draft per family
+-> concatenated render
+Proposed render doctrine
+
+Example:
+
+Event
+3.1.1.1
+Passages
+passage_index	prose
+1	opening
+2	continuation
+3	resolution
+Generated prose_body
+opening
+
+continuation
+
+resolution
+
+That becomes the operator-visible projection.
+
+This means prose_body should become:
+Derived state
+
+NOT editable authority.
+
+That’s the critical shift.
+
+Then the implementation becomes very clean
+Add canonical linkage
+
+You already created:
+
+calendar_event_passages
+
+Now the next important fields are probably:
+
+ALTER TABLE calendar_events
+ADD COLUMN prose_projection_updated_at DATETIME NULL;
+
+Possibly later:
+
+ADD COLUMN prose_projection_hash VARCHAR(64) NULL;
+
+for rebuild invalidation.
+
+Then establish rebuild doctrine
+
+Whenever:
+
+passage changes
+prose family changes
+prose draft changes
+
+the event projection becomes stale.
+
+Then regenerate:
+
+calendar_events.prose_body
+Important architectural recommendation
+
+I would strongly avoid:
+
+event directly owns prose family
+
+now.
+
+Instead:
+
+event
+-> passages
+-> prose families
+
+because this preserves future flexibility:
+
+multiple passages
+alternate renders
+passage-specific drafts
+branching narrative
+partial rewrites
+
+without destabilizing event identity.
+
+Suggested passage render query
+
+Eventually something conceptually like:
+
+SELECT
+cep.calendar_event_id,
+cep.passage_index,
+pd.prose_body
+FROM calendar_event_passages cep
+JOIN prose_drafts pd
+ON pd.prose_family_id = cep.prose_family_id
+WHERE pd.id = (
+SELECT MAX(pd2.id)
+FROM prose_drafts pd2
+WHERE pd2.prose_family_id = cep.prose_family_id
+)
+ORDER BY cep.passage_index;
+
+Then concatenate into:
+
+calendar_events.prose_body
+The most important thing
+
+This architecture finally gives you:
+
+concept	authority
+temporal identity	calendar_events
+narrative ordering	passages
+semantic continuity	prose_families
+mutable text	prose_drafts
+GPT visibility	prose_body
+
+That is an actually stable ontology.
+
+And most importantly:
+
+future GPT chats no longer need chronology archaeology to discover narrative state.
+
+yeah, what we don't know about is the actual functional relationship between migrating attached prose to the passages ... so we don't want to get too precious until we've cleaned out the semantic rot
+
+Exactly. That restraint is correct.
+
+Right now you do not yet understand the full operational semantics of:
+
+event
+↔ prose family
+↔ passage
+↔ draft lineage
+
+especially under real workflow mutation.
+
+So becoming too doctrinal too early would be dangerous.
+
+Phase 1 — Remove semantic rot
+
+Aggressively prune:
+
+empty lineage artifacts
+obsolete chronology residue
+duplicate shells
+semantically dead rows
+
+while preserving:
+
+active prose continuity
+modern references
+meaningful temporal anchors
+Phase 2 — Observe live passage behavior
+
+Actually use:
+
+calendar_event_passages
+
+in real workflows.
+
+See what naturally emerges around:
+
+continuation
+editing
+regeneration
+rendering
+chronology interaction
+draft evolution
+Phase 3 — Refine doctrine from operational reality
+
+Not from archaeology.
+
+That’s the key maturation step.
+
+You’ve already escaped the most dangerous phase, which was:
+
+implicit multiplexed chronology semantics
+
+Now the system can evolve through explicit structures instead of hidden topology accidents.
