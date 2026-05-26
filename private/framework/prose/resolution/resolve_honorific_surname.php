@@ -13,7 +13,7 @@ function prose_character_try_honorific_surname(
 
     if (
         preg_match(
-            "/^(Mr|Mrs|Miss|Ms|Dr)\\\\.?\\\\s+([\\\\p{L}'-]+)$/iu",
+            '/^(Mr|Mrs|Miss|Ms|Dr)\.?\s+([\p{L}'-]+)$/iu',
             trim($surfaceForm),
             $matches
         ) !== 1
