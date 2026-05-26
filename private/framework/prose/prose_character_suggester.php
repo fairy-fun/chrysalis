@@ -61,6 +61,31 @@ function prose_character_normalize_surface(string $surfaceForm): string
     return preg_replace('/\s+/u', ' ', $surfaceForm) ?? $surfaceForm;
 }
 
+function prose_character_tokenize_surface(string $surfaceForm): array
+{
+    $normalized = prose_character_normalize_surface($surfaceForm);
+
+    if ($normalized === '') {
+        return [];
+    }
+
+    $tokens = preg_split('/\s+/u', $normalized);
+
+    if (!is_array($tokens)) {
+        return [];
+    }
+
+    $tokens = array_values(array_filter(
+        array_map(
+            static fn (mixed $token): string => trim((string)$token),
+            $tokens
+        ),
+        static fn (string $token): bool => $token !== ''
+    ));
+
+    return $tokens;
+}
+
 function prose_character_build_candidate_identity_key(array $candidate): string
 {
     $transformChain = $candidate['transform_chain'] ?? [];
@@ -377,7 +402,7 @@ function prose_character_try_honorific_surname(PDO $pdo, string $surfaceForm): a
         return [];
     }
 
-    if (preg_match('/^(Mr|Mr\.|Mrs|Mrs\.|Miss|Ms|Ms\.|Dr|Dr\.)\s+([\p{L}\'-]+)$/iu', $surfaceForm, $matches) !== 1) {
+    if (preg_match('/^(Mr|Mr\\.|Mrs|Mrs\\.|Miss|Ms|Ms\\.|Dr|Dr\\.)\\s+([\\p{L}\\'-]+)$/iu', $surfaceForm, $matches) !== 1) {
         return [];
     }
 
@@ -409,191 +434,78 @@ function prose_character_try_honorific_surname(PDO $pdo, string $surfaceForm): a
 
 function prose_character_try_token_decomposition(PDO $pdo, string $surfaceForm): array
 {
-    return [];
-}
+    $surfaceTokens = prose_character_tokenize_surface($surfaceForm);
 
-function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): array
-{
-    $surfaceForm = trim($surfaceForm);
-
-    if ($surfaceForm === '') {
+    if (count($surfaceTokens) < 2) {
         return [];
     }
 
-    $pipelineStages = [
-        'prose_character_try_exact_canonical_label',
-        'prose_character_try_entity_label',
-        'prose_character_try_exact_alias',
-        'prose_character_try_normalized_alias',
-        'prose_character_try_honorific_surname',
-        'prose_character_try_token_decomposition',
-    ];
-
     $candidates = [];
 
-    foreach ($pipelineStages as $resolverStage) {
-        $stageCandidates = $resolverStage($pdo, $surfaceForm);
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                id AS entity_id,
+                canonical_label AS candidate_label
+            FROM entities
+            WHERE entity_type_id = 'entity_type_character'
+              AND canonical_label IS NOT NULL
+            LIMIT 500
+        ");
 
-        if ($stageCandidates === []) {
-            continue;
-        }
+        $stmt->execute();
 
-        foreach ($stageCandidates as $candidateKey => $candidate) {
-            $candidate['arbitration_stage'] = $resolverStage;
+        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+            $entityId = trim((string)($row['entity_id'] ?? ''));
+            $candidateLabel = trim((string)($row['candidate_label'] ?? ''));
 
-            if (
-                !isset($candidate['resolver_stage'])
-                || trim((string)$candidate['resolver_stage']) === ''
-            ) {
-                $candidate['resolver_stage'] = $resolverStage;
-            }
-
-            $candidates[] = $candidate;
-        }
-
-        $topCandidate = reset($stageCandidates);
-
-        if (
-            is_array($topCandidate)
-            && (float)($topCandidate['candidate_score'] ?? 0.0) >= 0.90
-        ) {
-            break;
-        }
-    }
-
-    usort(
-        $candidates,
-        static fn (array $a, array $b): int => (float)$b['candidate_score'] <=> (float)$a['candidate_score']
-    );
-
-    return array_values($candidates);
-}
-
-function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = []): array
-{
-    $proseBody = trim($proseBody);
-
-    if ($proseBody === '') {
-        return [
-            'suggestions' => [
-                'characters' => [],
-            ],
-            'suggestion_count' => 0,
-            'mutates_character_ontology' => false,
-        ];
-    }
-
-    $suggestionsByEntity = [];
-    $unresolved = [];
-
-    foreach (prose_character_known_surface_forms() as $surfaceSet) {
-        $surfaceForms = $surfaceSet['surface_forms'] ?? [];
-
-        if (!is_array($surfaceForms)) {
-            continue;
-        }
-
-        foreach ($surfaceForms as $surfaceForm) {
-            $surfaceForm = trim((string)$surfaceForm);
-
-            if ($surfaceForm === '') {
+            if ($entityId === '' || $candidateLabel === '') {
                 continue;
             }
 
-            $spans = prose_character_find_surface_spans($proseBody, $surfaceForm);
+            $canonicalTokens = prose_character_tokenize_surface($candidateLabel);
 
-            if ($spans === []) {
+            if (count($canonicalTokens) < count($surfaceTokens)) {
                 continue;
             }
 
-            $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
-            $selectedCandidate = $candidates[0] ?? null;
+            $tokenCursor = 0;
 
-            $selectedCandidateIdentityKey = is_array($selectedCandidate)
-                ? prose_character_build_candidate_identity_key($selectedCandidate)
-                : null;
+            foreach ($canonicalTokens as $canonicalToken) {
+                if ($canonicalToken === $surfaceTokens[$tokenCursor]) {
+                    $tokenCursor++;
 
-            foreach ($spans as $span) {
-                $evidenceContext = array_merge(
-                    $context,
-                    [
-                        'workflow' => 'calendar_event_suggest_characters',
-                        'span_start' => $span['span_start'],
-                        'span_end' => $span['span_end'],
-                        'source_classval_id' => 'SURFACE_SOURCE_PROSE_TEXT',
-                        'confidence_classval_id' => $selectedCandidate === null
-                            ? 'CONFIDENCE_LOW'
-                            : 'CONFIDENCE_HIGH',
-                        'resolution_status_classval_id' => $selectedCandidate === null
-                            ? 'EVIDENCE_STATUS_UNRESOLVED'
-                            : 'EVIDENCE_STATUS_ADVISORY',
-                    ]
-                );
-
-                $evidenceId = persist_semantic_surface_evidence(
-                    $pdo,
-                    (string)$span['surface_text'],
-                    $evidenceContext,
-                    is_array($selectedCandidate) ? $selectedCandidate : null
-                );
-
-                if ($evidenceId !== null && $candidates !== []) {
-                    persist_semantic_surface_resolution_candidates(
-                        $pdo,
-                        $evidenceId,
-                        $candidates,
-                        $selectedCandidateIdentityKey
-                    );
+                    if ($tokenCursor >= count($surfaceTokens)) {
+                        break;
+                    }
                 }
             }
 
-            if (is_array($selectedCandidate)) {
-                $entityId = (string)$selectedCandidate['resolved_entity_id'];
-
-                if (!isset($suggestionsByEntity[$entityId])) {
-                    $suggestionsByEntity[$entityId] = [
-                        'resolution_status' => 'resolved',
-                        'resolved_entity_id' => $entityId,
-                        'candidate_label' => $selectedCandidate['candidate_label'] ?? $surfaceForm,
-                        'surface_forms' => [],
-                        'candidate_score' => (float)($selectedCandidate['candidate_score'] ?? 0.0),
-                        'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
-                        'scoring_notes' => $selectedCandidate['scoring_notes'] ?? null,
-                    ];
-                }
-
-                $suggestionsByEntity[$entityId]['surface_forms'][] = $surfaceForm;
-                $suggestionsByEntity[$entityId]['surface_forms'] = array_values(array_unique(
-                    $suggestionsByEntity[$entityId]['surface_forms']
-                ));
-            } else {
-                $unresolved[$surfaceForm] = [
-                    'resolution_status' => 'unresolved',
-                    'resolved_entity_id' => null,
-                    'candidate_label' => $surfaceForm,
-                    'surface_forms' => [$surfaceForm],
-                    'candidate_score' => 0.0,
-                    'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
-                    'scoring_notes' => 'Deterministic semantic resolution pipeline exhausted without satisfying confidence threshold.',
-                ];
+            if ($tokenCursor < count($surfaceTokens)) {
+                continue;
             }
+
+            prose_character_append_candidate(
+                $candidates,
+                $entityId,
+                $candidateLabel,
+                'RESOLUTION_METHOD_TOKEN_DECOMPOSITION',
+                0.86,
+                'Resolved surface form through deterministic canonical token decomposition.',
+                $surfaceForm,
+                [
+                    'normalize_case',
+                    'tokenize_surface',
+                    'tokenize_canonical_label',
+                    'canonical_label_token_match',
+                ],
+                __FUNCTION__,
+                __FUNCTION__
+            );
         }
+    } catch (Throwable $e) {
+        return [];
     }
 
-    $characters = array_values($suggestionsByEntity);
-
-    usort(
-        $characters,
-        static fn (array $a, array $b): int => (float)$b['candidate_score'] <=> (float)$a['candidate_score']
-    );
-
-    return [
-        'suggestions' => [
-            'characters' => array_merge($characters, array_values($unresolved)),
-        ],
-        'suggestion_count' => count($characters),
-        'unresolved_surface_count' => count($unresolved),
-        'mutates_character_ontology' => false,
-        'approval_required' => true,
-    ];
+    return $candidates;
 }
