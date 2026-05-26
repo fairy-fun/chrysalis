@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/calendar_week_prose_label_formatter.php';
+
 function normalize_calendar_week_prose_mode(
     ?string $proseMode
 ): string {
@@ -397,14 +399,11 @@ function render_calendar_week_prose_item_label(
         $displayReference = 'Event ' . (int)($event['event_index'] ?? 0);
     }
 
-    $label = sprintf(
-        '%s — Week %d, Day %d, %s, %s (%s)',
-        $dotNotation,
-        (int)($renderTree['week']['week_index'] ?? 0),
-        (int)($day['day_index'] ?? 0),
-        (string)($time['display_label'] ?? ('Time ' . ($time['time_index'] ?? ''))),
-        $displayReference,
-        (string)($event['entity_id'] ?? '')
+    $label = format_calendar_week_prose_label(
+        $renderTree,
+        $day,
+        $time,
+        $event
     );
 
     $summary = trim((string)($event['summary'] ?? ''));
