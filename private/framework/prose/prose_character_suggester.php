@@ -9,11 +9,11 @@ require_once __DIR__
 require_once __DIR__
     . '/resolution/resolve_token_decomposition.php';
 require_once __DIR__
-    . '/../semantic_resolution/semantic_candidate_arbitrator.php';
-require_once __DIR__
     . '/semantic_surface_transform_pipeline.php';
 require_once __DIR__
     . '/../entity/entity_surface_inventory_provider.php';
+require_once __DIR__
+    . '/../semantic_resolution/semantic_resolution_workflow_runner.php';
 
 require_once __DIR__
     . '/semantic_resolution_persister.php';
@@ -79,23 +79,41 @@ function prose_character_try_token_decomposition(
     );
 }
 
-function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): array
-{
-    $candidates = array_merge(
-        prose_character_try_exact_alias($pdo, $surfaceForm),
-        prose_character_try_token_decomposition($pdo, $surfaceForm)
-    );
+function prose_character_run_resolution_workflow(
+    PDO $pdo,
+    string $surfaceForm
+): array {
 
-    $arbitration =
-        semantic_candidate_arbitrator_run(
-            $candidates,
+    return semantic_resolution_workflow_runner_run(
+        $pdo,
+        [
             [
-                'arbitration_stage' =>
-                    'prose_character_resolution',
-            ]
-        );
+                'resolver_stage' =>
+                    'prose_character_try_exact_alias',
 
-    return $arbitration['all_candidates'] ?? [];
+                'candidates' =>
+                    prose_character_try_exact_alias(
+                        $pdo,
+                        $surfaceForm
+                    ),
+            ],
+
+            [
+                'resolver_stage' =>
+                    'prose_character_try_token_decomposition',
+
+                'candidates' =>
+                    prose_character_try_token_decomposition(
+                        $pdo,
+                        $surfaceForm
+                    ),
+            ],
+        ],
+        [
+            'arbitration_stage' =>
+                'prose_character_resolution',
+        ]
+    );
 }
 
 function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = []): array
@@ -122,23 +140,15 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
             continue;
         }
 
-        $candidates = prose_character_resolve_surface_form($pdo, $surfaceForm);
-        $selectedCandidate = null;
+        $resolution = prose_character_run_resolution_workflow(
+            $pdo,
+            $surfaceForm
+        );
 
-        foreach ($candidates as $candidate) {
-            if (!is_array($candidate)) {
-                continue;
-            }
-
-            if ((int)(
-                $candidate['is_selected'] ?? 0
-            ) !== 1) {
-                continue;
-            }
-
-            $selectedCandidate = $candidate;
-            break;
-        }
+        $selectedCandidate = (
+            $resolution['selected_candidate']
+            ?? null
+        );
 
         if (is_array($selectedCandidate)) {
             $entityId = (string)($selectedCandidate['resolved_entity_id'] ?? '');
