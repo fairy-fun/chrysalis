@@ -141,12 +141,9 @@ function prose_character_append_candidate(
     }
 }
 
-function prose_character_exact_lookup(
+function prose_character_try_exact_canonical_label(
     PDO $pdo,
-    string $surfaceForm,
-    string $resolutionMethodClassvalId,
-    float $candidateScore,
-    string $scoringNotes
+    string $surfaceForm
 ): array {
 
     $surfaceForm = trim($surfaceForm);
@@ -157,45 +154,89 @@ function prose_character_exact_lookup(
 
     $candidates = [];
 
-    if (prose_character_table_exists($pdo, 'semantic_aliases')) {
-        try {
-            $stmt = $pdo->prepare("
-                SELECT
-                    entity_id,
-                    alias AS candidate_label
-                FROM semantic_aliases
-                WHERE alias = :surface_form
-                LIMIT 10
-            ");
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                id AS entity_id,
+                canonical_label AS candidate_label
+            FROM entities
+            WHERE entity_type_id = 'entity_type_character'
+              AND canonical_label = :surface_form
+            LIMIT 10
+        ");
 
-            $stmt->execute([
-                ':surface_form' => $surfaceForm,
-            ]);
+        $stmt->execute([
+            ':surface_form' => $surfaceForm,
+        ]);
 
-            while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-                if (!is_array($row)) {
-                    continue;
-                }
-
-                prose_character_append_candidate(
-                    $candidates,
-                    trim((string)($row['entity_id'] ?? '')),
-                    (string)($row['candidate_label'] ?? $surfaceForm),
-                    $resolutionMethodClassvalId,
-                    $candidateScore,
-                    $scoringNotes,
-                    $surfaceForm
-                );
-            }
-        } catch (Throwable $e) {
-            // deterministic fallback continues
+        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+            prose_character_append_candidate(
+                $candidates,
+                trim((string)($row['entity_id'] ?? '')),
+                (string)($row['candidate_label'] ?? $surfaceForm),
+                'RESOLUTION_METHOD_EXACT_CANONICAL_LABEL',
+                1.00,
+                'Matched exact canonical entity label.',
+                $surfaceForm
+            );
         }
+    } catch (Throwable $e) {
+        return [];
     }
 
     return $candidates;
 }
 
-function prose_character_normalized_alias_lookup(
+function prose_character_try_exact_alias(
+    PDO $pdo,
+    string $surfaceForm
+): array {
+
+    $surfaceForm = trim($surfaceForm);
+
+    if ($surfaceForm === '') {
+        return [];
+    }
+
+    $candidates = [];
+
+    if (!prose_character_table_exists($pdo, 'semantic_aliases')) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                entity_id,
+                alias AS candidate_label
+            FROM semantic_aliases
+            WHERE alias = :surface_form
+            LIMIT 10
+        ");
+
+        $stmt->execute([
+            ':surface_form' => $surfaceForm,
+        ]);
+
+        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+            prose_character_append_candidate(
+                $candidates,
+                trim((string)($row['entity_id'] ?? '')),
+                (string)($row['candidate_label'] ?? $surfaceForm),
+                'RESOLUTION_METHOD_EXACT_ALIAS',
+                0.96,
+                'Matched exact deterministic semantic alias.',
+                $surfaceForm
+            );
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $candidates;
+}
+
+function prose_character_try_normalized_alias(
     PDO $pdo,
     string $surfaceForm
 ): array {
@@ -208,46 +249,73 @@ function prose_character_normalized_alias_lookup(
 
     $candidates = [];
 
-    if (prose_character_table_exists($pdo, 'semantic_aliases')) {
-        try {
-            $stmt = $pdo->prepare("
-                SELECT
-                    entity_id,
-                    alias AS candidate_label
-                FROM semantic_aliases
-                WHERE LOWER(alias) = :normalized_surface
-                LIMIT 10
-            ");
+    if (!prose_character_table_exists($pdo, 'semantic_aliases')) {
+        return [];
+    }
 
-            $stmt->execute([
-                ':normalized_surface' => $normalizedSurface,
-            ]);
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                entity_id,
+                alias AS candidate_label
+            FROM semantic_aliases
+            WHERE LOWER(alias) = :normalized_surface
+            LIMIT 10
+        ");
 
-            while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-                if (!is_array($row)) {
-                    continue;
-                }
+        $stmt->execute([
+            ':normalized_surface' => $normalizedSurface,
+        ]);
 
-                prose_character_append_candidate(
-                    $candidates,
-                    trim((string)($row['entity_id'] ?? '')),
-                    (string)($row['candidate_label'] ?? $surfaceForm),
-                    'RESOLUTION_METHOD_NORMALIZED_ALIAS',
-                    0.94,
-                    'Matched normalized deterministic semantic alias surface form.',
-                    $normalizedSurface
-                );
-            }
-        } catch (Throwable $e) {
-            // deterministic fallback continues
+        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+            prose_character_append_candidate(
+                $candidates,
+                trim((string)($row['entity_id'] ?? '')),
+                (string)($row['candidate_label'] ?? $surfaceForm),
+                'RESOLUTION_METHOD_NORMALIZED_ALIAS',
+                0.94,
+                'Matched normalized deterministic semantic alias.',
+                $normalizedSurface
+            );
         }
+    } catch (Throwable $e) {
+        return [];
     }
 
     return $candidates;
 }
 
-function prose_character_honorific_surname_lookup(PDO $pdo, string $surfaceForm): array
-{
+function prose_character_try_normalized_surname_alias(
+    PDO $pdo,
+    string $surname
+): array {
+
+    $normalizedSurname = prose_character_normalize_surface($surname);
+
+    if ($normalizedSurname === '') {
+        return [];
+    }
+
+    $candidates = prose_character_try_normalized_alias(
+        $pdo,
+        $normalizedSurname
+    );
+
+    foreach ($candidates as $entityId => $candidate) {
+        $candidates[$entityId]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_NORMALIZED_SURNAME_ALIAS';
+        $candidates[$entityId]['candidate_score'] = 0.72;
+        $candidates[$entityId]['scoring_notes'] = 'Matched normalized surname alias after surname extraction.';
+        $candidates[$entityId]['normalized_lookup_surface'] = $normalizedSurname;
+    }
+
+    return $candidates;
+}
+
+function prose_character_try_honorific_surname(
+    PDO $pdo,
+    string $surfaceForm
+): array {
+
     $surfaceForm = trim($surfaceForm);
 
     if ($surfaceForm === '') {
@@ -264,20 +332,27 @@ function prose_character_honorific_surname_lookup(PDO $pdo, string $surfaceForm)
         return [];
     }
 
-    $candidates = prose_character_normalized_alias_lookup(
+    $candidates = prose_character_try_normalized_surname_alias(
         $pdo,
         $surname
     );
 
     foreach ($candidates as $entityId => $candidate) {
-        $candidates[$entityId]['raw_surface_text'] = $surfaceForm;
-        $candidates[$entityId]['normalized_lookup_surface'] = prose_character_normalize_surface($surname);
         $candidates[$entityId]['resolution_method_classval_id'] = 'RESOLUTION_METHOD_HONORIFIC_SURNAME';
         $candidates[$entityId]['candidate_score'] = 0.90;
         $candidates[$entityId]['scoring_notes'] = 'Resolved honorific surface by deterministic surname alias lookup.';
+        $candidates[$entityId]['raw_surface_text'] = $surfaceForm;
     }
 
     return $candidates;
+}
+
+function prose_character_try_token_decomposition(
+    PDO $pdo,
+    string $surfaceForm
+): array {
+
+    return [];
 }
 
 function prose_character_resolve_surface_form(
@@ -291,26 +366,36 @@ function prose_character_resolve_surface_form(
         return [];
     }
 
-    $candidates = prose_character_exact_lookup(
-        $pdo,
-        $surfaceForm,
-        'RESOLUTION_METHOD_EXACT_ALIAS',
-        0.96,
-        'Matched exact deterministic semantic alias surface form.'
-    );
+    $pipelineStages = [
+        'prose_character_try_exact_canonical_label',
+        'prose_character_try_exact_alias',
+        'prose_character_try_normalized_alias',
+        'prose_character_try_honorific_surname',
+        'prose_character_try_normalized_surname_alias',
+        'prose_character_try_token_decomposition',
+    ];
 
-    if ($candidates === []) {
-        $candidates = prose_character_normalized_alias_lookup(
-            $pdo,
-            $surfaceForm
-        );
-    }
+    $candidates = [];
 
-    if ($candidates === []) {
-        $candidates = prose_character_honorific_surname_lookup(
-            $pdo,
-            $surfaceForm
-        );
+    foreach ($pipelineStages as $resolverStage) {
+        $stageCandidates = $resolverStage($pdo, $surfaceForm);
+
+        if ($stageCandidates === []) {
+            continue;
+        }
+
+        foreach ($stageCandidates as $entityId => $candidate) {
+            $candidates[$entityId] = $candidate;
+        }
+
+        $topCandidate = reset($stageCandidates);
+
+        if (
+            is_array($topCandidate)
+            && (float)($topCandidate['candidate_score'] ?? 0.0) >= 0.90
+        ) {
+            break;
+        }
     }
 
     uasort(
@@ -434,8 +519,8 @@ function suggest_prose_characters(
                     'candidate_label' => $surfaceForm,
                     'surface_forms' => [$surfaceForm],
                     'candidate_score' => 0.0,
-                    'resolution_method_classval_id' => null,
-                    'scoring_notes' => 'Surface form matched prose, but no deterministic character entity candidate resolved.',
+                    'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
+                    'scoring_notes' => 'Deterministic semantic resolution pipeline exhausted without satisfying confidence threshold.',
                 ];
             }
         }
