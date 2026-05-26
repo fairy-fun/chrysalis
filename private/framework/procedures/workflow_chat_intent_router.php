@@ -1,6 +1,45 @@
 <?php
 declare(strict_types=1);
 
+/*
+|--------------------------------------------------------------------------
+| IMPORTANT ARCHITECTURAL DOCTRINE
+|--------------------------------------------------------------------------
+|
+| Selector identity is NOT the same thing as workflow identity.
+|
+| Multiple selector forms may legitimately route to different workflows
+| even when they ultimately reuse downstream rendering infrastructure.
+|
+| Example:
+|
+|     chronology selector      -> calendar_week_day_display_prose
+|     reference label selector -> prose_reference_label_display
+|
+| This separation is intentional.
+|
+| The shared doctrine is:
+|
+|     selector
+|     -> selector-specific resolution workflow
+|     -> shared prose rendering pipeline
+|
+| DO NOT collapse workflow routing merely because downstream formatter,
+| assembler, chronology derivation, or prose rendering infrastructure
+| becomes shared.
+|
+| The architectural goal is:
+|
+|     shared rendering infrastructure
+|     WITHOUT
+|     forced workflow unification.
+|
+| Grammar parity between selector types should be maintained where
+| appropriate, but routing distinctions may still encode meaningful
+| business semantics.
+|
+*/
+
 function fw_match_chat_workflow(
     string $message
 ): ?string {
@@ -11,8 +50,7 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
-            '/\\b(show|display|open)\\s+(me\\s+)?(the\\s+)?prose\\s+for\\s+[0-9]{8}-[a-z]\\b/',
-            $message
+'/\\b(show|display|open)\\s+(me\\s+)?(the\\s+)?(existing|published|all)?\\s*prose\\s+for\\s+[0-9]{8}-[a-z]+\\b/i'            $message
         ) === 1
     ) {
         return 'prose_reference_label_display';
