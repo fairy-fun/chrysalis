@@ -119,7 +119,8 @@ function prose_character_append_candidate(
     string $scoringNotes,
     string $matchedLookupSurface,
     array $transformChain = [],
-    ?string $resolverStage = null
+    ?string $resolverStage = null,
+    ?string $lookupStage = null
 ): void {
 
     $entityId = trim($entityId);
@@ -141,6 +142,7 @@ function prose_character_append_candidate(
             'matched_lookup_surface' => $matchedLookupSurface,
             'transform_chain' => $transformChain,
             'resolver_stage' => $resolverStage,
+            'lookup_stage' => $lookupStage,
         ];
     }
 }
@@ -178,6 +180,7 @@ function prose_character_try_exact_canonical_label(PDO $pdo, string $surfaceForm
                 'Matched exact canonical entity label.',
                 $surfaceForm,
                 [],
+                __FUNCTION__,
                 __FUNCTION__
             );
         }
@@ -218,6 +221,7 @@ function prose_character_try_entity_label(PDO $pdo, string $surfaceForm): array
                 'Matched deterministic entity label.',
                 $surfaceForm,
                 [],
+                __FUNCTION__,
                 __FUNCTION__
             );
         }
@@ -260,6 +264,7 @@ function prose_character_try_exact_alias(PDO $pdo, string $surfaceForm): array
                 'Matched exact deterministic semantic alias.',
                 $surfaceForm,
                 [],
+                __FUNCTION__,
                 __FUNCTION__
             );
         }
@@ -302,6 +307,7 @@ function prose_character_try_normalized_alias(PDO $pdo, string $surfaceForm): ar
                 'Matched normalized deterministic semantic alias.',
                 $normalizedSurface,
                 ['normalize_case', 'normalize_whitespace'],
+                __FUNCTION__,
                 __FUNCTION__
             );
         }
@@ -333,6 +339,7 @@ function prose_character_try_normalized_surname_alias(PDO $pdo, string $surname)
             'normalize_case',
             'normalize_whitespace',
         ];
+        $candidates[$entityId]['resolver_stage'] = __FUNCTION__;
     }
 
     return $candidates;
@@ -369,6 +376,8 @@ function prose_character_try_honorific_surname(PDO $pdo, string $surfaceForm): a
             'normalize_case',
             'normalize_whitespace',
         ];
+        $candidates[$entityId]['resolver_stage'] = __FUNCTION__;
+        $candidates[$entityId]['lookup_stage'] = 'prose_character_try_normalized_alias';
     }
 
     return $candidates;
@@ -407,6 +416,14 @@ function prose_character_resolve_surface_form(PDO $pdo, string $surfaceForm): ar
 
         foreach ($stageCandidates as $entityId => $candidate) {
             $candidate['arbitration_stage'] = $resolverStage;
+
+            if (
+                !isset($candidate['resolver_stage'])
+                || trim((string)$candidate['resolver_stage']) === ''
+            ) {
+                $candidate['resolver_stage'] = $resolverStage;
+            }
+
             $candidates[$entityId] = $candidate;
         }
 
