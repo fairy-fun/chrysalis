@@ -47,11 +47,11 @@ startWorkflowChat Show me published prose for 1.2
 #### Show me published prose for `[year][month][day]-[x]`
 
 ```text
-startWorkflowChat Show me all prose for 1.2
+startWorkflowChat Show me all prose for 20250122-e
 ```
 Expected output:
 
-1.2.1.2 — Week 1, Day 2, Morning, 20250120-a (calendar_event:2)
+_1.2.1.2 — Week 1, Day 2, Morning, 20250120-a (calendar_event:2)_
 
 #### Create an event in the correct projection
 
