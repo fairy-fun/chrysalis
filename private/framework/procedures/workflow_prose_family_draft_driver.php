@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_family_draft_creator.php';
 require_once __DIR__ . '/../prose/prose_projection_publisher.php';
+require_once __DIR__
+    . '/../prose/persistence/update_calendar_event_prose_surface.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
+
 
 function fw_execute_workflow_prose_create_family_draft(
     PDO $pdo,
@@ -51,6 +54,18 @@ function fw_execute_workflow_prose_create_calendar_event_family_draft(
         $pdo,
         $payload
     );
+
+    if (
+        isset($result['calendar_event_id'])
+        && isset($result['prose_family_id'])
+    ) {
+
+        update_calendar_event_prose_surface(
+            $pdo,
+            (int) $result['calendar_event_id'],
+            (int) $result['prose_family_id']
+        );
+    }
 
     return [
         'success' => true,
