@@ -33,6 +33,23 @@ function extract_chrysalis_calendar_event_scene_signals(
         'ledger',
     ]);
 
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'space.institutional_corridor', [
+        'corridor',
+        'hallway',
+        'towards the offices and studios',
+        'toward the offices and studios',
+        'end of the hall',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'movement.deeper_into_institution', [
+        'down the hallway',
+        'down the corridor',
+        'towards the offices and studios',
+        'toward the offices and studios',
+        'towards Ms Kingsley\'s office',
+        'toward Ms Kingsley\'s office',
+    ]);
+
     chrysalis_add_scene_signal_if_any($signals, $normalized, 'movement.threshold_crossing', [
         'doors swing',
         'step inside',
@@ -62,6 +79,14 @@ function extract_chrysalis_calendar_event_scene_signals(
         'Narrative Consultant',
         'Follow #8',
         'newly appointed',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'role.consultant_mandate', [
+        'consultant',
+        'hired gun',
+        'board',
+        'mandate',
+        'sanctioned my three-month tenure',
     ]);
 
     chrysalis_add_scene_signal_if_any($signals, $normalized, 'procedure.assessment', [
@@ -125,6 +150,51 @@ function extract_chrysalis_calendar_event_scene_signals(
         'Ms Kingsley',
         'Chloe',
         'Mr Fruean',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'participant.enters_scene', [
+        'A figure emerges',
+        'emerges from a doorway',
+        'walks towards me',
+        'walks toward me',
+        'draws closer',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'participant.named_identification', [
+        'Mr Kai Blackwood',
+        'Kai Blackwood',
+        'Mr Blackwood',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'role.team_role_identified', [
+        'captain of the Standard formation team',
+        'captain',
+        'Standard formation team',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'interaction.first_direct_address', [
+        'Forgive me',
+        'Miss Vertue',
+        'is it not',
+        'We\'ve been expecting you',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'recognition.prior_reputation', [
+        'recognise you from your work',
+        'I believe I recognise you',
+        'Worlds',
+        'American Latin team',
+        'four consecutive world titles',
+        'Latin formation',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'recognition.charged_mutual', [
+        'recognition',
+        'static shock',
+        'peace shatters',
+        'shared, unnerving secret',
+        'utterly, completely seen',
+        'I think I remember you',
     ]);
 
     return array_values(array_unique($signals));
