@@ -76,12 +76,43 @@ function entity_resolution_candidate_factory_from_surface(
 
         $candidateScore = $surfaceConfidence;
 
+        $canonicalSurfaceTypes = [
+            'CANONICAL_LABEL',
+            'CHARACTER_FULL_NAME',
+            'CHARACTER_SEARCH_NAME',
+            'CHARACTER_FIRST_NAME',
+            'CHARACTER_LAST_NAME',
+        ];
+
+        $strongCanonicalSurfaceTypes = [
+            'CANONICAL_LABEL',
+            'CHARACTER_FULL_NAME',
+            'CHARACTER_SEARCH_NAME',
+        ];
+
         /*
-         * Canonical ontology surfaces receive
-         * slight preference over advisory aliases.
+         * Canonical ontology and canonical character-registry
+         * surfaces receive preference over advisory aliases.
          */
-        if ($matchedSurfaceType === 'CANONICAL_LABEL') {
+        if (in_array(
+            $matchedSurfaceType,
+            $canonicalSurfaceTypes,
+            true
+        )) {
             $candidateScore += 0.05;
+        }
+
+        /*
+         * Full canonical names and normalized search surfaces
+         * receive an additional preference boost because they
+         * originate directly from the canonical character registry.
+         */
+        if (in_array(
+            $matchedSurfaceType,
+            $strongCanonicalSurfaceTypes,
+            true
+        )) {
+            $candidateScore += 0.03;
         }
 
         $scoringNotes = [
@@ -93,6 +124,11 @@ function entity_resolution_candidate_factory_from_surface(
                 ?? $surface
             ),
             'surface_confidence' => $surfaceConfidence,
+            'canonical_surface' => in_array(
+                $matchedSurfaceType,
+                $canonicalSurfaceTypes,
+                true
+            ),
         ];
 
         /*
