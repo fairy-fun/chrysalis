@@ -717,3 +717,153 @@ WHERE NOT EXISTS (
       AND projection_id = 5
 );
 ```
+
+---
+
+## Concrete Projection Realization Repair
+
+### Important Operational Reality
+
+`calendar_event_projection_membership` alone is currently NOT sufficient for export workflows.
+
+The live workflow resolver still depends on concrete rows in:
+
+```text
+calendar_event_projections
+```
+
+A repaired event may therefore:
+
+- appear attached to projections semantically
+- but still fail export elevation workflows
+
+if no concrete projection realization rows exist.
+
+Typical runtime symptom:
+
+```text
+Projection is not export-capable
+```
+
+even when canonical membership rows already exist.
+
+---
+
+## Live Canonical Pattern
+
+Observed live projection topology:
+
+| calendar_event_id | calendar_projection_id | projection_address | chronology_address |
+|---|---:|---|---|
+| 2 | 1 | NULL | 1.2.1.2 |
+| 3 | 1 | 1.2.1.3 | 1.2.1.3 |
+| 3 | 5 | 1.2.1.3 | 1.2.1.3 |
+
+This demonstrates that active workflows still resolve through:
+
+```text
+calendar_event_projections
+```
+
+rather than solely through:
+
+```text
+calendar_event_projection_membership
+```
+
+---
+
+## Required Concrete Projection Repair
+
+After membership normalization, create concrete projection realization rows.
+
+Example for `calendar_event.id = 7`:
+
+```sql
+INSERT INTO calendar_event_projections
+(
+    calendar_event_id,
+    calendar_projection_id,
+    projection_address,
+    chronology_address,
+    projection_sequence,
+    created_at,
+    updated_at
+)
+SELECT
+    7,
+    1,
+    '3.1.1.1',
+    '3.1.1.1',
+    1,
+    NOW(),
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM calendar_event_projections
+    WHERE calendar_event_id = 7
+      AND calendar_projection_id = 1
+);
+
+INSERT INTO calendar_event_projections
+(
+    calendar_event_id,
+    calendar_projection_id,
+    projection_address,
+    chronology_address,
+    projection_sequence,
+    created_at,
+    updated_at
+)
+SELECT
+    7,
+    5,
+    '3.1.1.1',
+    '3.1.1.1',
+    1,
+    NOW(),
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM calendar_event_projections
+    WHERE calendar_event_id = 7
+      AND calendar_projection_id = 5
+);
+```
+
+---
+
+## Current Ontology Reality
+
+At present, the live system still contains two distinct projection layers:
+
+```text
+calendar_event_projection_membership
+    = semantic projection membership topology
+
+calendar_event_projections
+    = operational projection realization layer
+```
+
+Repair workflows must currently normalize BOTH layers.
+
+---
+
+## Export Workflow Dependency
+
+Canonical prose export elevation currently depends on:
+
+```text
+calendar_event
+    -> calendar_event_projections
+        -> calendar_projection_id
+            -> export-capable projection
+```
+
+Therefore repaired events lacking concrete projection rows may fail:
+
+- prose export elevation
+- canonical export draft assignment
+- projection export workflows
+
+even when semantic membership already exists.
