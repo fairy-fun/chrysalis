@@ -99,13 +99,13 @@ ___
 
 ### Tier 3
 
-#### add a new prose draft to a family
+#### 3.1 add a new prose draft to a family
 
 ```text
 startWorkflowChat I want to add a new prose draft to a prose family
 ```
 
-#### publish a selected draft
+#### 3.2 publish a selected draft
 ```text
 startWorkflowChat set published prose draft
 
