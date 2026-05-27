@@ -73,6 +73,17 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
         $entityId
     );
 
+    $diagnosticProseBody = (string)($attachedProse['prose_body'] ?? '');
+
+    throw new RuntimeException(json_encode([
+        'diagnostic' => 'attached_prose_resolver_output',
+        'calendar_event_entity_id' => $entityId,
+        'prose_body_length' => strlen($diagnosticProseBody),
+        'prose_body_preview' => substr($diagnosticProseBody, 0, 3000),
+        'resolved_prose_family' => $attachedProse['prose_family'] ?? null,
+        'resolved_prose_draft' => $attachedProse['prose_draft'] ?? null,
+    ], JSON_PRETTY_PRINT));
+
     $proseBody = trim((string)(
         $attachedProse['prose_body'] ?? ''
     ));
