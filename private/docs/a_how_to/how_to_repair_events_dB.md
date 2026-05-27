@@ -659,3 +659,61 @@ sequence_index
 ```
 
 with no remaining reliance on `chronology_address`.
+
+## Projection Membership Repair During Event Fixup
+
+### Canonical Projection Topology
+
+Surviving semantic events must belong to the canonical publication projections.
+
+Current canonical projections:
+
+| Projection ID | Projection Code              | Purpose                    |
+|---|---|---|
+| 1 | `book_projection_BOOK-001` | Canonical Book 1 projection |
+| 5 | `realtime_projection_main` | Real-time continuity projection |
+
+---
+
+## Repair Doctrine
+
+When repairing or normalizing a `calendar_event`, the repair process must ensure:
+
+- the event belongs to the canonical book projection
+- the event belongs to the canonical real-time projection
+- the event is not stranded in temporary/non-export-only timeline projections
+
+This normalization restores:
+
+- export capability
+- canonical prose elevation workflows
+- semantic publication continuity
+- stable projection discoverability
+
+---
+
+## Required Membership Repair SQL
+
+Example for `calendar_event.id = 7`:
+
+```sql
+INSERT INTO calendar_event_projection_membership
+    (calendar_event_id, projection_id)
+SELECT 7, 1
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM calendar_event_projection_membership
+    WHERE calendar_event_id = 7
+      AND projection_id = 1
+);
+
+INSERT INTO calendar_event_projection_membership
+    (calendar_event_id, projection_id)
+SELECT 7, 5
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM calendar_event_projection_membership
+    WHERE calendar_event_id = 7
+      AND projection_id = 5
+);
+```

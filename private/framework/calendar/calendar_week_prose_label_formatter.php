@@ -47,7 +47,7 @@ function format_calendar_week_prose_label(
     );
 
     return sprintf(
-        '%s — Week %d, Day %d, %s, %s (%s)',
+        '%s — Week %d • Day %d  • %s • %s •(%s)',
         $dotNotation,
         (int)($renderTree['week']['week_index'] ?? 0),
         (int)($day['day_index'] ?? 0),
