@@ -33,6 +33,9 @@ function entity_surface_provider_fetch_exact_surface_candidates(
      */
     if ($entityTypeId === null || $entityTypeId === '' || $entityTypeId === 'entity_type_character') {
         try {
+
+            $allowSearchTokenMatch = mb_strlen($normalizedSurface) >= 3;
+
             $sql = "
                 SELECT
                     e.id AS entity_id,
@@ -42,31 +45,70 @@ function entity_surface_provider_fetch_exact_surface_candidates(
                     c.char_name_last,
                     c.search_name,
                     CASE
-                        WHEN LOWER(c.char_name_full) = LOWER(:surface) THEN 'CHARACTER_FULL_NAME'
-                        WHEN LOWER(c.search_name) = LOWER(:surface) THEN 'CHARACTER_SEARCH_NAME'
-                        WHEN LOWER(c.char_name_first) = LOWER(:surface) THEN 'CHARACTER_FIRST_NAME'
-                        WHEN LOWER(c.char_name_last) = LOWER(:surface) THEN 'CHARACTER_LAST_NAME'
+                        WHEN LOWER(c.char_name_full) = LOWER(:surface)
+                            THEN 'CHARACTER_FULL_NAME'
+
+                        WHEN LOWER(c.search_name) = LOWER(:surface)
+                            THEN 'CHARACTER_SEARCH_NAME'
+
+                        WHEN :allow_search_token_match = 1
+                            AND CONCAT(' ', LOWER(c.search_name), ' ')
+                                LIKE CONCAT('% ', LOWER(:surface), ' %')
+                            THEN 'CHARACTER_SEARCH_NAME'
+
+                        WHEN LOWER(c.char_name_first) = LOWER(:surface)
+                            THEN 'CHARACTER_FIRST_NAME'
+
+                        WHEN LOWER(c.char_name_last) = LOWER(:surface)
+                            THEN 'CHARACTER_LAST_NAME'
+
                         ELSE 'CHARACTER_REGISTRY_SURFACE'
                     END AS matched_surface_type,
+
                     CASE
-                        WHEN LOWER(c.char_name_full) = LOWER(:surface) THEN c.char_name_full
-                        WHEN LOWER(c.search_name) = LOWER(:surface) THEN c.search_name
-                        WHEN LOWER(c.char_name_first) = LOWER(:surface) THEN c.char_name_first
-                        WHEN LOWER(c.char_name_last) = LOWER(:surface) THEN c.char_name_last
+                        WHEN LOWER(c.char_name_full) = LOWER(:surface)
+                            THEN c.char_name_full
+
+                        WHEN LOWER(c.search_name) = LOWER(:surface)
+                            THEN c.search_name
+
+                        WHEN :allow_search_token_match = 1
+                            AND CONCAT(' ', LOWER(c.search_name), ' ')
+                                LIKE CONCAT('% ', LOWER(:surface), ' %')
+                            THEN c.search_name
+
+                        WHEN LOWER(c.char_name_first) = LOWER(:surface)
+                            THEN c.char_name_first
+
+                        WHEN LOWER(c.char_name_last) = LOWER(:surface)
+                            THEN c.char_name_last
+
                         ELSE :surface
                     END AS matched_surface
+
                 FROM characters c
                 INNER JOIN entities e
                     ON e.id = c.entity_id
+
                 WHERE e.entity_type_id = 'entity_type_character'
                   AND c.entity_id IS NOT NULL
                   AND TRIM(c.entity_id) <> ''
                   AND (
                       LOWER(c.char_name_full) = LOWER(:surface)
+
                       OR LOWER(c.search_name) = LOWER(:surface)
+
+                      OR (
+                          :allow_search_token_match = 1
+                          AND CONCAT(' ', LOWER(c.search_name), ' ')
+                              LIKE CONCAT('% ', LOWER(:surface), ' %')
+                      )
+
                       OR LOWER(c.char_name_first) = LOWER(:surface)
+
                       OR LOWER(c.char_name_last) = LOWER(:surface)
                   )
+
                 LIMIT 100
             ";
 
@@ -74,6 +116,8 @@ function entity_surface_provider_fetch_exact_surface_candidates(
 
             $stmt->execute([
                 ':surface' => $surface,
+                ':allow_search_token_match'
+                    => $allowSearchTokenMatch ? 1 : 0,
             ]);
 
             while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
