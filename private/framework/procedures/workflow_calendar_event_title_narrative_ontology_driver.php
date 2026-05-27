@@ -6,6 +6,8 @@ require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
 require_once __DIR__ . '/../calendar/calendar_event_metadata_applier.php';
 require_once __DIR__ . '/../calendar/calendar_event_ontology_applier.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
+require_once __DIR__
+    . '/../prose/resolve_calendar_event_attached_prose.php';
 
 function fw_execute_workflow_calendar_event_title_narrative_ontology(
     PDO $pdo,
@@ -64,28 +66,17 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
         throw new RuntimeException('Expected calendar_layer_event');
     }
 
-    $proseStmt = $pdo->prepare("
-        SELECT
-            pp.id AS prose_projection_id,
-            pd.id AS prose_draft_id,
-            pd.entity_id AS prose_entity_id,
-            pd.prose_body
-        FROM prose_projections pp
-        INNER JOIN prose_drafts pd
-            ON pd.id = pp.published_prose_draft_id
-        WHERE pp.target_entity_id = :entity_id
-          AND pp.published_prose_draft_id IS NOT NULL
-          AND pp.role_id = 'prose_projection_role_primary'
-          AND pp.projection_type_id = 'projection_type_timeline_view'
-        ORDER BY pp.projection_order ASC, pp.id ASC
-        LIMIT 1
-    ");
+    $attachedProse = resolve_calendar_event_attached_prose(
+        $pdo,
+        $entityId
+    );
 
-    $proseStmt->execute([
-        ':entity_id' => $entityId,
-    ]);
+    $proseBody = trim((string)(
+        $attachedProse['prose_body'] ?? ''
+    ));
 
-    $proseRow = $proseStmt->fetch(PDO::FETCH_ASSOC);
+    $resolvedProseDraft = $attachedProse['prose_draft'] ?? [];
+    $resolvedProseFamily = $attachedProse['prose_family'] ?? [];
 
     if (!is_array($proseRow)) {
         throw new RuntimeException('No primary timeline-view prose projection attached to calendar event: ' . $entityId);
@@ -123,8 +114,8 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
             'context' => array_merge($context, [
                 'title_narrative_ontology_derivation' => [
                     'calendar_event_entity_id' => $entityId,
-                    'prose_entity_id' => (string)$proseRow['prose_entity_id'],
-                    'prose_projection_id' => (int)$proseRow['prose_projection_id'],
+                    'prose_entity_id' => (string)($resolvedProseDraft['entity_id'] ?? ''),
+                    'prose_projection_id' => 'attachment_topology',
                     'derivation_mode' => $derivationMode,
                     'semantic_text_resolved' => false,
                     'ontology_resolved' => false,
@@ -161,8 +152,8 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
         'context' => array_merge($context, [
             'title_narrative_ontology_derivation' => [
                 'calendar_event_entity_id' => $entityId,
-                'prose_entity_id' => (string)$proseRow['prose_entity_id'],
-                'prose_projection_id' => (int)$proseRow['prose_projection_id'],
+                'prose_entity_id' => (string)($resolvedProseDraft['entity_id'] ?? ''),
+                'prose_projection_id' => 'attachment_topology',
                 'derived_title' => $derivedTitle,
                 'derived_narrative_summary' => $derivedNarrativeSummary,
                 'summary_target_field' => 'calendar_events.summary',
