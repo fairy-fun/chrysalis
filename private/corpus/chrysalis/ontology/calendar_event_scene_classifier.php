@@ -14,6 +14,26 @@ function classify_chrysalis_calendar_event_scene(array $signals): ?array
     $classes = [];
 
     if (
+        chrysalis_scene_has($signals, 'participant.enters_scene')
+        && chrysalis_scene_has($signals, 'participant.named_identification')
+        && chrysalis_scene_has_any($signals, [
+            'role.team_role_identified',
+            'interaction.first_direct_address',
+            'recognition.prior_reputation',
+        ])
+    ) {
+        $classes[] = chrysalis_scene_classification(
+            'character_introduction',
+            0.82,
+            [
+                'participant.enters_scene',
+                'participant.named_identification',
+                'team_role_address_or_reputation',
+            ]
+        );
+    }
+
+    if (
         chrysalis_scene_has($signals, 'institution.rbds')
         && chrysalis_scene_has_any($signals, [
             'space.public_entry',
