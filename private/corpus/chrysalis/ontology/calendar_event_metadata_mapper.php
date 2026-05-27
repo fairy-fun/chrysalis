@@ -18,8 +18,8 @@ function map_chrysalis_scene_class_to_calendar_event_metadata(
 
     if ($sceneClass === 'character_introduction') {
         return chrysalis_calendar_event_scene_metadata(
-            'Shay encounters Kai Blackwood in the RBDS corridor',
-            'As Shay moves deeper into RBDS from the lobby toward Ms Kingsley’s office, she encounters Kai Blackwood, captain of the Standard formation team. Their brief exchange establishes his controlled stillness, his awareness of her Latin formation history, and the unsettling mutual recognition that interrupts her professional composure before he moves on.',
+            'Shay encounters Kai Blackwood',
+            'The prose introduces Kai Blackwood through his entrance into the scene, Shay’s recognition of his role and reputation, and a brief exchange that establishes his controlled stillness, his awareness of her formation history, and the unsettling mutual recognition between them.',
             'BEAT_ORIENTATION',
             $classification,
             $signals
