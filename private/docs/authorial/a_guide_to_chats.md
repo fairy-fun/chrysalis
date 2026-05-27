@@ -43,7 +43,7 @@ startWorkflowChat Show me all prose for 1.2
 #### 1.5 Show me published prose for `[x].[y]`
 
 ```text
-startWorkflowChat Show me published prose for 1.2
+Call startWorkflowChat with message: Show me published prose for 1.2
 ```
 
 #### 1.6 Show me published prose for `[year][month][day]-[x]`
