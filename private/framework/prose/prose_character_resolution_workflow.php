@@ -45,19 +45,9 @@ function prose_character_resolution_workflow_run(
                     'token_decomposition',
 
                 'candidates' =>
-                    resolve_token_decomposition(
+                    prose_character_try_token_decomposition(
                         $pdo,
-                        $surfaceForm,
-                        [
-                            'entity_type_id' =>
-                                'entity_type_character',
-
-                            'resolution_method_classval_id' =>
-                                'RESOLUTION_METHOD_TOKEN_DECOMPOSITION',
-
-                            'resolver_stage' =>
-                                'token_decomposition',
-                        ]
+                        $surfaceForm
                     ),
             ],
         ],
