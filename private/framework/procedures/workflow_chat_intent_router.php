@@ -57,32 +57,149 @@ function fw_match_chat_workflow(
         return 'prose_reference_label_display';
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Prose display routing
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    |
+    | These selectors intentionally route to DIFFERENT workflows.
+    |
+    | Dot-notation selectors:
+    |
+    |     1.2
+    |
+    | represent:
+    |
+    |     specific canonical Book week/day locality
+    |
+    | and therefore route to:
+    |
+    |     calendar_week_day_display_prose
+    |
+    | while broader week selectors:
+    |
+    |     week 1
+    |
+    | represent:
+    |
+    |     an entire canonical Book week
+    |
+    | and therefore route to:
+    |
+    |     calendar_week_display_prose
+    |
+    | DO NOT collapse these routes together merely because they share
+    | downstream rendering infrastructure.
+    |
+    | Grammar is intentionally permissive:
+    |
+    |     show me prose for 1.2
+    |     show me published prose for 1.2
+    |     display all prose for week 1
+    |     list week prose
+    |
+    | should all continue routing successfully.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dot-notation week/day prose selector
+    |--------------------------------------------------------------------------
+    |
+    | Examples:
+    |
+    |     show me prose for 1.2
+    |     show me published prose for 1.2
+    |     display all prose for 1.2
+    |
+    | Routes:
+    |
+    |     calendar_week_day_display_prose
+    |
+    */
+
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+[0-9]+\\.[0-9]+\\b/',
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)?\\s*prose\\s+for\\s+[0-9]+\\.[0-9]+\\b/',
             $message
         ) === 1
     ) {
         return 'calendar_week_day_display_prose';
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Explicit "week X day Y" prose selector
+    |--------------------------------------------------------------------------
+    |
+    | Examples:
+    |
+    |     show me prose for week 1 day 2
+    |     show me published prose for week 1, day 2
+    |
+    | Routes:
+    |
+    |     calendar_week_day_display_prose
+    |
+    */
+
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+week\\s+[0-9]+\\s*,?\\s*day\\s+[0-9]+\\b/',
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)?\\s*prose\\s+for\\s+week\\s+[0-9]+\\s*,?\\s*day\\s+[0-9]+\\b/',
             $message
         ) === 1
     ) {
         return 'calendar_week_day_display_prose';
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Whole-week prose selector
+    |--------------------------------------------------------------------------
+    |
+    | Examples:
+    |
+    |     show me prose for week 1
+    |     show me published prose for week 1
+    |     display all prose for week 3
+    |
+    | Routes:
+    |
+    |     calendar_week_display_prose
+    |
+    */
+
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)\\s+prose\\s+for\\s+week(\\s+[0-9]+)?\\b/',
+            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(existing|published|all)?\\s*prose\\s+for\\s+week(\\s+[0-9]+)?\\b/',
             $message
         ) === 1
     ) {
         return 'calendar_week_display_prose';
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Loose prose/week browsing selector
+    |--------------------------------------------------------------------------
+    |
+    | Examples:
+    |
+    |     list week prose
+    |     show week prose
+    |     display prose
+    |
+    | Routes:
+    |
+    |     calendar_week_display_prose
+    |
+    | This intentionally acts as a low-specificity fallback AFTER
+    | more-specific locality selectors above.
+    |
+    */
 
     if (
         preg_match(
