@@ -16,6 +16,16 @@ function map_chrysalis_scene_class_to_calendar_event_metadata(
 
     $sceneClass = (string)($classification['scene_class'] ?? '');
 
+    if ($sceneClass === 'character_introduction') {
+        return chrysalis_calendar_event_scene_metadata(
+            'Shay encounters Kai Blackwood in the RBDS corridor',
+            'As Shay moves deeper into RBDS from the lobby toward Ms Kingsley’s office, she encounters Kai Blackwood, captain of the Standard formation team. Their brief exchange establishes his controlled stillness, his awareness of her Latin formation history, and the unsettling mutual recognition that interrupts her professional composure before he moves on.',
+            'BEAT_ORIENTATION',
+            $classification,
+            $signals
+        );
+    }
+
     if ($sceneClass === 'institutional_intake') {
         return chrysalis_calendar_event_scene_metadata(
             'Institutional intake at RBDS',
