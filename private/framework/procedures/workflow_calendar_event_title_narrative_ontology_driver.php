@@ -78,21 +78,25 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
     $resolvedProseDraft = $attachedProse['prose_draft'] ?? [];
     $resolvedProseFamily = $attachedProse['prose_family'] ?? [];
 
-    if (!is_array($proseRow)) {
-        throw new RuntimeException('No primary timeline-view prose projection attached to calendar event: ' . $entityId);
-    }
-
-    $proseBody = trim((string)($proseRow['prose_body'] ?? ''));
-
     if ($proseBody === '') {
-        throw new RuntimeException('Attached prose draft has empty prose_body');
+        throw new RuntimeException(
+            'Attached prose draft has empty prose_body'
+        );
     }
 
     $metadata = derive_prose_metadata(
         $proseBody,
         [
             'calendar_event' => $calendarEvent,
-            'prose_projection' => $proseRow,
+
+            'prose_resolution_topology'
+                => 'attachment_topology',
+
+            'resolved_prose_family'
+                => $resolvedProseFamily,
+
+            'resolved_prose_draft'
+                => $resolvedProseDraft,
         ]
     );
 
