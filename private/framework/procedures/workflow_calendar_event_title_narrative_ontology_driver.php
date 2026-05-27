@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
+require_once __DIR__
+    . '/../../corpus/chrysalis/ontology/calendar_event_fixture_rules.php';
 require_once __DIR__ . '/../calendar/calendar_event_metadata_applier.php';
 require_once __DIR__ . '/../calendar/calendar_event_ontology_applier.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
@@ -84,22 +86,6 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
         );
     }
 
-    throw new RuntimeException(
-        json_encode(
-            [
-                'resolved_prose_family'
-                    => $resolvedProseFamily,
-
-                'resolved_prose_draft'
-                    => $resolvedProseDraft,
-
-                'prose_body_preview'
-                    => mb_substr($proseBody, 0, 1000),
-            ],
-            JSON_PRETTY_PRINT
-        )
-    );
-
     $metadata = derive_prose_metadata(
         $proseBody,
         [
@@ -113,6 +99,9 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
 
             'resolved_prose_draft'
                 => $resolvedProseDraft,
+
+            'semantic_metadata_deriver'
+                => 'derive_chrysalis_calendar_event_fixture_metadata',
         ]
     );
 
