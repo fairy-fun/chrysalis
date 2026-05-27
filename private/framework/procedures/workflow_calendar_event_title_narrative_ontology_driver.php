@@ -84,6 +84,22 @@ function fw_execute_workflow_calendar_event_title_narrative_ontology(
         );
     }
 
+    throw new RuntimeException(
+        json_encode(
+            [
+                'resolved_prose_family'
+                    => $resolvedProseFamily,
+
+                'resolved_prose_draft'
+                    => $resolvedProseDraft,
+
+                'prose_body_preview'
+                    => mb_substr($proseBody, 0, 1000),
+            ],
+            JSON_PRETTY_PRINT
+        )
+    );
+
     $metadata = derive_prose_metadata(
         $proseBody,
         [
