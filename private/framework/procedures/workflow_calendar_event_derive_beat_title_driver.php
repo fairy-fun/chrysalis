@@ -3,8 +3,12 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
+require_once __DIR__
+    . '/../../corpus/chrysalis/ontology/calendar_event_semantic_deriver.php';
 require_once __DIR__ . '/../calendar/calendar_event_metadata_applier.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
+require_once __DIR__
+    . '/../prose/resolve_calendar_event_attached_prose.php';
 
 function fw_execute_workflow_calendar_event_derive_beat_title(
     PDO $pdo,
@@ -67,40 +71,15 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         );
     }
 
-    $proseStmt = $pdo->prepare("
-        SELECT
-            pp.id AS prose_projection_id,
-            pd.id AS prose_draft_id,
-            pd.entity_id AS prose_entity_id,
-            pd.title AS prose_title,
-            pd.summary AS prose_summary,
-            pd.prose_body
-        FROM prose_projections pp
-        INNER JOIN prose_drafts pd
-            ON pd.id = pp.published_prose_draft_id
-        WHERE pp.target_entity_id = :entity_id
-          AND pp.published_prose_draft_id IS NOT NULL
-          AND pp.role_id = 'prose_projection_role_primary'
-          AND pp.projection_type_id = 'projection_type_timeline_view'
-        ORDER BY
-            pp.projection_order ASC,
-            pp.id ASC
-        LIMIT 1
-    ");
+    $attachedProse = resolve_calendar_event_attached_prose(
+        $pdo,
+        $entityId
+    );
 
-    $proseStmt->execute([
-        ':entity_id' => $entityId,
-    ]);
+    $resolvedProseDraft = $attachedProse['prose_draft'] ?? [];
+    $resolvedProseFamily = $attachedProse['prose_family'] ?? [];
 
-    $proseRow = $proseStmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!is_array($proseRow)) {
-        throw new RuntimeException(
-            'No primary timeline-view prose projection attached to calendar event: ' . $entityId
-        );
-    }
-
-    $proseBody = trim((string)($proseRow['prose_body'] ?? ''));
+    $proseBody = trim((string)($attachedProse['prose_body'] ?? ''));
 
     if ($proseBody === '') {
         throw new RuntimeException(
@@ -108,11 +87,19 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         );
     }
 
+    $proseEntityId = (string)($resolvedProseDraft['entity_id'] ?? '');
+    $proseDraftId = (int)($resolvedProseDraft['id'] ?? 0);
+    $proseFamilyId = (int)($resolvedProseFamily['id'] ?? 0);
+
     $metadata = derive_prose_metadata(
         $proseBody,
         [
             'calendar_event' => $calendarEvent,
-            'prose_projection' => $proseRow,
+            'prose_resolution_topology' => 'attachment_topology',
+            'resolved_prose_family' => $resolvedProseFamily,
+            'resolved_prose_draft' => $resolvedProseDraft,
+            'semantic_metadata_deriver'
+                => 'derive_chrysalis_calendar_event_semantic_metadata',
         ]
     );
 
@@ -121,8 +108,17 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
     $derivedTitle = trim((string)($metadata['title'] ?? ''));
     $derivedBeat = trim((string)($metadata['beat_summary'] ?? ''));
 
+    $isSemanticDerivation = in_array(
+        $derivationMode,
+        [
+            'semantic_rule',
+            'semantic_scene_class',
+        ],
+        true
+    );
+
     if (
-        $derivationMode !== 'semantic_rule'
+        !$isSemanticDerivation
         || $derivedTitle === ''
         || $derivedBeat === ''
     ) {
@@ -132,21 +128,23 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
             'workflow' => 'calendar_event_derive_beat_title',
             'tier' => 3,
             'entity_id' => $entityId,
-            'transition_reason' => 'semantic_rule_not_matched',
+            'transition_reason' => 'semantic_derivation_not_matched',
             'context' => array_merge(
                 $context,
                 [
                     'beat_title_derivation' => [
                         'calendar_event_entity_id' => $entityId,
-                        'prose_entity_id' => (string)$proseRow['prose_entity_id'],
-                        'prose_projection_id' => (int)$proseRow['prose_projection_id'],
+                        'prose_entity_id' => $proseEntityId,
+                        'prose_draft_id' => ($proseDraftId > 0) ? $proseDraftId : null,
+                        'prose_family_id' => ($proseFamilyId > 0) ? $proseFamilyId : null,
+                        'prose_projection_id' => 'attachment_topology',
                         'derivation_mode' => $derivationMode,
                         'semantic_resolved' => false,
                         'extractive_title_candidate' => $metadata['extractive_title_candidate'] ?? null,
                         'extractive_summary' => $metadata['summary'] ?? null,
                         'evidence' => $metadata['evidence'] ?? [],
                         'applied_calendar_event_metadata' => null,
-                        'diagnostic' => 'No deterministic semantic beat/title rule matched this attached prose. Calendar metadata was not mutated.',
+                        'diagnostic' => 'No deterministic semantic beat/title rule matched the attached prose. Calendar metadata was not mutated.',
                     ],
                 ]
             ),
@@ -168,8 +166,10 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
             'target_entity_type' => 'calendar_event',
             'target_entity_id' => $entityId,
             'source_entity_type' => 'prose_draft',
-            'source_entity_id' => (string)$proseRow['prose_entity_id'],
-            'source_projection_id' => (int)$proseRow['prose_projection_id'],
+            'source_entity_id' => $proseEntityId,
+            'source_projection_id' => 'attachment_topology',
+            'source_prose_draft_id' => ($proseDraftId > 0) ? $proseDraftId : null,
+            'source_prose_family_id' => ($proseFamilyId > 0) ? $proseFamilyId : null,
         ],
         'doctrine' => [
             'derive_* produces semantic metadata.',
@@ -242,8 +242,10 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
             [
                 'beat_title_derivation' => [
                     'calendar_event_entity_id' => $entityId,
-                    'prose_entity_id' => (string)$proseRow['prose_entity_id'],
-                    'prose_projection_id' => (int)$proseRow['prose_projection_id'],
+                    'prose_entity_id' => $proseEntityId,
+                    'prose_draft_id' => ($proseDraftId > 0) ? $proseDraftId : null,
+                    'prose_family_id' => ($proseFamilyId > 0) ? $proseFamilyId : null,
+                    'prose_projection_id' => 'attachment_topology',
                     'derived_title' => $derivedTitle,
                     'derived_beat' => $derivedBeat,
                     'derivation_mode' => $derivationMode,
@@ -259,8 +261,10 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     ],
                     'canonical' => [
                         'calendar_event_entity_id' => $entityId,
-                        'prose_entity_id' => (string)$proseRow['prose_entity_id'],
-                        'prose_projection_id' => (int)$proseRow['prose_projection_id'],
+                        'prose_entity_id' => $proseEntityId,
+                        'prose_projection_id' => 'attachment_topology',
+                        'prose_draft_id' => ($proseDraftId > 0) ? $proseDraftId : null,
+                        'prose_family_id' => ($proseFamilyId > 0) ? $proseFamilyId : null,
                     ],
                     'derived' => [
                         'title' => $derivedTitle,
