@@ -74,9 +74,27 @@ function apply_calendar_event_metadata(
     ]);
 
     if ($stmt->rowCount() < 1) {
-        throw new RuntimeException(
-            'No calendar event metadata row updated for entity_id: ' . $entityId
-        );
+
+        $verifyStmt = $pdo->prepare("
+            SELECT id
+            FROM calendar_events
+            WHERE entity_id = :entity_id
+              AND layer_id = 'calendar_layer_event'
+            LIMIT 1
+        ");
+
+        $verifyStmt->execute([
+            ':entity_id' => $entityId,
+        ]);
+
+        $existingRow = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($existingRow)) {
+            throw new RuntimeException(
+                'No calendar event found for entity_id: '
+                . $entityId
+            );
+        }
     }
 
     return [
