@@ -56,97 +56,150 @@ function suggest_prose_places(
             $surfaceRecord
         );
 
-        $selectedCandidate = (
-            $resolution['selected_candidate']
-            ?? null
+        $allCandidates = (
+            $resolution['all_candidates']
+            ?? []
         );
 
-        if (!is_array($selectedCandidate)) {
-            continue;
+        foreach ($allCandidates as $candidate) {
+
+            if (!is_array($candidate)) {
+                continue;
+            }
+
+            $placeId = trim((string)(
+                $candidate['resolved_entity_id'] ?? ''
+            ));
+
+            if ($placeId === '') {
+                continue;
+            }
+
+            $relationshipClassvalId = trim((string)(
+                $candidate['semantic_relationship_classval_id']
+                ?? 'SEMANTIC_RELATIONSHIP_DIRECT_MATCH'
+            ));
+
+            /*
+            |--------------------------------------------------------------------------
+            | Preserve directly evidenced places separately from advisory expansion
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                $relationshipClassvalId
+                === 'SEMANTIC_RELATIONSHIP_DIRECT_MATCH'
+            ) {
+                $directlyEvidencedPlaceIds[] = $placeId;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Composite semantic uniqueness
+            |--------------------------------------------------------------------------
+            |
+            | Same place may appear under different semantic relationships.
+            |
+            */
+
+            $candidateKey =
+                $placeId
+                . '::'
+                . $relationshipClassvalId;
+
+            $existingScore = (float)(
+                $suggestionsByPlace[$candidateKey]['candidate_score']
+                ?? -1
+            );
+
+            $incomingScore = (float)(
+                $candidate['candidate_score']
+                ?? 0.0
+            );
+
+            if ($existingScore >= $incomingScore) {
+                continue;
+            }
+
+            $suggestionsByPlace[$candidateKey] = [
+
+                'resolution_status'
+                    => 'resolved',
+
+                'resolved_place_id'
+                    => $placeId,
+
+                'candidate_label'
+                    => (
+                        $candidate['candidate_label']
+                        ?? $surface
+                    ),
+
+                'surface_forms'
+                    => [$surface],
+
+                'surface_spans'
+                    => $surfaceSpans,
+
+                'candidate_score'
+                    => $incomingScore,
+
+                'resolution_method_classval_id'
+                    => (
+                        $candidate['resolution_method_classval_id']
+                        ?? null
+                    ),
+
+                'semantic_relationship_classval_id'
+                    => $relationshipClassvalId,
+
+                'resolver_stage'
+                    => (
+                        $candidate['resolver_stage']
+                        ?? null
+                    ),
+
+                'arbitration_stage'
+                    => (
+                        $candidate['arbitration_stage']
+                        ?? null
+                    ),
+
+                'candidate_relationship_type'
+                    => match ($relationshipClassvalId) {
+
+                        'SEMANTIC_RELATIONSHIP_DIRECT_MATCH'
+                            => 'direct_match',
+
+                        'SEMANTIC_RELATIONSHIP_CONTAINMENT_ANCESTOR'
+                            => 'containment_ancestor',
+
+                        'SEMANTIC_RELATIONSHIP_CONTAINMENT_DESCENDANT'
+                            => 'containment_descendant',
+
+                        'SEMANTIC_RELATIONSHIP_IMPLIED_CONTEXT'
+                            => 'implied_context',
+
+                        default
+                            => 'semantic_candidate',
+                    },
+
+                'containment_depth'
+                    => (
+                        $candidate['containment_depth']
+                        ?? 0
+                    ),
+
+                'scoring_notes'
+                    => (
+                        $candidate['scoring_notes']
+                        ?? null
+                    ),
+
+                'containment_context'
+                    => [],
+            ];
         }
-
-        $placeId = trim((string)(
-            $selectedCandidate['resolved_entity_id'] ?? ''
-        ));
-
-        if ($placeId === '') {
-            continue;
-        }
-
-        $directlyEvidencedPlaceIds[] = $placeId;
-
-        $existingScore = (float)(
-            $suggestionsByPlace[$placeId]['candidate_score'] ?? -1
-        );
-
-        $incomingScore = (float)(
-            $selectedCandidate['candidate_score'] ?? 0.0
-        );
-
-        if ($existingScore >= $incomingScore) {
-            continue;
-        }
-
-        $suggestionsByPlace[$placeId] = [
-            'resolution_status' => 'resolved',
-            'resolved_place_id' => $placeId,
-            'candidate_label' => (
-                $selectedCandidate['candidate_label']
-                ?? $surface
-            ),
-            'surface_forms' => [$surface],
-            'surface_spans' => $surfaceSpans,
-            'candidate_score' => $incomingScore,
-            'resolution_method_classval_id' => (
-                $selectedCandidate['resolution_method_classval_id']
-                ?? null
-            ),
-            'resolver_stage' => (
-                $selectedCandidate['resolver_stage']
-                ?? null
-            ),
-            'arbitration_stage' => (
-                $selectedCandidate['arbitration_stage']
-                ?? null
-            ),
-            'candidate_relationship_type' => 'exact_match',
-            'containment_context' => [],
-        ];
     }
 
-    $containmentContext =
-        prose_place_containment_provider_fetch_context(
-            $pdo,
-            $directlyEvidencedPlaceIds
-        );
-
-    foreach ($suggestionsByPlace as $placeId => $suggestion) {
-
-        $containment = (
-            $containmentContext[$placeId]
-            ?? [
-                'containment_depth' => 0,
-                'ancestors' => [],
-            ]
-        );
-
-        $suggestion['containment_depth'] = (int)(
-            $containment['containment_depth'] ?? 0
-        );
-
-        $suggestion['containment_context'] = array_values(
-            $containment['ancestors'] ?? []
-        );
-
-        $suggestionsByPlace[$placeId] = $suggestion;
-    }
-
-    return [
-        'suggestions' => [
-            'places' => array_values($suggestionsByPlace),
-        ],
-        'suggestion_count' => count($suggestionsByPlace),
-        'mutates_place_ontology' => false,
-        'approval_required' => true,
-    ];
 }
