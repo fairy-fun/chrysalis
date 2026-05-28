@@ -8,6 +8,9 @@ require_once __DIR__
 require_once __DIR__
     . '/prose_character_resolution_workflow.php';
 
+require_once __DIR__
+    . '/spans/find_surface_spans.php';
+
 function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = []): array
 {
     $suggestionsByEntity = [];
@@ -28,7 +31,12 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
             continue;
         }
 
-        if (mb_stripos($proseBody, $surfaceForm) === false) {
+        $surfaceSpans = prose_character_find_surface_spans(
+            $proseBody,
+            $surfaceForm
+        );
+
+        if ($surfaceSpans === []) {
             continue;
         }
 
@@ -51,6 +59,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
                     'resolved_entity_id' => $entityId,
                     'candidate_label' => $selectedCandidate['candidate_label'] ?? $surfaceForm,
                     'surface_forms' => [$surfaceForm],
+                    'surface_spans' => $surfaceSpans,
                     'candidate_score' => (float)($selectedCandidate['candidate_score'] ?? 0.0),
                     'resolution_method_classval_id' => $selectedCandidate['resolution_method_classval_id'] ?? null,
                 ];
@@ -61,6 +70,7 @@ function suggest_prose_characters(PDO $pdo, string $proseBody, array $context = 
                 'resolved_entity_id' => null,
                 'candidate_label' => $surfaceForm,
                 'surface_forms' => [$surfaceForm],
+                'surface_spans' => $surfaceSpans,
                 'candidate_score' => 0.0,
                 'resolution_method_classval_id' => 'RESOLUTION_METHOD_UNRESOLVED',
             ];
