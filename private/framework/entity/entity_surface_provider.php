@@ -45,45 +45,45 @@ function entity_surface_provider_fetch_exact_surface_candidates(
                     c.char_name_last,
                     c.search_name,
                     CASE
-                        WHEN LOWER(c.char_name_full) = LOWER(:surface)
+                        WHEN LOWER(c.char_name_full) = LOWER(:surface_full_match)
                             THEN 'CHARACTER_FULL_NAME'
 
-                        WHEN LOWER(c.search_name) = LOWER(:surface)
+                        WHEN LOWER(c.search_name) = LOWER(:surface_search_exact)
                             THEN 'CHARACTER_SEARCH_NAME'
 
-                        WHEN :allow_search_token_match = 1
+                        WHEN :allow_token_match_case = 1
                             AND CONCAT(' ', LOWER(c.search_name), ' ')
-                                LIKE CONCAT('% ', LOWER(:surface), ' %')
+                                LIKE CONCAT('% ', LOWER(:surface_search_token), ' %')
                             THEN 'CHARACTER_SEARCH_NAME'
 
-                        WHEN LOWER(c.char_name_first) = LOWER(:surface)
+                        WHEN LOWER(c.char_name_first) = LOWER(:surface_first_match)
                             THEN 'CHARACTER_FIRST_NAME'
 
-                        WHEN LOWER(c.char_name_last) = LOWER(:surface)
+                        WHEN LOWER(c.char_name_last) = LOWER(:surface_last_match)
                             THEN 'CHARACTER_LAST_NAME'
 
                         ELSE 'CHARACTER_REGISTRY_SURFACE'
                     END AS matched_surface_type,
 
                     CASE
-                        WHEN LOWER(c.char_name_full) = LOWER(:surface)
+                        WHEN LOWER(c.char_name_full) = LOWER(:surface_full_return)
                             THEN c.char_name_full
 
-                        WHEN LOWER(c.search_name) = LOWER(:surface)
+                        WHEN LOWER(c.search_name) = LOWER(:surface_search_return)
                             THEN c.search_name
 
-                        WHEN :allow_search_token_match = 1
+                        WHEN :allow_token_match_return = 1
                             AND CONCAT(' ', LOWER(c.search_name), ' ')
-                                LIKE CONCAT('% ', LOWER(:surface), ' %')
+                                LIKE CONCAT('% ', LOWER(:surface_search_token_return), ' %')
                             THEN c.search_name
 
-                        WHEN LOWER(c.char_name_first) = LOWER(:surface)
+                        WHEN LOWER(c.char_name_first) = LOWER(:surface_first_return)
                             THEN c.char_name_first
 
-                        WHEN LOWER(c.char_name_last) = LOWER(:surface)
+                        WHEN LOWER(c.char_name_last) = LOWER(:surface_last_return)
                             THEN c.char_name_last
 
-                        ELSE :surface
+                        ELSE :surface_fallback
                     END AS matched_surface
 
                 FROM characters c
@@ -94,19 +94,19 @@ function entity_surface_provider_fetch_exact_surface_candidates(
                   AND c.entity_id IS NOT NULL
                   AND TRIM(c.entity_id) <> ''
                   AND (
-                      LOWER(c.char_name_full) = LOWER(:surface)
+                      LOWER(c.char_name_full) = LOWER(:surface_where_full)
 
-                      OR LOWER(c.search_name) = LOWER(:surface)
+                      OR LOWER(c.search_name) = LOWER(:surface_where_search)
 
                       OR (
-                          :allow_search_token_match = 1
+                          :allow_token_match_where = 1
                           AND CONCAT(' ', LOWER(c.search_name), ' ')
-                              LIKE CONCAT('% ', LOWER(:surface), ' %')
+                              LIKE CONCAT('% ', LOWER(:surface_where_token), ' %')
                       )
 
-                      OR LOWER(c.char_name_first) = LOWER(:surface)
+                      OR LOWER(c.char_name_first) = LOWER(:surface_where_first)
 
-                      OR LOWER(c.char_name_last) = LOWER(:surface)
+                      OR LOWER(c.char_name_last) = LOWER(:surface_where_last)
                   )
 
                 LIMIT 100
@@ -115,9 +115,25 @@ function entity_surface_provider_fetch_exact_surface_candidates(
             $stmt = $pdo->prepare($sql);
 
             $stmt->execute([
-                ':surface' => $surface,
-                ':allow_search_token_match'
-                    => $allowSearchTokenMatch ? 1 : 0,
+                ':surface_full_match' => $surface,
+                ':surface_search_exact' => $surface,
+                ':surface_search_token' => $surface,
+                ':surface_first_match' => $surface,
+                ':surface_last_match' => $surface,
+                ':surface_full_return' => $surface,
+                ':surface_search_return' => $surface,
+                ':surface_search_token_return' => $surface,
+                ':surface_first_return' => $surface,
+                ':surface_last_return' => $surface,
+                ':surface_fallback' => $surface,
+                ':surface_where_full' => $surface,
+                ':surface_where_search' => $surface,
+                ':surface_where_token' => $surface,
+                ':surface_where_first' => $surface,
+                ':surface_where_last' => $surface,
+                ':allow_token_match_case' => $allowSearchTokenMatch ? 1 : 0,
+                ':allow_token_match_return' => $allowSearchTokenMatch ? 1 : 0,
+                ':allow_token_match_where' => $allowSearchTokenMatch ? 1 : 0,
             ]);
 
             while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
