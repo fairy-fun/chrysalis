@@ -92,7 +92,7 @@ function fw_filter_approved_location_suggestions(
         }
 
         $entityId = strtoupper(trim((string)(
-            $suggestion['resolved_entity_id'] ?? ''
+            $suggestion['resolved_place_id'] ?? ''
         )));
 
         if ($entityId === '') {
@@ -221,7 +221,8 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
 
     if (!is_array($eventRow)) {
         throw new RuntimeException(
-            'Cannot approve location tags for missing calendar event: ' . $calendarEventEntityId
+            'Cannot approve location tags for missing calendar event: '
+            . $calendarEventEntityId
         );
     }
 
@@ -229,7 +230,8 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
 
     if ($eventId < 1) {
         throw new RuntimeException(
-            'Calendar event resolved to invalid persistence id: ' . $calendarEventEntityId
+            'Calendar event resolved to invalid persistence id: '
+            . $calendarEventEntityId
         );
     }
 
@@ -261,7 +263,9 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
             continue;
         }
 
-        $placeEntityId = trim((string)($suggestion['resolved_entity_id'] ?? ''));
+        $placeEntityId = trim((string)(
+            $suggestion['resolved_place_id'] ?? ''
+        ));
 
         if ($placeEntityId === '') {
             continue;
@@ -274,7 +278,9 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
 
     return [
         'success' => $resolvedSuggestions !== [],
-        'status' => $resolvedSuggestions === [] ? 'no_resolved_suggestions' : 'ok',
+        'status' => $resolvedSuggestions === []
+            ? 'no_resolved_suggestions'
+            : 'ok',
         'workflow' => 'calendar_event_approve_location_tags',
         'tier' => 3,
         'entity_id' => $calendarEventEntityId,
@@ -285,7 +291,7 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
                     'calendar_event_entity_id' => $calendarEventEntityId,
                     'calendar_event_id' => $eventId,
                     'resolved_suggestions' => $resolvedSuggestions,
-                    'mutates_location_ontology' => false,
+                    'mutates_location_ontology' => true,
                     'approval_required' => true,
                 ],
             ]
@@ -321,7 +327,9 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
     $approvalContext = $context['location_tag_approval'] ?? [];
 
     if (!is_array($approvalContext)) {
-        throw new RuntimeException('Missing location tag approval context');
+        throw new RuntimeException(
+            'Missing location tag approval context'
+        );
     }
 
     $calendarEventEntityId = trim((string)(
@@ -330,14 +338,23 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
 
     $eventId = (int)($approvalContext['calendar_event_id'] ?? 0);
 
-    $resolvedSuggestions = $approvalContext['resolved_suggestions'] ?? [];
+    $resolvedSuggestions = (
+        $approvalContext['resolved_suggestions'] ?? []
+    );
 
     if ($calendarEventEntityId === '' || $eventId < 1) {
-        throw new RuntimeException('Missing approved calendar event identity');
+        throw new RuntimeException(
+            'Missing approved calendar event identity'
+        );
     }
 
-    if (!is_array($resolvedSuggestions) || $resolvedSuggestions === []) {
-        throw new RuntimeException('No resolved location suggestions available to approve');
+    if (
+        !is_array($resolvedSuggestions)
+        || $resolvedSuggestions === []
+    ) {
+        throw new RuntimeException(
+            'No resolved location suggestions available to approve'
+        );
     }
 
     $approvedSuggestions = fw_filter_approved_location_suggestions(
@@ -377,7 +394,7 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
         }
 
         $placeEntityId = trim((string)(
-            $suggestion['resolved_entity_id'] ?? ''
+            $suggestion['resolved_place_id'] ?? ''
         ));
 
         if ($placeEntityId === '') {
@@ -397,15 +414,21 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
             'event_id' => $eventId,
             'calendar_event_entity_id' => $calendarEventEntityId,
             'entity_id' => $placeEntityId,
-            'candidate_label' => $suggestion['candidate_label'] ?? null,
-            'surface_forms' => $suggestion['surface_forms'] ?? [],
+            'candidate_label' => (
+                $suggestion['candidate_label'] ?? null
+            ),
+            'surface_forms' => (
+                $suggestion['surface_forms'] ?? []
+            ),
             'approval_status' => 'approved',
         ];
     }
 
     return [
         'success' => $approvedTags !== [],
-        'status' => $approvedTags === [] ? 'no_tags_applied' : 'ok',
+        'status' => $approvedTags === []
+            ? 'no_tags_applied'
+            : 'ok',
         'workflow' => 'calendar_event_approve_location_tags',
         'tier' => 3,
         'entity_id' => $calendarEventEntityId,
