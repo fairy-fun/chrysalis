@@ -304,10 +304,11 @@ function fw_match_chat_workflow(
             str_contains($message, 'tag locations')
             || str_contains($message, 'suggest locations')
             || str_contains($message, 'suggest place tags')
+            || str_contains($message, "tag locations from an event's attached prose")
+            || str_contains($message, 'tag locations from attached prose')
         ) {
             return 'calendar_event_suggest_locations';
         }
-
     if (
         str_contains($message, 'beat and title')
         || str_contains($message, 'derive beat')

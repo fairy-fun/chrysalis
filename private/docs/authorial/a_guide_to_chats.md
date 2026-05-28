@@ -167,7 +167,7 @@ Call startWorkflowChat with message: I want to tag locations from an event's att
 
 #### 3e: I want to approve Locations from an event's attached prose
 ```text
-startWorkflowChat I want to approve locations from attached prose
+Call startWorkflowChat with message: I want to approve locations from attached prose
 ```
 
 ---
