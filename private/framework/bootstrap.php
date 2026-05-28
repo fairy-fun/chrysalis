@@ -39,6 +39,9 @@ require_once __DIR__ . '/procedures/workflow_calendar_event_derive_beat_title_dr
 require_once __DIR__ . '/procedures/workflow_calendar_event_title_narrative_ontology_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_suggest_characters_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_event_approve_character_tags_driver.php';
+require_once __DIR__ . '/procedures/workflow_calendar_event_suggest_locations_driver.php';
+
+require_once __DIR__ . '/procedures/workflow_calendar_event_approve_location_tags_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_day_display_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_week_display_prose_driver.php';
 require_once __DIR__ . '/procedures/workflow_calendar_week_day_display_prose_driver.php';
