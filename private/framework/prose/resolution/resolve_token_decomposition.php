@@ -19,10 +19,14 @@ function prose_character_try_token_decomposition(
 
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, canonical_label
-             FROM entities
-             WHERE entity_type_id = 'entity_type_character'
-               AND canonical_label IS NOT NULL
+            "SELECT
+                e.id,
+                el.label AS canonical_label
+             FROM entity_labels el
+             INNER JOIN entities e
+                 ON e.id = el.entity_id
+             WHERE e.entity_type_id = 'entity_type_character'
+               AND el.label IS NOT NULL
              LIMIT 500"
         );
 
@@ -38,6 +42,10 @@ function prose_character_try_token_decomposition(
         $canonicalLabel = trim(
             (string)($row['canonical_label'] ?? '')
         );
+
+        if ($canonicalLabel === '') {
+            continue;
+        }
 
         $canonicalTokens = prose_character_tokenize_surface(
             $canonicalLabel
@@ -82,8 +90,8 @@ function prose_character_try_token_decomposition(
                 => [
                     'normalize_case',
                     'tokenize_surface',
-                    'tokenize_canonical_label',
-                    'canonical_label_token_match',
+                    'tokenize_entity_label',
+                    'entity_label_token_match',
                 ],
 
             'resolver_stage'
