@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require_once __DIR__
     . '/../semantic_resolution/semantic_resolution_workflow_runner.php';
+require_once __DIR__
+    . '/../semantic_resolution/place_semantic_candidate_expander.php';
 
 function prose_place_resolution_workflow_run(
     PDO $pdo,
@@ -33,6 +35,44 @@ function prose_place_resolution_workflow_run(
         $placeSurfaceRecord['surface_confidence'] ?? 0.9
     );
 
+    $directCandidates = [
+        [
+            'resolved_entity_id' => $placeId,
+
+            'candidate_label' => $surface,
+
+            'resolution_method_classval_id'
+                => 'RESOLUTION_METHOD_EXACT_PLACE_NAME',
+
+            'semantic_relationship_classval_id'
+                => 'SEMANTIC_RELATIONSHIP_DIRECT_MATCH',
+
+            'candidate_score'
+                => $surfaceConfidence,
+
+            'matched_lookup_surface'
+                => mb_strtolower($surface),
+
+            'normalized_lookup_surface'
+                => mb_strtolower($surface),
+
+            'resolver_stage'
+                => 'exact_place_name',
+
+            'lookup_stage'
+                => 'place_surface_inventory',
+
+            'transform_chain'
+                => [],
+        ],
+    ];
+
+    $expandedCandidates =
+        place_semantic_candidate_expander_expand(
+            $pdo,
+            $directCandidates
+        );
+
     return semantic_resolution_workflow_runner_run(
         $pdo,
         [
@@ -40,25 +80,13 @@ function prose_place_resolution_workflow_run(
                 'resolver_stage' =>
                     'exact_place_name',
 
-                'candidates' => [
-                    [
-                        'resolved_entity_id' => $placeId,
-                        'candidate_label' => $surface,
-                        'resolution_method_classval_id' =>
-                            'RESOLUTION_METHOD_EXACT_PLACE_NAME',
-                        'candidate_score' => $surfaceConfidence,
-                        'matched_lookup_surface' => mb_strtolower($surface),
-                        'normalized_lookup_surface' => mb_strtolower($surface),
-                        'resolver_stage' => 'exact_place_name',
-                        'lookup_stage' => 'place_surface_inventory',
-                        'transform_chain' => [],
-                    ],
-                ],
+                'candidates'
+                    => $expandedCandidates,
             ],
         ],
         [
-            'arbitration_stage' =>
-                'prose_place_resolution',
+            'arbitration_stage'
+                => 'prose_place_resolution',
         ]
     );
 }
