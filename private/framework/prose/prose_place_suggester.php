@@ -200,6 +200,7 @@ function suggest_prose_places(
                     => [],
             ];
         }
+    }
     return [
             'suggestions' => [
                 'places' => array_values($suggestionsByPlace),
