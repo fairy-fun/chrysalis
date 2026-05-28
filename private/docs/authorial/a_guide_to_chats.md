@@ -159,6 +159,19 @@ CHAR-MAIN-001 CHAR-SUP-998 CHAR-SUP-997
 
 → approve only those entities
 
+#### 3d: I want to tag Characters from an event's attached prose
+
+```text
+Call startWorkflowChat with message: I want to tag locations from an event's attached prose
+```
+
+#### 3e: I want to approve Locations from an event's attached prose
+```text
+startWorkflowChat I want to approve locations from attached prose
+```
+
+---
+
 #### Process attached prose into calendar subevents
 
 To process prose already attached to a calendar event into subevents, tell the chat:
