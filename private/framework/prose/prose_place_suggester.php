@@ -9,6 +9,9 @@ require_once __DIR__
     . '/prose_place_resolution_workflow.php';
 
 require_once __DIR__
+    . '/prose_place_containment_provider.php';
+
+require_once __DIR__
     . '/spans/find_surface_spans.php';
 
 function suggest_prose_places(
@@ -18,6 +21,7 @@ function suggest_prose_places(
 ): array {
 
     $suggestionsByPlace = [];
+    $directlyEvidencedPlaceIds = [];
 
     foreach (
         prose_place_surface_inventory_provider_fetch_surfaces(
@@ -69,6 +73,8 @@ function suggest_prose_places(
             continue;
         }
 
+        $directlyEvidencedPlaceIds[] = $placeId;
+
         $existingScore = (float)(
             $suggestionsByPlace[$placeId]['candidate_score'] ?? -1
         );
@@ -103,7 +109,36 @@ function suggest_prose_places(
                 $selectedCandidate['arbitration_stage']
                 ?? null
             ),
+            'candidate_relationship_type' => 'exact_match',
+            'containment_context' => [],
         ];
+    }
+
+    $containmentContext =
+        prose_place_containment_provider_fetch_context(
+            $pdo,
+            $directlyEvidencedPlaceIds
+        );
+
+    foreach ($suggestionsByPlace as $placeId => $suggestion) {
+
+        $containment = (
+            $containmentContext[$placeId]
+            ?? [
+                'containment_depth' => 0,
+                'ancestors' => [],
+            ]
+        );
+
+        $suggestion['containment_depth'] = (int)(
+            $containment['containment_depth'] ?? 0
+        );
+
+        $suggestion['containment_context'] = array_values(
+            $containment['ancestors'] ?? []
+        );
+
+        $suggestionsByPlace[$placeId] = $suggestion;
     }
 
     return [
