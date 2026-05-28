@@ -1,4 +1,3 @@
-```php
 <?php
 
 declare(strict_types=1);
@@ -91,4 +90,3 @@ function persist_semantic_surface_candidate_provenance(
         $selectedCandidateIdentityKey
     );
 }
-```
