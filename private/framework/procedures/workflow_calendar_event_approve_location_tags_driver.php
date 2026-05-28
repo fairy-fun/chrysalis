@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_place_suggester.php';
-require_once __DIR__ . '/../calendar/apply_calendar_event_location.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
 function fw_workflow_location_tag_approval_status(
@@ -356,6 +355,20 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
         ];
     }
 
+    $insertStmt = $pdo->prepare("
+        INSERT IGNORE INTO calendar_event_locations (
+            event_id,
+            place_id,
+            role_id,
+            subsequence_index
+        ) VALUES (
+            :event_id,
+            :place_id,
+            :role_id,
+            :subsequence_index
+        )
+    ");
+
     $approvedTags = [];
 
     foreach ($approvedSuggestions as $suggestion) {
@@ -373,11 +386,12 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
 
         fw_validate_place_entity($pdo, $placeEntityId);
 
-        apply_calendar_event_location(
-            $pdo,
-            $calendarEventEntityId,
-            $placeEntityId
-        );
+        $insertStmt->execute([
+            ':event_id' => $eventId,
+            ':place_id' => $placeEntityId,
+            ':role_id' => 'location_role_primary',
+            ':subsequence_index' => 1,
+        ]);
 
         $approvedTags[] = [
             'event_id' => $eventId,
