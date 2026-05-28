@@ -292,6 +292,22 @@ function fw_match_chat_workflow(
         return 'calendar_event_suggest_characters';
     }
 
+        if (
+            str_contains($message, 'approve location tags')
+            || str_contains($message, 'approve location suggestions')
+            || str_contains($message, 'approve locations from attached prose')
+        ) {
+            return 'calendar_event_approve_location_tags';
+        }
+
+        if (
+            str_contains($message, 'tag locations')
+            || str_contains($message, 'suggest locations')
+            || str_contains($message, 'suggest place tags')
+        ) {
+            return 'calendar_event_suggest_locations';
+        }
+
     if (
         str_contains($message, 'beat and title')
         || str_contains($message, 'derive beat')
