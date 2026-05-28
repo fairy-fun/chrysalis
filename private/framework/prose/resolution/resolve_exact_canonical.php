@@ -18,10 +18,14 @@ function prose_character_try_exact_canonical_label(
 
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, canonical_label
-             FROM entities
-             WHERE entity_type_id = 'entity_type_character'
-               AND canonical_label = :surface
+            "SELECT
+                e.id,
+                el.label AS canonical_label
+             FROM entity_labels el
+             INNER JOIN entities e
+                 ON e.id = el.entity_id
+             WHERE e.entity_type_id = 'entity_type_character'
+               AND el.label = :surface
              LIMIT 10"
         );
 
@@ -55,7 +59,9 @@ function prose_character_try_exact_canonical_label(
                 => prose_character_normalize_surface($surfaceForm),
 
             'transform_chain'
-                => [],
+                => [
+                    'entity_labels_canonical_lookup',
+                ],
 
             'resolver_stage'
                 => __FUNCTION__,
