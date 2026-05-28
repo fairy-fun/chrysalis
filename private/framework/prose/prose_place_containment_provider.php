@@ -76,17 +76,33 @@ function prose_place_containment_provider_fetch_lineage(
 
     for ($depth = 0; $depth < 25; $depth++) {
         $stmt = $pdo->prepare(
-            "SELECT {$parentColumn}\n"
-            . "FROM sxnzlfun_chrysalis.places\n"
-            . "WHERE place_id = :place_id\n"
-            . "LIMIT 1"
+            "SELECT
+                child.{$parentColumn} AS parent_place_id,
+                parent.place_name AS parent_place_name
+             FROM sxnzlfun_chrysalis.places child
+             LEFT JOIN sxnzlfun_chrysalis.places parent
+                 ON parent.place_id = child.{$parentColumn}
+             WHERE child.place_id = :place_id
+             LIMIT 1"
         );
 
         $stmt->execute([
             ':place_id' => $currentPlaceId,
         ]);
 
-        $parentId = trim((string)($stmt->fetchColumn() ?: ''));
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($row)) {
+            break;
+        }
+
+        $parentId = trim((string)(
+            $row['parent_place_id'] ?? ''
+        ));
+
+        $parentPlaceName = trim((string)(
+            $row['parent_place_name'] ?? ''
+        ));
 
         if ($parentId === '' || isset($seen[$parentId])) {
             break;
@@ -94,8 +110,18 @@ function prose_place_containment_provider_fetch_lineage(
 
         $ancestors[] = [
             'place_id' => $parentId,
-            'candidate_relationship_type' => 'ancestor_of_candidate',
-            'distance' => $depth + 1,
+
+            'place_label' => (
+                $parentPlaceName !== ''
+                    ? $parentPlaceName
+                    : $parentId
+            ),
+
+            'candidate_relationship_type'
+                => 'ancestor_of_candidate',
+
+            'distance'
+                => $depth + 1,
         ];
 
         $seen[$parentId] = true;
