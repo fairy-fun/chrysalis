@@ -115,7 +115,7 @@ return [
 
         'terminal_location_tags_applied' => [
             'type' => 'terminal',
-            'message' => 'Location tags approved and applied to calendar_events.',
+            'message' => 'Location tags approved and linked to the calendar event.',
         ],
 
         'terminal_location_tag_approval_rejected' => [
