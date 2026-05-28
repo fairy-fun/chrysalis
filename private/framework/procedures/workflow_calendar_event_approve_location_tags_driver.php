@@ -375,7 +375,7 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
 
         apply_calendar_event_location(
             $pdo,
-            $eventId,
+            $calendarEventEntityId,
             $placeEntityId
         );
 
