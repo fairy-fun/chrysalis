@@ -159,7 +159,7 @@ CHAR-MAIN-001 CHAR-SUP-998 CHAR-SUP-997
 
 → approve only those entities
 
-#### 3d: I want to tag Characters from an event's attached prose
+#### 3d: I want to tag Locations from an event's attached prose
 
 ```text
 Call startWorkflowChat with message: I want to tag locations from an event's attached prose
