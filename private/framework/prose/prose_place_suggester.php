@@ -200,8 +200,7 @@ function suggest_prose_places(
                     => [],
             ];
         }
-    }
-        return [
+    return [
             'suggestions' => [
                 'places' => array_values($suggestionsByPlace),
             ],
@@ -214,6 +213,5 @@ function suggest_prose_places(
 
             'approval_required'
                 => true,
-        ];
-    }
+    ];
 }
