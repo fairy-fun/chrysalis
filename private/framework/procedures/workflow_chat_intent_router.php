@@ -428,3 +428,58 @@ function fw_match_chat_workflow(
 
     return null;
 }
+
+/*
+|--------------------------------------------------------------------------
+| FUTURE ARCHITECTURAL DIRECTION
+|--------------------------------------------------------------------------
+|
+| This router currently performs:
+|
+|     - selector grammar recognition
+|     - specificity ordering
+|     - semantic workflow routing
+|
+| using a single ordered imperative routing surface.
+|
+| This remains correct for the current architecture because:
+|
+|     - selector precedence matters
+|     - regex selectors overlap intentionally
+|     - low-specificity fallbacks must remain ordered
+|     - workflow semantics are not fully normalized
+|
+| HOWEVER:
+|
+| As workflow families continue expanding
+| (prose, ontology, projections, tagging, chronology, etc),
+| this file risks becoming a monolithic selector registry.
+|
+| Preferred long-term direction:
+|
+|     workflow_chat_intent_router.php
+|         -> delegates to domain selector registries
+|
+| Example:
+|
+|     prose_selector_registry.php
+|     ontology_selector_registry.php
+|     projection_selector_registry.php
+|     calendar_selector_registry.php
+|
+| allowing:
+|
+|     - isolated grammar ownership
+|     - thinner orchestration coordinators
+|     - selector-family modularity
+|     - safer workflow expansion
+|     - easier specificity management
+|
+| IMPORTANT:
+|
+| This should NOT become a switch() router unless the system first
+| introduces canonical intent normalization and selector tokenization.
+|
+| Current ordered routing semantics are intentional.
+|
+*/
