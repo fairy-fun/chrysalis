@@ -201,5 +201,19 @@ function suggest_prose_places(
             ];
         }
     }
+        return [
+            'suggestions' => [
+                'places' => array_values($suggestionsByPlace),
+            ],
 
+            'suggestion_count'
+                => count($suggestionsByPlace),
+
+            'mutates_place_ontology'
+                => false,
+
+            'approval_required'
+                => true,
+        ];
+    }
 }
