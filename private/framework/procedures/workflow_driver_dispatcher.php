@@ -59,9 +59,17 @@ function fw_execute_workflow_driver_operation(
             'suggest_characters' => 'fw_execute_workflow_calendar_event_suggest_characters',
             'prepare_character_tag_approval' => 'fw_execute_workflow_calendar_event_prepare_character_tag_approval',
             'apply_character_tags' => 'fw_execute_workflow_calendar_event_apply_character_tags',
+            'suggest_locations' => 'fw_execute_workflow_calendar_event_suggest_locations',
+
+                        'prepare_location_tag_approval'
+                            => 'fw_execute_workflow_calendar_event_prepare_location_tag_approval',
+
+                        'apply_location_tags'
+                            => 'fw_execute_workflow_calendar_event_apply_location_tags',
             'display_day_prose' => 'fw_execute_workflow_calendar_display_day_prose',
             'display_week_prose' => 'fw_execute_workflow_calendar_display_week_prose',
             'display_week_day_prose' => 'fw_execute_workflow_calendar_display_week_day_prose',
+
         ],
 
     ];
