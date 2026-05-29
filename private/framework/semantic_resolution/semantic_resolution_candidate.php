@@ -21,6 +21,17 @@ function semantic_resolution_candidate_build(
             ?? ''
         )),
 
+        /*
+        |--------------------------------------------------------------------------
+        | Ontology provenance
+        |--------------------------------------------------------------------------
+        */
+
+        'semantic_relationship_classval_id' => trim((string)(
+            $candidate['semantic_relationship_classval_id']
+            ?? ''
+        )),
+
         'candidate_score' => (float)(
             $candidate['candidate_score'] ?? 0.0
         ),
@@ -51,6 +62,26 @@ function semantic_resolution_candidate_build(
 
         'lookup_stage' => trim((string)(
             $candidate['lookup_stage'] ?? ''
+        )),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Containment provenance
+        |--------------------------------------------------------------------------
+        */
+
+        'containment_source_entity_id' => trim((string)(
+            $candidate['containment_source_entity_id']
+            ?? ''
+        )),
+
+        'containment_depth' => (int)(
+            $candidate['containment_depth'] ?? 0
+        ),
+
+        'scoring_notes' => trim((string)(
+            $candidate['scoring_notes']
+            ?? ''
         )),
 
         'is_selected' => (int)(
