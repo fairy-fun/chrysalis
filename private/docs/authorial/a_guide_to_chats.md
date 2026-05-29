@@ -8,6 +8,10 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 
 #### I want to create a Book week
 
+#### I want to create a Book day
+
+#### I want to create a Book time
+
 #### I want to create a character
 
 ### Tier 1
@@ -60,7 +64,7 @@ _1.2.1.2 — Week 1, Day 2, Morning, 20250120-a (calendar_event:2)_
 ##### 1.7.1 Create a book event
 Write: 
 ```text
-startWorkflowChat create book event
+Call startWorkflowChat with message: create book event
 ```
 
 ##### 1.7.2 Create an event that only attaches to the real-time calendar
