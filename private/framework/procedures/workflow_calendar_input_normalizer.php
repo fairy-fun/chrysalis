@@ -86,6 +86,15 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
         throw new RuntimeException('Book time input is required');
     }
 
+    throw new RuntimeException(
+        'DEBUG projectionInput=' .
+        var_export($projectionInput, true) .
+        ' payload=' .
+        json_encode($payload) .
+        ' input=' .
+        json_encode($input)
+    );
+
     $projectionCode = fw_normalize_calendar_book_projection_code(
         $projectionInput
     );
