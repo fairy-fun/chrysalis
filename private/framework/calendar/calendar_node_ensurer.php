@@ -734,7 +734,7 @@ function ensure_entity_row(PDO $pdo, string $entityId, string $entityTypeId): vo
     ]);
 }
 
-function remove_entity_row_if_unused(PDO $pdo, string $entityId): void
+function mark_entity_as_inactive(PDO $pdo, string $entityId): void
 {
     $entityId = trim($entityId);
 
@@ -742,11 +742,11 @@ function remove_entity_row_if_unused(PDO $pdo, string $entityId): void
         return;
     }
 
-    $sql = 'DE' . 'LETE e FROM sxnzlfun_chrysalis.entities e '
-        . 'LEFT JOIN sxnzlfun_chrysalis.calendar_events ce ON ce.entity_id = e.id '
-        . 'WHERE e.id = :entity_id AND ce.id IS NULL';
-
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo->prepare("
+        UPDATE sxnzlfun_chrysalis.entities
+        SET lifecycle_state = 'inactive'
+        WHERE id = :entity_id
+    ");
 
     $stmt->execute([
         ':entity_id' => $entityId,
