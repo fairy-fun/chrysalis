@@ -240,6 +240,41 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
         $calendarEventEntityId
     );
 
+    $existingStmt = $pdo->prepare("
+        SELECT place_id
+        FROM calendar_event_locations
+        WHERE event_id = :event_id
+        LIMIT 1
+    ");
+
+    $existingStmt->execute([
+        ':event_id' => $eventId,
+    ]);
+
+    $existing = $existingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($existing)) {
+        return [
+            'success' => true,
+            'status' => 'already_applied',
+            'workflow' => 'calendar_event_approve_location_tags',
+            'tier' => 3,
+            'entity_id' => $calendarEventEntityId,
+            'context' => array_merge(
+                $context,
+                [
+                    'location_tag_approval' => [
+                        'calendar_event_entity_id' => $calendarEventEntityId,
+                        'calendar_event_id' => $eventId,
+                        'resolved_suggestions' => [],
+                        'approval_required' => false,
+                        'already_applied' => true,
+                    ],
+                ]
+            ),
+        ];
+    }
+
     $suggestions = suggest_prose_places(
         $pdo,
         (string)$proseRow['prose_body'],

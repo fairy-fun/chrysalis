@@ -53,8 +53,11 @@ function semantic_candidate_arbitrator_run(
         }
     }
 
+    $hasWinner = $selected !== null;
+
     return [
         'selected_candidate' => $selected,
         'all_candidates' => $normalized,
+        'commit_ready' => $selected !== null,
     ];
 }
