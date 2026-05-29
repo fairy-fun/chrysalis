@@ -282,27 +282,7 @@ function insert_calendar_node(
             ':id' => $id,
         ]);
 
-        try {
-            remove_entity_row_if_unused($pdo, $temporaryEntityId);
-        } catch (PDOException $e) {
-            $info = $e->errorInfo ?? [];
-
-            $isDeletePrivilegeError =
-                (string)($info[0] ?? '') === '42000'
-                && (int)($info[1] ?? 0) === 1142;
-
-            if (!$isDeletePrivilegeError) {
-                throw $e;
-            }
-
-            throw new RuntimeException(
-                json_encode([
-                    'status' => 'author_cleanup_required',
-                    'reason' => 'Workflow user lacks DELETE permission on entities.',
-                    'temporary_entity_id' => $temporaryEntityId,
-                ], JSON_UNESCAPED_SLASHES)
-            );
-        }
+        mark_entity_as_inactive($pdo, $temporaryEntityId);
 
         if ($started) {
             $pdo->commit();
@@ -704,7 +684,7 @@ function ensure_calendar_event_entity_exists(PDO $pdo, int $calendarEventRowId):
         ]);
 
         if (str_starts_with($currentEntityId, '__pending_calendar_event__:')) {
-            remove_entity_row_if_unused($pdo, $currentEntityId);
+            mark_entity_as_inactive($pdo, $currentEntityId);
         }
     }
 }
@@ -746,6 +726,10 @@ function mark_entity_as_inactive(PDO $pdo, string $entityId): void
         UPDATE sxnzlfun_chrysalis.entities
         SET lifecycle_state = 'inactive'
         WHERE id = :entity_id
+          AND (
+                lifecycle_state IS NULL
+                OR lifecycle_state <> 'inactive'
+              )
     ");
 
     $stmt->execute([
