@@ -36,6 +36,9 @@ require_once __DIR__
 require_once __DIR__
     . '/semantic_surface_candidate_persister.php';
 
+require_once __DIR__
+    . '/../semantic_resolution/semantic_surface_resolution_candidate_persistence.php';
+
 function semantic_resolution_persister_persist_resolution(
     PDO $pdo,
     array $resolution
@@ -85,6 +88,21 @@ function semantic_resolution_persister_persist_resolution(
 
     $persistedCandidateCount = 0;
 
+    $selectedCandidate = null;
+
+    foreach ($candidatePayloads as $candidatePayload) {
+
+        if (
+            (int)(
+                $candidatePayload['is_selected']
+                ?? 0
+            ) === 1
+        ) {
+            $selectedCandidate = $candidatePayload;
+            break;
+        }
+    }
+
     /*
      * Persist ALL candidates.
      *
@@ -107,6 +125,13 @@ function semantic_resolution_persister_persist_resolution(
 
         $persistedCandidateCount++;
     }
+
+persist_semantic_surface_resolution_candidate_provenance(
+    $pdo,
+    (int)$semanticSurfaceEvidenceId,
+    $candidatePayloads,
+    $selectedCandidate
+);
 
     /*
      * Arbitration integrity:
