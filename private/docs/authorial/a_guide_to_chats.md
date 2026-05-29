@@ -204,7 +204,7 @@ ___
 To retrieve prose already attached to a calendar event or subevent by chronology position, tell the chat:
 
 ```text
-Show me the prose for 1.2.1.3
+Call startWorkflowChat with message: Show me the prose for 1.2.1.3
 ```
 or
 ```text
