@@ -86,30 +86,14 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
             throw new RuntimeException('Book time input is required');
         }
 
-        throw new RuntimeException(
-            'DEBUG projectionInput=' .
-            var_export($projectionInput, true) .
-            ' payload=' .
-            json_encode($payload) .
-            ' input=' .
-            json_encode($input)
-        );
-
         $projectionCode = fw_normalize_calendar_book_projection_code(
             $projectionInput
         );
 
-        $projectionStmt = $pdo->prepare('
-            SELECT
-                id,
-                entity_id,
-                projection_type_id,
-                projection_code
-            FROM calendar_projections
-            WHERE projection_type_id = :projection_type_id
-              AND projection_code = :projection_code
-            LIMIT 1
-        ');
+        throw new RuntimeException(
+            'DEBUG projectionCode=' .
+            var_export($projectionCode, true)
+        );
 
     /*$projectionCode = fw_normalize_calendar_book_projection_code(
         $projectionInput
