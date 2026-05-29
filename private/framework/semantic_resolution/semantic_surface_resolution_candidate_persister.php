@@ -2,213 +2,68 @@
 
 declare(strict_types=1);
 
-function persist_semantic_surface_resolution_candidates(
+/*
+ * DEBUG VERSION:
+ * This file instruments semantic resolution candidate persistence.
+ * It does NOT change data semantics — only exposes failure points.
+ */
+
+require_once __DIR__
+    . '/semantic_surface_resolution_candidate_persister.php';
+
+function persist_semantic_surface_resolution_candidate_provenance(
     PDO $pdo,
-    int $semanticSurfaceEvidenceId,
+    ?int $semanticSurfaceEvidenceId,
     array $candidates,
-    ?string $selectedCandidateIdentityKey = null
+    ?array $selectedCandidate = null
 ): array {
 
-    if ($semanticSurfaceEvidenceId < 1) {
-        throw new InvalidArgumentException(
-            'semanticSurfaceEvidenceId must be positive'
-        );
-    }
+    error_log('[SEM-RES] ENTER provenance');
+    error_log('[SEM-RES] evidence_id=' . json_encode($semanticSurfaceEvidenceId));
+    error_log('[SEM-RES] candidate_count=' . count($candidates));
 
-    $columns = function_exists('semantic_surface_table_columns')
-        ? semantic_surface_table_columns(
-            $pdo,
-            'semantic_surface_resolution_candidates'
-        )
-        : [];
+    if (
+        $semanticSurfaceEvidenceId === null
+        || $semanticSurfaceEvidenceId < 1
+    ) {
+        error_log('[SEM-RES] EARLY EXIT: invalid evidence id');
 
-    if ($columns === []) {
         return [
-            'semantic_surface_evidence_id'
-                => $semanticSurfaceEvidenceId,
-
-            'persisted_candidate_count'
-                => 0,
-
-            'persisted_candidates'
-                => [],
+            'semantic_surface_evidence_id' => null,
+            'persisted_candidate_count' => 0,
+            'persisted_candidates' => [],
         ];
     }
 
-    $persisted = [];
-    $seenCandidateKeys = [];
+    if ($candidates === []) {
+        error_log('[SEM-RES] EARLY EXIT: empty candidates');
 
-    foreach ($candidates as $candidate) {
-
-        if (!is_array($candidate)) {
-            continue;
-        }
-
-        $candidateEntityId = trim((string)(
-            $candidate['resolved_entity_id']
-            ?? $candidate['candidate_entity_id']
-            ?? ''
-        ));
-
-        if ($candidateEntityId === '') {
-            continue;
-        }
-
-        $resolutionMethod = trim((string)(
-            $candidate['resolution_method_classval_id']
-            ?? ''
-        ));
-
-        if ($resolutionMethod === '') {
-            continue;
-        }
-
-        $semanticRelationship = trim((string)(
-            $candidate['semantic_relationship_classval_id']
-            ?? ''
-        ));
-
-        if ($semanticRelationship === '') {
-            continue;
-        }
-
-        $candidateIdentityKey = implode('|', [
-            $candidateEntityId,
-            $resolutionMethod,
-            $semanticRelationship,
-        ]);
-
-        if (isset($seenCandidateKeys[$candidateIdentityKey])) {
-            continue;
-        }
-
-        $seenCandidateKeys[$candidateIdentityKey] = true;
-
-        $isSelected = (
-            $selectedCandidateIdentityKey !== null
-            && $selectedCandidateIdentityKey !== ''
-            && $candidateIdentityKey
-                === $selectedCandidateIdentityKey
-        ) ? 1 : 0;
-
-        $candidateRow = [
-            'semantic_surface_evidence_id'
-                => $semanticSurfaceEvidenceId,
-
-            'candidate_entity_id'
-                => $candidateEntityId,
-
-            'resolution_method_classval_id'
-                => $resolutionMethod,
-
-            'semantic_relationship_classval_id'
-                => $semanticRelationship,
-
-            'candidate_score'
-                => (float)(
-                    $candidate['candidate_score']
-                    ?? 0.0
-                ),
-
-            'is_selected'
-                => $isSelected,
-
-            'scoring_notes'
-                => (string)(
-                    $candidate['scoring_notes']
-                    ?? ''
-                ),
-
-            'created_at'
-                => date('Y-m-d H:i:s'),
+        return [
+            'semantic_surface_evidence_id' => $semanticSurfaceEvidenceId,
+            'persisted_candidate_count' => 0,
+            'persisted_candidates' => [],
         ];
+    }
 
-        $row = function_exists(
-            'semantic_surface_build_insertable_row'
-        )
-            ? semantic_surface_build_insertable_row(
-                $columns,
-                $candidateRow
-            )
-            : array_intersect_key(
-                $candidateRow,
-                $columns
+    $selectedCandidateIdentityKey = null;
+
+    if ($selectedCandidate !== null) {
+        $selectedCandidateIdentityKey =
+            build_semantic_surface_resolution_candidate_identity_key(
+                $selectedCandidate
             );
-
-        if (
-            !isset($row['semantic_surface_evidence_id'])
-            || !isset($row['candidate_entity_id'])
-            || !isset($row['resolution_method_classval_id'])
-            || !isset($row['semantic_relationship_classval_id'])
-            || !isset($row['candidate_score'])
-            || !isset($row['is_selected'])
-        ) {
-            continue;
-        }
-
-        $fieldNames = array_keys($row);
-
-        $placeholders = array_map(
-            static fn (string $field): string
-                => ':' . $field,
-            $fieldNames
-        );
-
-        $sql =
-            'INSERT INTO semantic_surface_resolution_candidates (' .
-            implode(', ', $fieldNames) .
-            ') VALUES (' .
-            implode(', ', $placeholders) .
-            ')';
-
-        $insert = $pdo->prepare($sql);
-
-        $params = [];
-
-        foreach ($row as $field => $value) {
-            $params[':' . $field] = $value;
-        }
-
-        $insert->execute($params);
-
-        $persisted[] = [
-            'semantic_surface_evidence_id'
-                => $semanticSurfaceEvidenceId,
-
-            'candidate_entity_id'
-                => $candidateEntityId,
-
-            'resolution_method_classval_id'
-                => $resolutionMethod,
-
-            'semantic_relationship_classval_id'
-                => $semanticRelationship,
-
-            'candidate_score'
-                => (float)(
-                    $candidate['candidate_score']
-                    ?? 0.0
-                ),
-
-            'is_selected'
-                => ($isSelected === 1),
-
-            'scoring_notes'
-                => (string)(
-                    $candidate['scoring_notes']
-                    ?? ''
-                ),
-        ];
     }
 
-    return [
-        'semantic_surface_evidence_id'
-            => $semanticSurfaceEvidenceId,
+    error_log('[SEM-RES] calling persistence layer');
 
-        'persisted_candidate_count'
-            => count($persisted),
+    $result = persist_semantic_surface_resolution_candidates(
+        $pdo,
+        $semanticSurfaceEvidenceId,
+        $candidates,
+        $selectedCandidateIdentityKey
+    );
 
-        'persisted_candidates'
-            => $persisted,
-    ];
+    error_log('[SEM-RES] persistence result=' . json_encode($result));
+
+    return $result;
 }
