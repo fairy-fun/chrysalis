@@ -174,7 +174,6 @@ function insert_calendar_node(
     }
 
     try {
-        $eventId = generate_event_id($pdo);
         $entityTypeId = calendar_entity_type_for_layer($layerId);
 
         $temporaryEntityId = calendar_pending_event_entity_id();
@@ -195,7 +194,6 @@ function insert_calendar_node(
                 sequence_index,
                 book_time_id,
                 event_index,
-                event_id,
                 summary,
                 prose_body,
                 real_date_start_id,
@@ -220,7 +218,6 @@ function insert_calendar_node(
                 :seq,
                 :book_time_id,
                 :event_index,
-                :event_id,
                 :summary,
                 :prose_body,
                 :real_date_start_id,
@@ -248,7 +245,6 @@ function insert_calendar_node(
             ':seq' => $sequenceIndex,
             ':book_time_id' => $payload['book_time_id'] ?? null,
             ':event_index' => $payload['event_index'] ?? null,
-            ':event_id' => $eventId,
             ':summary' => $payload['summary'] ?? null,
             ':prose_body' => $payload['prose_body'] ?? null,
             ':real_date_start_id' => $payload['real_date_start_id'] ?? null,
@@ -745,28 +741,6 @@ function calendar_event_entity_id(int $calendarEventRowId): string
 function calendar_pending_event_entity_id(): string
 {
     return '__pending_calendar_event__:' . bin2hex(random_bytes(16));
-}
-
-function generate_event_id(PDO $pdo): int
-{
-    ensure_sequence_row($pdo);
-
-    $pdo->exec("
-        UPDATE sxnzlfun_chrysalis.calendar_event_sequence
-        SET current_value = LAST_INSERT_ID(current_value + 1)
-        WHERE id = 1
-    ");
-
-    return (int)$pdo->query("SELECT LAST_INSERT_ID()")->fetchColumn();
-}
-
-function ensure_sequence_row(PDO $pdo): void
-{
-    $pdo->exec("
-        INSERT INTO sxnzlfun_chrysalis.calendar_event_sequence (id, current_value)
-        VALUES (1, 0)
-        ON DUPLICATE KEY UPDATE current_value = current_value
-    ");
 }
 
 function get_calendar_node_by_id(PDO $pdo, int $id): array
