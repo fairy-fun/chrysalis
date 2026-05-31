@@ -79,22 +79,22 @@ function fw_workflow_render_input_prompt(
                 : '';
 
             $line = sprintf(
-                'ID %d%s — %s',
+                'ID %d%s - %s',
                 $id,
                 $marker,
                 $title
             );
 
             if ($createdAt !== '') {
-                $line .= ' — created ' . $createdAt;
+                $line .= ' - created ' . $createdAt;
             }
 
             if ($status !== '') {
-                $line .= ' — status ' . $status;
+                $line .= ' - status ' . $status;
             }
 
             if ($summary !== '') {
-                $line .= ' — ' . $summary;
+                $line .= ' - ' . $summary;
             }
 
             $lines[] = $line;
@@ -177,13 +177,14 @@ function fw_workflow_render_input_prompt(
 
             $labels[] = $displayLabel === ('Time ' . $timeIndex)
                 ? $displayLabel
-                : sprintf('Time %d — %s', $timeIndex, $displayLabel);
+                : sprintf('Time %d - %s', $timeIndex, $displayLabel);
         }
 
-        $message = $prompt
-            . "\n\nThis will create canonical Time "
-            . $nextTimeIndex
-            . '.';
+        $message = sprintf(
+            "%s\n\nThis will create canonical Time %d.",
+            $prompt,
+            $nextTimeIndex
+        );
 
         if ($labels === []) {
             return $message
@@ -264,7 +265,7 @@ function fw_workflow_render_input_prompt(
 
         $labels[] = $displayLabel === ('Time ' . $timeIndex)
             ? $displayLabel
-            : sprintf('Time %d — %s', $timeIndex, $displayLabel);
+            : sprintf('Time %d - %s', $timeIndex, $displayLabel);
     }
 
     if ($labels === []) {
