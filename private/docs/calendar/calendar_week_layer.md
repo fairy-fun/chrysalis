@@ -30,15 +30,14 @@ Week creation should be implemented via an ensurer-backed wrapper (e.g., `ensure
 
 Each calendar node has a corresponding entity:
 
-`entity_id = calendar_event:<event_id>`
+`entity_id = calendar_event:<id>`
 
 The ensurer guarantees the entity row exists and that its `entity_type_id` matches the node’s `layer_id`.
 
 ### Identity and relationships
 
-- `calendar_events.id` is the internal primary key used for joins
-- `calendar_events.event_id` is the stable numeric identity
-- `calendar_events.entity_id` is the external handle
+- `calendar_events.id` is the structural row identity used for joins
+- `calendar_events.entity_id` is the external handle derived from `id`
 
 Relationships use:
 
