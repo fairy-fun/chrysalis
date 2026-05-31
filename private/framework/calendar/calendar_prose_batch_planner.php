@@ -118,14 +118,20 @@ function resolve_classset_for_event(PDO $pdo, string $eventEntityId): array
     if ($stmt === null) {
         $stmt = $pdo->prepare("
             SELECT
-                COALESCE(m.classset_id, 'CLASSSET-CALENDAR-BEAT-001') AS classset_id,
+                COALESCE(
+                    NULLIF(TRIM(et.beat_classset_id), ''),
+                    'CLASSSET-CALENDAR-BEAT-001'
+                ) AS classset_id,
                 cs.code AS classset_code,
                 cs.label AS classset_label
             FROM calendar_events e
-            LEFT JOIN calendar_domain_beat_classset_map m
-                ON m.domain_id = e.domain_id
+            LEFT JOIN calendar_event_type_classvals et
+                ON et.id = e.event_type_id
             LEFT JOIN calendar_beat_classsets cs
-                ON cs.id = COALESCE(m.classset_id, 'CLASSSET-CALENDAR-BEAT-001')
+                ON cs.id = COALESCE(
+                    NULLIF(TRIM(et.beat_classset_id), ''),
+                    'CLASSSET-CALENDAR-BEAT-001'
+                )
             WHERE e.entity_id = :event_entity_id
             LIMIT 1
         ");
@@ -429,7 +435,7 @@ function calendar_beat_regex_matches(string $summaryNorm, string $pattern): bool
     $regex = $pattern;
 
     if (@preg_match($regex, '') === false) {
-        $regex = '/' . str_replace('/', '\/', $pattern) . '/u';
+        $regex = '/' . str_replace('/', '\\/', $pattern) . '/u';
     }
 
     return @preg_match($regex, $summaryNorm) === 1;
@@ -450,8 +456,8 @@ function resolve_calendar_beat_fallback_code(
 
         if (!in_array($configuredDefault, $allowedCodes, true)) {
             throw new RuntimeException(
-                'Configured fallback beat code "' . $configuredDefault .
-                '" is not allowed for classset ' . $classsetCode
+                'Configured fallback beat code \"' . $configuredDefault .
+                '\" is not allowed for classset ' . $classsetCode
             );
         }
 
