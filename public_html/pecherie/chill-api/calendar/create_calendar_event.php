@@ -6,7 +6,28 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/calendar/calendar_layer_ensurers.php';
+require_once __DIR__ . '/../../../../private/framework/calendar/calendar_book_event_ensurer.php';
 require_once __DIR__ . '/../../../../private/framework/classvals/classval_validation.php';
+
+function parent_identity_is_canonical_book_time(
+    PDO $pdo,
+    string $parentIdentity
+): bool {
+    $stmt = $pdo->prepare("
+        SELECT entity_id
+        FROM sxnzlfun_chrysalis.calendar_book_times
+        WHERE entity_id = :entity_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':entity_id' => $parentIdentity,
+    ]);
+
+    $resolved = $stmt->fetchColumn();
+
+    return is_string($resolved) && trim($resolved) !== '';
+}
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(405, ['error' => 'Method not allowed']);
@@ -107,12 +128,21 @@ try {
         static fn($value) => $value !== null
     );
 
-    $event = ensure_calendar_event(
-        $pdo,
-        $parentTimeEntityId,
-        null,
-        $payload
-    );
+    if (parent_identity_is_canonical_book_time($pdo, $parentTimeEntityId)) {
+        $event = ensure_calendar_book_event(
+            $pdo,
+            $parentTimeEntityId,
+            null,
+            $payload
+        );
+    } else {
+        $event = ensure_calendar_event(
+            $pdo,
+            $parentTimeEntityId,
+            null,
+            $payload
+        );
+    }
 
     respond(200, [
         'status' => 'ok',
