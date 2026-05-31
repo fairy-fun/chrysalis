@@ -179,6 +179,46 @@ function fw_fetch_calendar_event_attached_prose_for_location_approval(
     return $row;
 }
 
+function fw_sync_calendar_event_primary_location_if_unambiguous(
+    PDO $pdo,
+    int $eventId,
+    array $placeEntityIds
+): ?string {
+
+    $normalized = [];
+
+    foreach ($placeEntityIds as $placeEntityId) {
+        $value = strtoupper(trim((string)$placeEntityId));
+
+        if ($value === '') {
+            continue;
+        }
+
+        $normalized[$value] = true;
+    }
+
+    $uniquePlaceEntityIds = array_keys($normalized);
+
+    if (count($uniquePlaceEntityIds) !== 1) {
+        return null;
+    }
+
+    $primaryPlaceEntityId = $uniquePlaceEntityIds[0];
+
+    $updateStmt = $pdo->prepare("
+        UPDATE calendar_events
+        SET location_id = :location_id
+        WHERE id = :event_id
+    ");
+
+    $updateStmt->execute([
+        ':location_id' => $primaryPlaceEntityId,
+        ':event_id' => $eventId,
+    ]);
+
+    return $primaryPlaceEntityId;
+}
+
 function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
     PDO $pdo,
     array $action,
@@ -205,7 +245,7 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
     }
 
     $eventStmt = $pdo->prepare("
-        SELECT id
+        SELECT id, location_id
         FROM calendar_events
         WHERE entity_id = :entity_id
            OR entity_id = CONCAT('calendar_event:', :bare_entity_id)
@@ -244,7 +284,7 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
         SELECT place_id
         FROM calendar_event_locations
         WHERE event_id = :event_id
-        LIMIT 1
+        ORDER BY subsequence_index ASC, place_id ASC
     ");
 
     $existingStmt->execute([
@@ -254,6 +294,15 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
     $existing = $existingStmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!empty($existing)) {
+        fw_sync_calendar_event_primary_location_if_unambiguous(
+            $pdo,
+            $eventId,
+            array_map(
+                static fn(array $row): string => (string)($row['place_id'] ?? ''),
+                $existing
+            )
+        );
+
         return [
             'success' => true,
             'status' => 'already_applied',
@@ -422,6 +471,7 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
     ");
 
     $approvedTags = [];
+    $approvedPlaceEntityIds = [];
 
     foreach ($approvedSuggestions as $suggestion) {
         if (!is_array($suggestion)) {
@@ -445,6 +495,8 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
             ':subsequence_index' => 1,
         ]);
 
+        $approvedPlaceEntityIds[] = $placeEntityId;
+
         $approvedTags[] = [
             'event_id' => $eventId,
             'calendar_event_entity_id' => $calendarEventEntityId,
@@ -459,6 +511,12 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
         ];
     }
 
+    $primaryLocationId = fw_sync_calendar_event_primary_location_if_unambiguous(
+        $pdo,
+        $eventId,
+        $approvedPlaceEntityIds
+    );
+
     return [
         'success' => $approvedTags !== [],
         'status' => $approvedTags === []
@@ -471,6 +529,7 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
             $context,
             [
                 'approved_location_tags' => $approvedTags,
+                'primary_location_id' => $primaryLocationId,
             ]
         ),
     ];
