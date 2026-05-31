@@ -26,6 +26,16 @@ function map_chrysalis_scene_class_to_calendar_event_metadata(
         );
     }
 
+    if ($sceneClass === 'charged_recognition') {
+        return chrysalis_calendar_event_scene_metadata(
+            'Shay and Kai recognise one another',
+            'The prose centers a charged recognition encounter in which identification, address, or prior awareness sharpens the interpersonal stakes and reframes the scene around what passes between Shay and Kai when they fully register one another.',
+            'BEAT_RECOGNITION',
+            $classification,
+            $signals
+        );
+    }
+
     if ($sceneClass === 'institutional_intake') {
         return chrysalis_calendar_event_scene_metadata(
             'Institutional intake at RBDS',
