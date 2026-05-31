@@ -174,11 +174,6 @@ function fw_normalize_calendar_book_projection_code(string $value): string
         return 'book_projection_' . $trimmed;
     }
 
-    throw new RuntimeException(
-        'DEBUG trim=' . var_export($trimmed, true) .
-        ' bytes=' . bin2hex($trimmed)
-    );
-
     $normalized = strtolower(
         preg_replace('/[^a-z0-9]/', '', $trimmed) ?? ''
     );
@@ -191,21 +186,12 @@ function fw_normalize_calendar_book_projection_code(string $value): string
         $bookNumber = (int)$matches[1];
     }
 
-    /*if (!is_int($bookNumber) || $bookNumber < 1) {
-        throw new RuntimeException(
-            'Unable to normalize Book projection input'
-        );
-    }*/
-    // temp for debug
-
-    if (!is_int($bookNumber) || $bookNumber < 1) {
-        throw new RuntimeException(
-            'DEBUG trim=' . var_export($trimmed, true) .
-            ' normalized=' . var_export($normalized, true) .
-            ' matches=' . json_encode($matches ?? null) .
-            ' bookNumber=' . var_export($bookNumber, true)
-        );
-    }
+    throw new RuntimeException(
+        'DEBUG trim=' . var_export($trimmed, true) .
+        ' normalized=' . var_export($normalized, true) .
+        ' matches=' . json_encode($matches ?? null) .
+        ' bookNumber=' . var_export($bookNumber, true)
+    );
 
     return 'book_projection_BOOK-' . str_pad(
         (string)$bookNumber,
