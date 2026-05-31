@@ -7,9 +7,6 @@ require_once __DIR__ . '/workflow_value_resolver.php';
 require_once __DIR__
     . '/../calendar/admin/calendar_book_chronology_materializer.php';
 
-require_once __DIR__
-    . '/../calendar/calendar_projection_materializer.php';
-
 function fw_execute_workflow_calendar_book_time_create(
     PDO $pdo,
     array $action,
@@ -254,14 +251,16 @@ function fw_execute_workflow_calendar_book_time_create(
 
     /*
     |--------------------------------------------------------------------------
-    | Projection rebuild
+    | Derived projection rows are event-backed, not empty-container-backed.
     |--------------------------------------------------------------------------
+    |
+    | Creating a Book time container does not itself create or mutate any
+    | calendar_event projection rows, so this workflow should not require a
+    | projection rebuild. Avoiding rebuild here also keeps Tier 0 container
+    | creation compatible with runtime DB users that do not have DELETE on the
+    | derived projection surface.
+    |
     */
-
-    $projectionBuildId = rebuild_calendar_projection(
-        $pdo,
-        $projectionId
-    );
 
     return [
 
@@ -301,11 +300,11 @@ function fw_execute_workflow_calendar_book_time_create(
                             : null,
 
                     'projection_build_id'
-                        => $projectionBuildId,
+                        => null,
                 ],
 
                 'projection_build_id'
-                    => $projectionBuildId,
+                    => null,
             ]
         ),
     ];
