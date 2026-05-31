@@ -20,7 +20,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
     $eventTypeId = $body['event_type_id'] ?? null;
     $locationId = $body['location_id'] ?? null;
-    $domainId = $body['domain_id'] ?? null;
     $classTypeId = $body['class_type_id'] ?? null;
     $beatTypeId = $body['beat_type_id'] ?? null;
     $beatHash = $body['beat_hash'] ?? null;
@@ -98,12 +97,8 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     $parentStmt = $pdo->prepare("
         SELECT
             id,
-            event_id,
-            projection_id,
             entity_id,
-            layer_id,
             event_type_id,
-            domain_id,
             class_type_id,
             location_id
         FROM calendar_events
@@ -138,6 +133,10 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
     |--------------------------------------------------------------------------
     | Subevent payload
     |--------------------------------------------------------------------------
+    |
+    | Subevents inherit beat-classset context from the canonical parent event.
+    | They do not persist a duplicate domain_id of their own.
+    |
     */
 
     $payload = [
@@ -150,9 +149,6 @@ function create_calendar_subevent_core(PDO $pdo, array $body): array
 
         'event_type_id'
         => $eventTypeId ?: $parentEvent['event_type_id'],
-
-        'domain_id'
-        => $domainId ?: $parentEvent['domain_id'],
 
         'class_type_id'
         => $classTypeId ?: $parentEvent['class_type_id'],
