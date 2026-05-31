@@ -111,6 +111,89 @@ function fw_workflow_render_input_prompt(
     }
 
     if (
+        ($workflow['workflow_id'] ?? null) === 'calendar_book_time_create'
+        && $stateName === 'await_time_label'
+    ) {
+        $projectionId = (int) (
+            $context['calendar_normalized_input']['projection_id']
+            ?? $context['projection']['id']
+            ?? 0
+        );
+
+        $dayId = (int) (
+            $context['book_day']['id']
+            ?? 0
+        );
+
+        $nextTimeIndex = (int) (
+            $context['next_book_time']['next_time_index']
+            ?? 0
+        );
+
+        if ($projectionId < 1 || $dayId < 1 || $nextTimeIndex < 1) {
+            return $prompt;
+        }
+
+        $stmt = $pdo->prepare(
+            '
+            SELECT
+                t.time_index,
+                COALESCE(
+                    NULLIF(TRIM(cv.label), \'\'),
+                    NULLIF(TRIM(t.summary), \'\'),
+                    NULLIF(TRIM(t.notes), \'\'),
+                    CONCAT(\'Time \', t.time_index)
+                ) AS display_label
+            FROM calendar_book_times t
+            LEFT JOIN calendar_time_label_classvals cv
+                ON cv.id = t.time_label_id
+            WHERE t.projection_id = :projection_id
+              AND t.day_id = :day_id
+            ORDER BY t.time_index ASC
+            '
+        );
+
+        $stmt->execute([
+            ':projection_id' => $projectionId,
+            ':day_id' => $dayId,
+        ]);
+
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $labels = [];
+
+        foreach ($rows as $row) {
+            $timeIndex = (int) ($row['time_index'] ?? 0);
+
+            if ($timeIndex < 1) {
+                continue;
+            }
+
+            $displayLabel = trim((string) ($row['display_label'] ?? ''));
+
+            if ($displayLabel === '') {
+                $displayLabel = 'Time ' . $timeIndex;
+            }
+
+            $labels[] = $displayLabel === ('Time ' . $timeIndex)
+                ? $displayLabel
+                : sprintf('Time %d — %s', $timeIndex, $displayLabel);
+        }
+
+        $message = $prompt
+            . "\n\nThis will create canonical Time " . $nextTimeIndex . '.'';
+
+        if ($labels === []) {
+            return $message
+                . "\n\nNo time layers currently exist for this Book day.";
+        }
+
+        return $message
+            . "\n\nExisting time layers for this Book day:\n"
+            . implode("\n", $labels);
+    }
+
+    if (
         ($workflow['workflow_id'] ?? null) !== 'calendar_book_event_create'
         || $stateName !== 'await_time_index'
     ) {
