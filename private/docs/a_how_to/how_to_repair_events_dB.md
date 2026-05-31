@@ -117,6 +117,19 @@ CEK-000007
 
 Keep this note as a temporary placement and move it later when the correct surveillance-discovery event is realized.
 
+Additional caution:
+
+When repairing or deleting events, also check for surviving rows in related tables such as:
+
+- `calendar_event_projection_books`
+- `calendar_event_sequence`
+- `calendar_event_participants`
+- `calendar_event_locations`
+- `calendar_event_passages`
+- `calendar_event_knowledge`
+
+Do not assume `calendar_events` is the only surface that may still retain references to an event identity.
+
 ---
 
 # Phase 1 — Audit Existing Event State
