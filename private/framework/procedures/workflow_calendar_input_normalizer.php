@@ -174,6 +174,11 @@ function fw_normalize_calendar_book_projection_code(string $value): string
         return 'book_projection_' . $trimmed;
     }
 
+    throw new RuntimeException(
+        'DEBUG trim=' . var_export($trimmed, true) .
+        ' bytes=' . bin2hex($trimmed)
+    );
+
     $normalized = strtolower(
         preg_replace('/[^a-z0-9]/', '', $trimmed) ?? ''
     );
