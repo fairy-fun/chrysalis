@@ -160,6 +160,17 @@ function extract_chrysalis_calendar_event_scene_signals(
         'draws closer',
     ]);
 
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'participant.approaches_focal_character', [
+        'spots me immediately',
+        'locks onto me',
+        'detaches himself from the pack',
+        'saunters over',
+        'comes up',
+        'steps into the light',
+        'walks towards me',
+        'walks toward me',
+    ]);
+
     chrysalis_add_scene_signal_if_any($signals, $normalized, 'participant.named_identification', [
         'Mr Kai Blackwood',
         'Kai Blackwood',
@@ -170,6 +181,7 @@ function extract_chrysalis_calendar_event_scene_signals(
         'captain of the Standard formation team',
         'captain',
         'Standard formation team',
+        'Lead Number One',
     ]);
 
     chrysalis_add_scene_signal_if_any($signals, $normalized, 'interaction.first_direct_address', [
@@ -177,6 +189,15 @@ function extract_chrysalis_calendar_event_scene_signals(
         'Miss Vertue',
         'is it not',
         'We\'ve been expecting you',
+        'You must be the reinforcement',
+    ]);
+
+    chrysalis_add_scene_signal_if_any($signals, $normalized, 'interaction.welcoming_or_social_opening', [
+        'You must be the reinforcement',
+        'I\'d shake your hand',
+        'Welcome to the asylum',
+        'currently two civilians having an illicit conversation',
+        'chief apologist for the humidity',
     ]);
 
     chrysalis_add_scene_signal_if_any($signals, $normalized, 'recognition.prior_reputation', [
@@ -186,6 +207,7 @@ function extract_chrysalis_calendar_event_scene_signals(
         'American Latin team',
         'four consecutive world titles',
         'Latin formation',
+        'I\'ve read about you in the manual',
     ]);
 
     chrysalis_add_scene_signal_if_any($signals, $normalized, 'recognition.charged_mutual', [
