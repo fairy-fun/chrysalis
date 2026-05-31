@@ -110,6 +110,13 @@ Current AUTO_INCREMENT target:
 ALTER TABLE calendar_events AUTO_INCREMENT = 8;
 ```
 
+Temporary note:
+
+CEK-000007
+"Kai knows the audio bug is active in Shay's flat. Shay is unaware of the surveillance device."
+
+Keep this note as a temporary placement and move it later when the correct surveillance-discovery event is realized.
+
 ---
 
 # Phase 1 — Audit Existing Event State
