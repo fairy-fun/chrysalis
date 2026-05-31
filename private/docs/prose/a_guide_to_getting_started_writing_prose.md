@@ -320,7 +320,7 @@ Only after this interview resolves may the GPT proceed to:
 createProseDraft
 → executeCalendarBatchFromProse
 ```
-The GPT MUST preserve the resolved event-layer parent identity throughout the
+The GPT MUST preserve the resolved event-layer parent entity identity throughout the
 interview and MUST NOT reopen Week → Day → Time → Event targeting unless the
 user explicitly changes placement.
 
@@ -487,7 +487,7 @@ Projection
 
 Important:
 
-The resolved `event_id` MUST reference a runtime row whose:
+The resolved `target_event_entity_id` MUST reference a runtime row whose:
 
 ```text
 layer_id = calendar_layer_event
@@ -524,17 +524,17 @@ Required resolved runtime state before prose creation:
 ```json
 {
   "projection_id": "...",
-  "week_id": "...",
-  "day_id": "...",
-  "time_id": "...",
-  "event_id": "..."
+  "week_entity_id": "...",
+  "day_entity_id": "...",
+  "time_entity_id": "...",
+  "target_event_entity_id": "calendar_event:..."
 }
 ```
 
-Only after `event_id` resolves may prose materialize beneath:
+Only after `target_event_entity_id` resolves may prose materialize beneath:
 
 ```text
-calendar_layer_event:<event_id>
+calendar_event:<id>
     → calendar_layer_subevent
 ```
 
@@ -579,17 +579,17 @@ Correct prose attachment requires a resolved concrete runtime event:
 ```json
 {
   "projection_id": "...",
-  "week_id": "...",
-  "day_id": "...",
-  "time_id": "...",
-  "event_id": "evt_123"
+  "week_entity_id": "...",
+  "day_entity_id": "...",
+  "time_entity_id": "...",
+  "target_event_entity_id": "calendar_event:123"
 }
 ```
 
 Valid runtime attachment:
 
 ```text
-calendar_layer_event:evt_123
+calendar_event:123
 ```
 
 Invalid runtime attachment:
