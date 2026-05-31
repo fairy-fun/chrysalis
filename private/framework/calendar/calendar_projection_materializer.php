@@ -18,14 +18,24 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             $projectionId
         );
 
-        // 3. Fetch source events
+        // 3. Clear the derived projection surface for a full rebuild.
+        $delete = $pdo->prepare("
+            DELETE FROM calendar_event_projections
+            WHERE calendar_projection_id = :calendar_projection_id
+        ");
+
+        $delete->execute([
+            'calendar_projection_id' => $projectionId,
+        ]);
+
+        // 4. Fetch source events
         $events = fetch_projection_source_events(
             $pdo,
             $projectionId,
             $projectionType
         );
 
-        // 4. Insert projection rows
+        // 5. Insert projection rows
         $insert = $pdo->prepare("
             INSERT INTO calendar_event_projections (
                 calendar_event_id,
