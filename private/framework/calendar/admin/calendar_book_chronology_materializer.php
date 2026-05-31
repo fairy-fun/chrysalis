@@ -222,14 +222,15 @@ function materialize_calendar_book_time(
         INNER JOIN calendar_book_weeks cbw
             ON cbw.id = cbd.week_id
         WHERE cbd.id = :day_id
-          AND cbd.projection_id = :projection_id
-          AND cbw.projection_id = :projection_id
+          AND cbd.projection_id = :day_projection_id
+          AND cbw.projection_id = :week_projection_id
         LIMIT 1
     ");
 
     $parentStmt->execute([
         ':day_id' => $dayId,
-        ':projection_id' => $projectionId,
+        ':day_projection_id' => $projectionId,
+        ':week_projection_id' => $projectionId,
     ]);
 
     $parentDay = $parentStmt->fetch(PDO::FETCH_ASSOC);
