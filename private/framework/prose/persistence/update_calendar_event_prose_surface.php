@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/calendar/calendar_event_metadata_applier.php';
+
 /* --------------------------------------------------------------------------
 SEMANTIC DISCOVERABILITY DOCTRINE
 -----------------------------------------------------------------------------
@@ -59,12 +61,10 @@ function update_calendar_event_prose_surface(
         $proseFamilyId
     );
 
-    ensure_calendar_node(
+    apply_calendar_event_prose_surface(
         $pdo,
-        [
-            'id' => $calendarEventId,
-            'prose_body' => $semanticSurface,
-        ]
+        $calendarEventId,
+        $semanticSurface
     );
 }
 
