@@ -53,17 +53,21 @@ Recommended minimum insert:
 ```sql
 INSERT INTO characters (
     character_id,
+    character_code_type_id,
+    character_number,
     entity_id,
     char_name_full,
     char_name_first,
     char_name_last
 ) VALUES (
-    'CHAR-MAIN-003',
-    'CHAR-MAIN-003',
-    'Kai Lysander Blackwood',
-    'Kai',
-    'Blackwood'
-);
+             'CHAR-MAIN-006',
+             'character_code_type_main',
+             6,
+             'CHAR-MAIN-006',
+             'Kai Lysander Blackwood',
+             'Kai',
+             'Blackwood'
+         );
 ```
 
 ---
@@ -92,7 +96,7 @@ CHAR-MAIN-003
 
 ## Table
 
-```sql
+```text
 entities
 ```
 
@@ -116,7 +120,7 @@ This exposes the character to broader ontology resolution systems.
 
 ## Table
 
-```sql
+```text
 entity_labels
 ```
 
@@ -151,7 +155,7 @@ INSERT INTO entity_labels (
 
 ## Table
 
-```sql
+```text
 semantic_aliases
 ```
 
@@ -159,17 +163,29 @@ Examples:
 
 ```sql
 INSERT INTO semantic_aliases (
+    id,
+    alias_type_id,
+    alias_scope_id,
+    alias,
     entity_id,
-    alias
+    created_at
 ) VALUES
-(
-    'CHAR-MAIN-003',
-    'Mr Blackwood'
-),
-(
-    'CHAR-MAIN-003',
-    'Kai L Blackwood'
-);
+      (
+          'alias_char_main_003_mr_blackwood',
+          'sat_synonym',
+          'sasc_entity_name',
+          'Mr Blackwood',
+          'CHAR-MAIN-003',
+          NOW()
+      ),
+      (
+          'alias_char_main_003_kai_l_blackwood',
+          'sat_synonym',
+          'sasc_entity_name',
+          'Kai L Blackwood',
+          'CHAR-MAIN-003',
+          NOW()
+      );
 ```
 
 Use aliases for:
@@ -187,7 +203,7 @@ Use aliases for:
 
 ## Table
 
-```sql
+```text
 calendar_event_participants
 ```
 
@@ -195,12 +211,16 @@ Example:
 
 ```sql
 INSERT INTO calendar_event_participants (
-    event_id,
-    entity_id
+    calendar_event_id,
+    entity_id,
+    role_id,
+    subsequence_index
 ) VALUES (
-    7,
-    'CHAR-MAIN-003'
-);
+             7,
+             'CHAR-MAIN-003',
+             '',
+             0
+         );
 ```
 
 This creates participation linkage only.
@@ -239,15 +259,16 @@ implicit ontology existence
 
 Character suggestion workflows should source canonical surfaces directly from:
 
-```sql
+```text
 characters
 ```
 
 instead of relying exclusively on:
 
-```sql
+```text
 entity_labels
 semantic_aliases
 ```
 
 Otherwise canonical characters may remain invisible to prose scanning systems.
+
