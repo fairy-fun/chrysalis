@@ -50,12 +50,6 @@ function assert_calendar_event_creation_paths(): void
         ) ?: ''
     );
 
-    $allowedBookTimeApiFile = (
-        realpath(
-            $repoRoot . '/public_html/pecherie/chill-api/calendar/create_calendar_time.php'
-        ) ?: ''
-    );
-
     $allowedProjectionMaterializerFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
     );
@@ -169,8 +163,7 @@ function assert_calendar_event_creation_paths(): void
         ) {
             if (
                 $path !== $allowedBookChronologyMaterializerFile &&
-                $path !== $allowedBookTimeWorkflowDriverFile &&
-                $path !== $allowedBookTimeApiFile
+                $path !== $allowedBookTimeWorkflowDriverFile
             ) {
                 throw new RuntimeException(
                     "Unauthorised calendar_book_times mutation detected in {$path}"
