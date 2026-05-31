@@ -178,43 +178,13 @@ function fw_execute_workflow_calendar_book_time_create(
 
     /*
     |--------------------------------------------------------------------------
-    | Existing chronology protection
-    |--------------------------------------------------------------------------
-    */
-
-    $existingStmt = $pdo->prepare("
-        SELECT
-            id,
-            entity_id,
-            projection_id,
-            day_id,
-            time_index
-        FROM calendar_book_times
-        WHERE projection_id = :projection_id
-          AND day_id = :day_id
-          AND time_index = :time_index
-        LIMIT 1
-    ");
-
-    $existingStmt->execute([
-        ':projection_id' => $projectionId,
-        ':day_id' => $dayId,
-        ':time_index' => $timeIndex,
-    ]);
-
-    $existingTime = $existingStmt->fetch(PDO::FETCH_ASSOC);
-
-    if (is_array($existingTime)) {
-
-        throw new RuntimeException(
-            'Canonical Book time already exists'
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | Canonical chronology container materialization
     |--------------------------------------------------------------------------
+    |
+    | The Tier 0 materializer is intentionally ensure-like for a specific
+    | canonical locality. Replays of the same payload should resolve the same
+    | Book time row rather than failing solely because the row already exists.
+    |
     */
 
     $time = materialize_calendar_book_time(
@@ -316,8 +286,19 @@ function fw_execute_workflow_calendar_book_time_create(
                     'calendar_book_time_id'
                         => (int)$time['id'],
 
+                    'calendar_time_id'
+                        => (int)$time['id'],
+
                     'entity_id'
                         => $time['entity_id'] ?? null,
+
+                    'summary'
+                        => $time['summary'] ?? null,
+
+                    'sequence_index'
+                        => isset($time['sequence_index'])
+                            ? (int)$time['sequence_index']
+                            : null,
 
                     'projection_build_id'
                         => $projectionBuildId,
