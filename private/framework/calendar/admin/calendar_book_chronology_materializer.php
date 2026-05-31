@@ -45,16 +45,29 @@ function materialize_calendar_book_week(
         return $row;
     }
 
+    $entityId = calendar_book_week_entity_id(
+        $projectionId,
+        $weekIndex
+    );
+
+    ensure_calendar_structure_entity_row(
+        $pdo,
+        $entityId,
+        'entity_type_calendar_week'
+    );
+
     $insert = $pdo->prepare("
         INSERT INTO calendar_book_weeks (
             projection_id,
             week_index,
+            entity_id,
             created_at,
             updated_at
         )
         VALUES (
             :projection_id,
             :week_index,
+            :entity_id,
             NOW(),
             NOW()
         )
@@ -63,6 +76,7 @@ function materialize_calendar_book_week(
     $insert->execute([
         ':projection_id' => $projectionId,
         ':week_index' => $weekIndex,
+        ':entity_id' => $entityId,
     ]);
 
     return reload_calendar_book_week(
@@ -96,7 +110,7 @@ function materialize_calendar_book_day(
     }
 
     $parentStmt = $pdo->prepare("
-        SELECT id
+        SELECT id, week_index
         FROM calendar_book_weeks
         WHERE id = :week_id
           AND projection_id = :projection_id
@@ -108,9 +122,9 @@ function materialize_calendar_book_day(
         ':projection_id' => $projectionId,
     ]);
 
-    $parentWeekId = $parentStmt->fetchColumn();
+    $parentWeek = $parentStmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($parentWeekId === false || (int)$parentWeekId < 1) {
+    if (!is_array($parentWeek)) {
         throw new RuntimeException('calendar_book_week parent not found');
     }
 
@@ -135,12 +149,25 @@ function materialize_calendar_book_day(
         return $row;
     }
 
+    $entityId = calendar_book_day_entity_id(
+        $projectionId,
+        (int)$parentWeek['week_index'],
+        $dayIndex
+    );
+
+    ensure_calendar_structure_entity_row(
+        $pdo,
+        $entityId,
+        'entity_type_calendar_day'
+    );
+
     $insert = $pdo->prepare("
         INSERT INTO calendar_book_days (
             projection_id,
             week_id,
             day_index,
             day_of_week_id,
+            entity_id,
             created_at,
             updated_at
         )
@@ -149,6 +176,7 @@ function materialize_calendar_book_day(
             :week_id,
             :day_index,
             :day_of_week_id,
+            :entity_id,
             NOW(),
             NOW()
         )
@@ -159,6 +187,7 @@ function materialize_calendar_book_day(
         ':week_id' => $weekId,
         ':day_index' => $dayIndex,
         ':day_of_week_id' => $dayOfWeekId,
+        ':entity_id' => $entityId,
     ]);
 
     return reload_calendar_book_day(
@@ -185,10 +214,16 @@ function materialize_calendar_book_time(
     }
 
     $parentStmt = $pdo->prepare("
-        SELECT id
-        FROM calendar_book_days
-        WHERE id = :day_id
-          AND projection_id = :projection_id
+        SELECT
+            cbd.id,
+            cbd.day_index,
+            cbw.week_index
+        FROM calendar_book_days cbd
+        INNER JOIN calendar_book_weeks cbw
+            ON cbw.id = cbd.week_id
+        WHERE cbd.id = :day_id
+          AND cbd.projection_id = :projection_id
+          AND cbw.projection_id = :projection_id
         LIMIT 1
     ");
 
@@ -197,9 +232,9 @@ function materialize_calendar_book_time(
         ':projection_id' => $projectionId,
     ]);
 
-    $parentDayId = $parentStmt->fetchColumn();
+    $parentDay = $parentStmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($parentDayId === false || (int)$parentDayId < 1) {
+    if (!is_array($parentDay)) {
         throw new RuntimeException('calendar_book_day parent not found');
     }
 
@@ -224,11 +259,25 @@ function materialize_calendar_book_time(
         return $row;
     }
 
+    $entityId = calendar_book_time_entity_id(
+        $projectionId,
+        (int)$parentDay['week_index'],
+        (int)$parentDay['day_index'],
+        $timeIndex
+    );
+
+    ensure_calendar_structure_entity_row(
+        $pdo,
+        $entityId,
+        'entity_type_calendar_time'
+    );
+
     $insert = $pdo->prepare("
         INSERT INTO calendar_book_times (
             projection_id,
             day_id,
             time_index,
+            entity_id,
             created_at,
             updated_at
         )
@@ -236,6 +285,7 @@ function materialize_calendar_book_time(
             :projection_id,
             :day_id,
             :time_index,
+            :entity_id,
             NOW(),
             NOW()
         )
@@ -245,6 +295,7 @@ function materialize_calendar_book_time(
         ':projection_id' => $projectionId,
         ':day_id' => $dayId,
         ':time_index' => $timeIndex,
+        ':entity_id' => $entityId,
     ]);
 
     return reload_calendar_book_time(
@@ -326,4 +377,84 @@ function reload_calendar_book_time(
     }
 
     return $row;
+}
+
+function ensure_calendar_structure_entity_row(
+    PDO $pdo,
+    string $entityId,
+    string $entityTypeId
+): void {
+
+    $entityId = trim($entityId);
+    $entityTypeId = trim($entityTypeId);
+
+    if ($entityId === '') {
+        throw new InvalidArgumentException('entity_id must be non-empty');
+    }
+
+    if ($entityTypeId === '') {
+        throw new InvalidArgumentException('entity_type_id must be non-empty');
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO entities (
+            id,
+            entity_type_id,
+            lifecycle_state
+        )
+        VALUES (
+            :id,
+            :entity_type_id,
+            'active'
+        )
+        ON DUPLICATE KEY UPDATE
+            id = id
+    ");
+
+    $stmt->execute([
+        ':id' => $entityId,
+        ':entity_type_id' => $entityTypeId,
+    ]);
+}
+
+function calendar_book_week_entity_id(
+    int $projectionId,
+    int $weekIndex
+): string {
+
+    return sprintf(
+        'calendar_book_week:projection=%d:week=%d',
+        $projectionId,
+        $weekIndex
+    );
+}
+
+function calendar_book_day_entity_id(
+    int $projectionId,
+    int $weekIndex,
+    int $dayIndex
+): string {
+
+    return sprintf(
+        'calendar_book_day:projection=%d:week=%d:day=%d',
+        $projectionId,
+        $weekIndex,
+        $dayIndex
+    );
+}
+
+function calendar_book_time_entity_id(
+    int $projectionId,
+    int $weekIndex,
+    int $dayIndex,
+    int $timeIndex
+): string {
+
+    return sprintf(
+        'calendar_book_time:projection=%d:week=%d:day=%d:time=%d',
+        $projectionId,
+        $weekIndex,
+        $dayIndex,
+        $timeIndex
+    );
 }
