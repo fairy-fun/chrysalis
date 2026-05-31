@@ -1,10 +1,11 @@
 ## Beat Classification Model
 
-event → domain_id → classset_id → (set_id, code) → beat_type_id
+event → event_type_id → beat_classset_id → (set_id, code) → beat_type_id
 
-- Classset is determined by domain (NOT by classifier)
+- Classset is determined by event type (NOT by classifier)
 - Classifier must emit codes valid within the resolved classset
-- (set_id, code) must exist in cvt_calendar_beat_type
+- `(set_id, code)` must exist in `cvt_calendar_beat_type`
+- Domains remain valid human-readable categorizations, but they are not beat-resolution authority
 
 ## Classsets
 
@@ -108,6 +109,6 @@ Return format:
 ## Guarantees
 
 - Classifier must emit a valid code for the resolved classset
-- Invalid codes will fail in resolve_beat_type_id()
+- Invalid codes will fail in `resolve_beat_type_id()`
 - No cross-classset fallback
 - No global code assumptions
