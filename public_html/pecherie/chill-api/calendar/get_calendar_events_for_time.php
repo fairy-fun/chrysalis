@@ -31,7 +31,6 @@ try {
         SELECT
             ce.`id` AS _internal_id,
             ce.entity_id,
-            ce.event_id,
             ce.parent_event_id,
             ce.layer_id,
             ce.sequence_index,
@@ -79,7 +78,6 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             ce.entity_id,
-            ce.event_id,
             ce.layer_id,
             ce.sequence_index,
             ce.summary,
@@ -92,7 +90,7 @@ try {
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_event'
           AND e.entity_type_id = 'entity_type_calendar_event'
-        ORDER BY ce.sequence_index ASC, ce.event_id ASC
+        ORDER BY ce.sequence_index ASC, ce.id ASC
     ");
 
     $stmt->execute([
