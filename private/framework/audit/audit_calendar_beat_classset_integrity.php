@@ -6,7 +6,28 @@ declare(strict_types=1);
 function assert_calendar_beat_classset_integrity(PDO $pdo, string $schemaName): void
 {
     // --------------------------------------------------
-    // 1. Beat types referencing invalid classsets
+    // 1. Unmapped domains in calendar_events
+    // --------------------------------------------------
+    $stmt = $pdo->query("
+        SELECT DISTINCT e.domain_id
+        FROM {$schemaName}.calendar_events e
+        LEFT JOIN {$schemaName}.calendar_domain_beat_classset_map m
+            ON m.domain_id = e.domain_id
+        WHERE e.domain_id IS NOT NULL
+          AND e.domain_id <> ''
+          AND m.domain_id IS NULL
+    ");
+
+    $unmapped = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!empty($unmapped)) {
+        throw new RuntimeException(
+            'Unmapped calendar_event domains: ' . implode(', ', $unmapped)
+        );
+    }
+
+    // --------------------------------------------------
+    // 2. Beat types referencing invalid classsets
     // --------------------------------------------------
     $stmt = $pdo->query("
         SELECT DISTINCT b.set_id
@@ -25,7 +46,7 @@ function assert_calendar_beat_classset_integrity(PDO $pdo, string $schemaName): 
     }
 
     // --------------------------------------------------
-    // 2. Mapping table referencing invalid classsets
+    // 3. Mapping table referencing invalid classsets
     // --------------------------------------------------
     $stmt = $pdo->query("
         SELECT DISTINCT m.classset_id
