@@ -86,8 +86,180 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
         throw new RuntimeException('Book time input is required');
     }
 
-    $projectionCode = fw_normalize_calendar_book_projection_code(
+    $projection = fw_resolve_calendar_book_projection(
+        $pdo,
         $projectionInput
+    );
+
+    $weekIndex = fw_normalize_calendar_index_value(
+        $weekInput,
+        'week'
+    );
+
+    $dayIndex = fw_normalize_calendar_day_index(
+        $dayInput
+    );
+
+    $timeIndex = fw_normalize_calendar_index_value(
+        $timeInput,
+        'time'
+    );
+
+    return [
+        'success' => true,
+        'context' => array_merge(
+            $context,
+            [
+                'projection' => $projection,
+                'calendar_normalized_input' => [
+                    'projection_id' => (int)$projection['id'],
+                    'projection_code' => $projection['projection_code'],
+                    'book_projection_code' => $projection['projection_code'],
+                    'week_index' => $weekIndex,
+                    'day_index' => $dayIndex,
+                    'time_index' => $timeIndex,
+                ],
+            ]
+        ),
+    ];
+}
+
+function fw_execute_workflow_calendar_normalize_book_time_input(
+    PDO $pdo,
+    array $action,
+    array $input = [],
+    array $context = []
+): array {
+
+    $payload = fw_resolve_workflow_value(
+        $action['payload'] ?? [],
+        $input,
+        $context
+    );
+
+    $forbiddenKeys = [
+        'chronology_address',
+        'sequence_index',
+        'parent_event_id',
+        'week_id',
+        'day_id',
+        'book_time_id',
+        'time_index',
+        'event_index',
+        'subevent_index',
+    ];
+
+    foreach ($forbiddenKeys as $key) {
+        if (array_key_exists($key, $payload)) {
+            throw new RuntimeException(
+                'Forbidden ontology field detected: ' . $key
+            );
+        }
+    }
+
+    $projectionInput = trim((string)(
+        $payload['projection'] ??
+        $payload['projection_id'] ??
+        $payload['book'] ??
+        ''
+    ));
+
+    $weekInput = trim((string)(
+        $payload['week'] ??
+        $payload['week_index'] ??
+        ''
+    ));
+
+    $dayInput = trim((string)(
+        $payload['day'] ??
+        $payload['day_index'] ??
+        ''
+    ));
+
+    if ($projectionInput === '') {
+        throw new RuntimeException('Book projection input is required');
+    }
+
+    if ($weekInput === '') {
+        throw new RuntimeException('Book week input is required');
+    }
+
+    if ($dayInput === '') {
+        throw new RuntimeException('Book day input is required');
+    }
+
+    $projection = fw_resolve_calendar_book_projection(
+        $pdo,
+        $projectionInput
+    );
+
+    $weekIndex = fw_normalize_calendar_index_value(
+        $weekInput,
+        'week'
+    );
+
+    $dayIndex = fw_normalize_calendar_day_index(
+        $dayInput
+    );
+
+    return [
+        'success' => true,
+        'context' => array_merge(
+            $context,
+            [
+                'projection' => $projection,
+                'calendar_normalized_input' => [
+                    'projection_id' => (int)$projection['id'],
+                    'projection_code' => $projection['projection_code'],
+                    'book_projection_code' => $projection['projection_code'],
+                    'week_index' => $weekIndex,
+                    'day_index' => $dayIndex,
+                ],
+            ]
+        ),
+    ];
+}
+
+function fw_resolve_calendar_book_projection(
+    PDO $pdo,
+    string $value
+): array {
+
+    $trimmed = trim($value);
+
+    if ($trimmed === '') {
+        throw new RuntimeException(
+            'Book projection input is required'
+        );
+    }
+
+    if (ctype_digit($trimmed) && (int)$trimmed > 0) {
+        $projectionStmt = $pdo->prepare('
+            SELECT
+                id,
+                entity_id,
+                projection_type_id,
+                projection_code
+            FROM calendar_projections
+            WHERE id = :projection_id
+              AND projection_type_id = :projection_type_id
+            LIMIT 1
+        ');
+
+        $projectionStmt->execute([
+            'projection_id' => (int)$trimmed,
+            'projection_type_id' => 'projection_type_book',
+        ]);
+
+        $projection = $projectionStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (is_array($projection)) {
+            return $projection;
+        }
+    }
+
+    $projectionCode = fw_normalize_calendar_book_projection_code(
+        $trimmed
     );
 
     $projectionStmt = $pdo->prepare('
@@ -115,36 +287,7 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
         );
     }
 
-    $weekIndex = fw_normalize_calendar_index_value(
-        $weekInput,
-        'week'
-    );
-
-    $dayIndex = fw_normalize_calendar_day_index(
-        $dayInput
-    );
-
-    $timeIndex = fw_normalize_calendar_index_value(
-        $timeInput,
-        'time'
-    );
-
-    return [
-        'success' => true,
-        'context' => array_merge(
-            $context,
-            [
-                'projection' => $projection,
-                'calendar_normalized_input' => [
-                    'projection_id' => (int)$projection['id'],
-                    'projection_code' => $projection['projection_code'],
-                    'week_index' => $weekIndex,
-                    'day_index' => $dayIndex,
-                    'time_index' => $timeIndex,
-                ],
-            ]
-        ),
-    ];
+    return $projection;
 }
 
 function fw_normalize_calendar_book_projection_code(string $value): string
