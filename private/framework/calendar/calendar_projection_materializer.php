@@ -18,15 +18,13 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             $projectionId
         );
 
-        // 3. Clear the derived projection surface for a full rebuild.
-        $delete = $pdo->prepare("
-            DELETE FROM calendar_event_projections
-            WHERE calendar_projection_id = :calendar_projection_id
-        ");
-
-        $delete->execute([
-            'calendar_projection_id' => $projectionId,
-        ]);
+        // 3. Clear the derived projection surface for a full rebuild when
+        // runtime permissions allow it. Some workflow DB users are allowed to
+        // insert/update derived projection rows but not delete them.
+        $performedFullClear = clear_calendar_projection_rows_for_rebuild(
+            $pdo,
+            $projectionId
+        );
 
         // 4. Fetch source events
         $events = fetch_projection_source_events(
@@ -35,7 +33,7 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             $projectionType
         );
 
-        // 5. Insert projection rows
+        // 5. Insert or refresh projection rows
         $insert = $pdo->prepare("
             INSERT INTO calendar_event_projections (
                 calendar_event_id,
@@ -75,6 +73,16 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
                 NOW(),
                 NOW()
             )
+            ON DUPLICATE KEY UPDATE
+                projection_address = VALUES(projection_address),
+                chronology_address = VALUES(chronology_address),
+                projection_starts_at = VALUES(projection_starts_at),
+                projection_ends_at = VALUES(projection_ends_at),
+                parent_projection_row_id = VALUES(parent_projection_row_id),
+                projection_sequence = VALUES(projection_sequence),
+                render_label = VALUES(render_label),
+                notes = VALUES(notes),
+                updated_at = NOW()
         ");
 
         foreach ($events as $sequence => $event) {
@@ -99,6 +107,49 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
         }
         throw $e;
     }
+}
+
+function clear_calendar_projection_rows_for_rebuild(
+    PDO $pdo,
+    int $projectionId
+): bool {
+
+    $delete = $pdo->prepare("
+        DELETE FROM calendar_event_projections
+        WHERE calendar_projection_id = :calendar_projection_id
+    ");
+
+    try {
+        $delete->execute([
+            'calendar_projection_id' => $projectionId,
+        ]);
+
+        return true;
+    } catch (PDOException $e) {
+        if (!is_calendar_projection_delete_permission_error($e)) {
+            throw $e;
+        }
+
+        return false;
+    }
+}
+
+function is_calendar_projection_delete_permission_error(
+    PDOException $e
+): bool {
+
+    $info = $e->errorInfo ?? null;
+
+    if (!is_array($info)) {
+        return false;
+    }
+
+    $driverCode = isset($info[1]) ? (int)$info[1] : 0;
+    $driverMessage = isset($info[2]) ? (string)$info[2] : '';
+
+    return $driverCode === 1142
+        && str_contains($driverMessage, 'DELETE command denied')
+        && str_contains($driverMessage, 'calendar_event_projections');
 }
 
 function build_calendar_projection_row(
