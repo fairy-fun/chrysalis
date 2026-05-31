@@ -1,6 +1,101 @@
 <?php
 declare(strict_types=1);
 
+function fw_extract_chat_bootstrap_book_number(
+    string $userMessage
+): ?int {
+
+    if (
+        preg_match(
+            '/\bbook\s+(\d+)\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        return (int)$matches[1];
+    }
+
+    if (
+        preg_match(
+            '/\bBOOK-(\d{1,3})\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        return (int)$matches[1];
+    }
+
+    if (
+        preg_match(
+            '/\bbook_projection_BOOK-(\d{3})\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        return (int)$matches[1];
+    }
+
+    return null;
+}
+
+function fw_extract_chat_bootstrap_projection_code(
+    string $userMessage
+): ?string {
+
+    $bookNumber = fw_extract_chat_bootstrap_book_number(
+        $userMessage
+    );
+
+    if (!is_int($bookNumber) || $bookNumber < 1) {
+        return null;
+    }
+
+    return 'book_projection_BOOK-' . str_pad(
+        (string)$bookNumber,
+        3,
+        '0',
+        STR_PAD_LEFT
+    );
+}
+
+function fw_extract_chat_bootstrap_day_index(
+    string $userMessage
+): ?int {
+
+    if (
+        preg_match(
+            '/\bday\s+(\d+)\b/i',
+            $userMessage,
+            $matches
+        ) === 1
+    ) {
+        return (int)$matches[1];
+    }
+
+    $dayMap = [
+        'sunday' => 1,
+        'monday' => 2,
+        'tuesday' => 3,
+        'wednesday' => 4,
+        'thursday' => 5,
+        'friday' => 6,
+        'saturday' => 7,
+    ];
+
+    foreach ($dayMap as $label => $dayIndex) {
+        if (
+            preg_match(
+                '/\b' . preg_quote($label, '/') . '\b/i',
+                $userMessage
+            ) === 1
+        ) {
+            return $dayIndex;
+        }
+    }
+
+    return null;
+}
+
 function fw_resolve_workflow_id_from_chat_message(
     string $userMessage
 ): ?string {
@@ -24,7 +119,7 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
-            '/\\b(show|display)\\s+(me\\s+)?(the\\s+)?(published|all)\\s+prose\\s+for\\b/',
+            '/\b(show|display)\s+(me\s+)?(the\s+)?(published|all)\s+prose\s+for\b/',
             $normalisedMessage
         ) === 1
     ) {
@@ -33,9 +128,17 @@ function fw_extract_chat_bootstrap_input(
         $input['prose_mode'] = 'export';
     }
 
+    $projectionCode = fw_extract_chat_bootstrap_projection_code(
+        $userMessage
+    );
+
+    if (is_string($projectionCode) && $projectionCode !== '') {
+        $input['projection_id'] = $projectionCode;
+    }
+
     if (
         preg_match(
-            '/\\b(calendar_event:\\d+)\\b/i',
+            '/\b(calendar_event:\d+)\b/i',
             $userMessage,
             $matches
         ) === 1
@@ -45,7 +148,7 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
-            '/\\b(\\d{8}-[a-z]+)\\b/i',
+            '/\b(\d{8}-[a-z]+)\b/i',
             $userMessage,
             $matches
         ) === 1
@@ -59,35 +162,37 @@ function fw_extract_chat_bootstrap_input(
 
     if (
         preg_match(
-            '/\\b([0-9]+)\\.([0-9]+)\\b/',
+            '/\b([0-9]+)\.([0-9]+)\b/',
             $userMessage,
             $matches
         ) === 1
     ) {
         $input['week'] = $matches[1];
         $input['day'] = $matches[2];
+        $input['week_index'] = $matches[1];
+        $input['day_index'] = $matches[2];
 
         return $input;
     }
 
     if (
         preg_match(
-            '/\\bweek\\s+([0-9]+)\\b/i',
+            '/\bweek\s+([0-9]+)\b/i',
             $userMessage,
             $matches
         ) === 1
     ) {
         $input['week'] = $matches[1];
+        $input['week_index'] = $matches[1];
     }
 
-    if (
-        preg_match(
-            '/\\bday\\s+([0-9]+)\\b/i',
-            $userMessage,
-            $matches
-        ) === 1
-    ) {
-        $input['day'] = $matches[1];
+    $dayIndex = fw_extract_chat_bootstrap_day_index(
+        $userMessage
+    );
+
+    if (is_int($dayIndex) && $dayIndex > 0) {
+        $input['day'] = (string)$dayIndex;
+        $input['day_index'] = (string)$dayIndex;
     }
 
     return $input;
