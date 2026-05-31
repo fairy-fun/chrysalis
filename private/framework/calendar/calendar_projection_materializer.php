@@ -30,7 +30,6 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             INSERT INTO calendar_event_projections (
                 calendar_event_id,
                 calendar_projection_id,
-                build_id,
 
                 projection_address,
                 chronology_address,
@@ -50,7 +49,6 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
             VALUES (
                 :calendar_event_id,
                 :calendar_projection_id,
-                :build_id,
 
                 :projection_address,
                 :chronology_address,
@@ -103,7 +101,6 @@ function build_calendar_projection_row(
     $row = [
         'calendar_event_id' => $event['id'],
         'calendar_projection_id' => $projectionId,
-        'build_id' => 1,
 
         'projection_address' => null,
         'chronology_address' => null,
