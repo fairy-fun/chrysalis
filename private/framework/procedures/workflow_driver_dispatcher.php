@@ -50,6 +50,7 @@ function fw_execute_workflow_driver_operation(
 
         'calendar' => [
             'normalize_book_event_input' => 'fw_execute_workflow_calendar_normalize_book_event_input',
+            'normalize_book_time_input' => 'fw_execute_workflow_calendar_normalize_book_time_input',
             'create_book_event' => 'fw_execute_workflow_calendar_create_book_event',
             'create_book_week' => 'fw_execute_workflow_calendar_book_week_create',
             'create_book_day' => 'fw_execute_workflow_calendar_book_day_create',
