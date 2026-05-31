@@ -53,7 +53,6 @@ try {
             SELECT
                 ce.`id` AS _internal_id,
                 ce.entity_id,
-                ce.event_id,
                 ce.parent_event_id AS _internal_parent_id,
                 ce.layer_id,
                 ce.sequence_index,
@@ -73,7 +72,6 @@ try {
             SELECT
                 child.`id` AS _internal_id,
                 child.entity_id,
-                child.event_id,
                 child.parent_event_id AS _internal_parent_id,
                 child.layer_id,
                 child.sequence_index,
@@ -94,7 +92,6 @@ try {
             _internal_id,
             _internal_parent_id,
             entity_id,
-            event_id,
             layer_id,
             sequence_index,
             summary,
@@ -146,7 +143,6 @@ try {
         $row['_internal_parent_id'] = $row['_internal_parent_id'] === null
             ? null
             : (int)$row['_internal_parent_id'];
-        $row['event_id'] = (int)$row['event_id'];
         $row['sequence_index'] = $row['sequence_index'] === null
             ? null
             : (int)$row['sequence_index'];
