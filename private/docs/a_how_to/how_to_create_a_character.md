@@ -1,0 +1,253 @@
+# How To Create a Character in the Database
+
+## Canonical Doctrine
+
+Canonical character identity begins in:
+
+```text
+characters
+```
+
+This is the authoritative registry for character existence.
+
+Do NOT begin character creation from:
+
+```text
+entity_labels
+semantic_aliases
+calendar_event_participants
+```
+
+Those are downstream ontology/support structures.
+
+---
+
+# Canonical Creation Order
+
+```text
+characters
+    ->
+entities
+    ->
+entity_labels
+    ->
+semantic_aliases
+    ->
+participant attachment
+```
+
+---
+
+# Step 1 — Create the Canonical Character Row
+
+## Table
+
+```text
+characters
+```
+
+## Minimum Required Fields
+
+Recommended minimum insert:
+
+```sql
+INSERT INTO characters (
+    character_id,
+    entity_id,
+    char_name_full,
+    char_name_first,
+    char_name_last
+) VALUES (
+    'CHAR-MAIN-003',
+    'CHAR-MAIN-003',
+    'Kai Lysander Blackwood',
+    'Kai',
+    'Blackwood'
+);
+```
+
+---
+
+# Canonical ID Doctrine
+
+Recommended canonical identity format:
+
+```text
+CHAR-MAIN-###
+```
+
+Examples:
+
+```text
+CHAR-MAIN-001
+CHAR-MAIN-002
+CHAR-MAIN-003
+```
+
+`character_id` and `entity_id` should remain aligned unless a future ontology split becomes necessary.
+
+---
+
+# Step 2 — Create the Entity Row
+
+## Table
+
+```sql
+entities
+```
+
+## Insert
+
+```sql
+INSERT INTO entities (
+    id,
+    entity_type_id
+) VALUES (
+    'CHAR-MAIN-003',
+    'entity_type_character'
+);
+```
+
+This exposes the character to broader ontology resolution systems.
+
+---
+
+# Step 3 — Create Canonical Entity Labels
+
+## Table
+
+```sql
+entity_labels
+```
+
+Recommended inserts:
+
+```sql
+INSERT INTO entity_labels (
+    entity_id,
+    label
+) VALUES
+(
+    'CHAR-MAIN-003',
+    'Kai Lysander Blackwood'
+),
+(
+    'CHAR-MAIN-003',
+    'Kai Blackwood'
+),
+(
+    'CHAR-MAIN-003',
+    'Kai'
+),
+(
+    'CHAR-MAIN-003',
+    'Blackwood'
+);
+```
+
+---
+
+# Step 4 — Optional Alias Expansion
+
+## Table
+
+```sql
+semantic_aliases
+```
+
+Examples:
+
+```sql
+INSERT INTO semantic_aliases (
+    entity_id,
+    alias
+) VALUES
+(
+    'CHAR-MAIN-003',
+    'Mr Blackwood'
+),
+(
+    'CHAR-MAIN-003',
+    'Kai L Blackwood'
+);
+```
+
+Use aliases for:
+
+- abbreviations
+- nicknames
+- honorifics
+- alternate spellings
+- OCR variants
+- prose shorthand
+
+---
+
+# Step 5 — Attach Character to Events
+
+## Table
+
+```sql
+calendar_event_participants
+```
+
+Example:
+
+```sql
+INSERT INTO calendar_event_participants (
+    event_id,
+    entity_id
+) VALUES (
+    7,
+    'CHAR-MAIN-003'
+);
+```
+
+This creates participation linkage only.
+
+It does NOT create ontology.
+
+---
+
+# Important Doctrine
+
+## Character existence != event participation
+
+These are separate concepts.
+
+Correct topology:
+
+```text
+characters
+    ->
+ontology surfaces
+    ->
+event attachment
+```
+
+NOT:
+
+```text
+event mention
+    ->
+implicit ontology existence
+```
+
+---
+
+# Recommended Future Repair
+
+Character suggestion workflows should source canonical surfaces directly from:
+
+```sql
+characters
+```
+
+instead of relying exclusively on:
+
+```sql
+entity_labels
+semantic_aliases
+```
+
+Otherwise canonical characters may remain invisible to prose scanning systems.
