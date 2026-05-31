@@ -5,30 +5,19 @@ declare(strict_types=1);
 function assert_calendar_beat_classset_integrity(PDO $pdo, string $schemaName): void
 {
     $stmt = $pdo->query("
-        SELECT domain_id
-        FROM {$schemaName}.calendar_domain_beat_classset_map
-        GROUP BY domain_id
-        HAVING COUNT(*) > 1
-    ");
-
-    $duplicates = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-    if (!empty($duplicates)) {
-        throw new RuntimeException('Duplicate domain classset mappings: ' . implode(', ', $duplicates));
-    }
-
-    $stmt = $pdo->query("
-        SELECT DISTINCT m.classset_id
-        FROM {$schemaName}.calendar_domain_beat_classset_map m
+        SELECT DISTINCT et.beat_classset_id
+        FROM {$schemaName}.calendar_event_type_classvals et
         LEFT JOIN {$schemaName}.calendar_beat_classsets c
-            ON c.id = m.classset_id
-        WHERE c.id IS NULL
+            ON c.id = et.beat_classset_id
+        WHERE et.beat_classset_id IS NOT NULL
+          AND et.beat_classset_id <> ''
+          AND c.id IS NULL
     ");
 
     $invalidMappings = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if (!empty($invalidMappings)) {
-        throw new RuntimeException('Invalid domain to classset mappings: ' . implode(', ', $invalidMappings));
+        throw new RuntimeException('Invalid event type to classset mappings: ' . implode(', ', $invalidMappings));
     }
 
     $stmt = $pdo->query("
