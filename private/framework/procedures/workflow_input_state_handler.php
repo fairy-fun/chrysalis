@@ -181,7 +181,9 @@ function fw_workflow_render_input_prompt(
         }
 
         $message = $prompt
-            . "\n\nThis will create canonical Time " . $nextTimeIndex . '.'';
+            . "\n\nThis will create canonical Time "
+            . $nextTimeIndex
+            . '.';
 
         if ($labels === []) {
             return $message
