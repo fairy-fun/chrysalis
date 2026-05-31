@@ -91,7 +91,7 @@ try {
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_event'
           AND e.entity_type_id = 'entity_type_calendar_event'
-        ORDER BY ce.sequence_index ASC, ce.id ASC
+        ORDER BY ce.sequence_index ASC
     ");
 
     $stmt->execute([
