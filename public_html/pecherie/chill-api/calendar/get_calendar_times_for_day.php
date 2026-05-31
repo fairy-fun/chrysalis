@@ -80,8 +80,7 @@ try {
           AND ce.layer_id = 'calendar_layer_time'
         ORDER BY
             tl.sort_order ASC,
-            ce.sequence_index ASC,
-            ce.id ASC
+            ce.sequence_index ASC
     ");
 
     $stmt->execute([':parent_event_id' => (int)$day['_internal_id']]);
