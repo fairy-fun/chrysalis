@@ -84,7 +84,7 @@ function resolve_prose_target_calendar_node(
 
     $row = $rows[0];
 
-    // ✅ Phase 14: semantic assertion
+    // Phase 14: semantic assertion
     if (!isset($row['entity_type_id']) || !is_string($row['entity_type_id'])) {
         throw new RuntimeException('Missing entity_type_id for resolved calendar node');
     }
