@@ -261,7 +261,9 @@ LIMIT 1;
 Current runtime doctrine:
 
 - projection rows are rebuilt from source event membership
-- chronology locality is carried by `chronology_address`
+- `chronology_address` is a derived projection artifact used for lookup, ordering, and rendering
+- `chronology_address` is not the canonical authority for Book locality
+- canonical Book locality remains anchored in source event/container semantics, especially `projection_id`, `book_time_id`, and `event_index`
 - no `build_id` column is required in the live projection table
 
 If projection drift is suspected, inspect for:
