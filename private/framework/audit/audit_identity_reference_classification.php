@@ -49,9 +49,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         // domain entity references
         ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['attribute_domains', 'domain_id', 'DOMAIN_ENTITY_FK'],
-        ['calendar_events', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['calendar_domain_beat_classset_map', 'domain_id', 'DOMAIN_CLASSVAL'],
-        ['calendar_records', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'input_domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'target_domain_id', 'DOMAIN_ENTITY_FK'],
         ['idea_classifications', 'domain_id', 'DOMAIN_ENTITY_FK'],
