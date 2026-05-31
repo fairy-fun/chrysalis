@@ -212,6 +212,33 @@ function fw_match_chat_workflow(
 
     if (
         preg_match(
+            '/\\b(add|create)\\s+(a\\s+new\\s+)?time(\\s+slot)?\\s+to\\s+book\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_book_time_create';
+    }
+
+    if (
+        preg_match(
+            '/\\b(create|add)\\s+(a\\s+)?book\\s+time\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_book_time_create';
+    }
+
+    if (
+        preg_match(
+            '/\\b(create|add)\\s+(a\\s+)?time\\s+slot\\b/',
+            $message
+        ) === 1
+    ) {
+        return 'calendar_book_time_create';
+    }
+
+    if (
+        preg_match(
             '/\\b(continue|resume|use|open|attach)\\s+(calendar\\s+)?event\\s+calendar_event:\\d+\\b/',
             $message
         ) === 1
@@ -246,7 +273,7 @@ function fw_match_chat_workflow(
         return 'calendar_event_add_prose';
     }
 
-    if (preg_match('/\bcalendar_event:\d+\b/', $message) === 1
+    if (preg_match('/\\bcalendar_event:\\d+\\b/', $message) === 1
         && str_contains($message, 'subevent')) {
         return 'calendar_event_process_attached_prose';
     }
@@ -347,6 +374,24 @@ function fw_match_chat_workflow(
 
         'create a book event'
         => 'calendar_book_event_create',
+
+        'create book time'
+        => 'calendar_book_time_create',
+
+        'create a book time'
+        => 'calendar_book_time_create',
+
+        'add time to book'
+        => 'calendar_book_time_create',
+
+        'add a time to book'
+        => 'calendar_book_time_create',
+
+        'create time slot'
+        => 'calendar_book_time_create',
+
+        'add time slot'
+        => 'calendar_book_time_create',
 
         'i want to set the canonical export draft'
         => 'prose_projection_set_published_draft',
