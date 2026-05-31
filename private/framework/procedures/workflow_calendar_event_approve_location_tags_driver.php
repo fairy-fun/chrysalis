@@ -16,7 +16,7 @@ function fw_workflow_location_tag_approval_status(
         return 'approved';
     }
 
-    if (preg_match('/place-[a-z0-9\-]+/i', $value) === 1) {
+    if (preg_match('/place-[a-z0-9\\-]+/i', $value) === 1) {
         return 'partial';
     }
 
@@ -38,7 +38,7 @@ function fw_workflow_location_tag_approval_status(
 function fw_extract_place_entity_ids(string $text): array
 {
     preg_match_all(
-        '/PLACE-[A-Z0-9\-]+/i',
+        '/PLACE-[A-Z0-9\\-]+/i',
         $text,
         $matches
     );
@@ -271,11 +271,6 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
         );
     }
 
-    $proseRow = fw_fetch_calendar_event_attached_prose_for_location_approval(
-        $pdo,
-        $calendarEventEntityId
-    );
-
     $existingStmt = $pdo->prepare("
         SELECT place_id
         FROM calendar_event_locations
@@ -319,6 +314,11 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
             ),
         ];
     }
+
+    $proseRow = fw_fetch_calendar_event_attached_prose_for_location_approval(
+        $pdo,
+        $calendarEventEntityId
+    );
 
     $suggestions = suggest_prose_places(
         $pdo,
