@@ -14,11 +14,17 @@ function classify_chrysalis_calendar_event_scene(array $signals): ?array
     $classes = [];
 
     if (
-        chrysalis_scene_has($signals, 'participant.enters_scene')
-        && chrysalis_scene_has($signals, 'participant.named_identification')
+        chrysalis_scene_has_any($signals, [
+            'participant.enters_scene',
+            'participant.approaches_focal_character',
+        ])
         && chrysalis_scene_has_any($signals, [
+            'participant.named_identification',
             'role.team_role_identified',
+        ])
+        && chrysalis_scene_has_any($signals, [
             'interaction.first_direct_address',
+            'interaction.welcoming_or_social_opening',
             'recognition.prior_reputation',
         ])
     ) {
@@ -26,9 +32,9 @@ function classify_chrysalis_calendar_event_scene(array $signals): ?array
             'character_introduction',
             0.82,
             [
-                'participant.enters_scene',
-                'participant.named_identification',
-                'team_role_address_or_reputation',
+                'participant_entry_or_approach',
+                'named_or_role_identification',
+                'address_welcome_or_reputation_context',
             ]
         );
     }
