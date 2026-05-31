@@ -52,7 +52,6 @@ public_html/pecherie/chill-api/calendar/create_calendar_event.php
 "event_label": "Foxtrot Technique — Centre vs Foot",
 
 "event_type_id": "EVENT_TYPE_CLASS",
-"domain_id": "DOMAIN_CLASS",
 "class_type_id": "CLASS_TYPE_CLASS",
 "location_id": "PLACE_ID",
 
@@ -65,10 +64,11 @@ parent_time_entity_id → required
 event_label → maps to summary
 
 event_type_id → classval (validated)
-domain_id → classval (validated)
 class_type_id → classval (validated)
 
-domain_id remains the canonical root-event input used for beat-classset resolution.
+event_type_id is the canonical root-event input used for beat-classset resolution via `calendar_event_type_classvals.beat_classset_id`.
+
+domain categorization now lives on the event type registry, not on `calendar_events` rows.
 
 location_id → reference (NOT classval)
 ### Structural Behaviour
@@ -207,7 +207,6 @@ Validated before calling ensurer:
 
 time_label_id
 event_type_id
-domain_id
 class_type_id
 
 #### Helper:
