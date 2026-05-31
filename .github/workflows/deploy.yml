@@ -129,6 +129,11 @@ jobs:
         run: |
           ssh -vvv -o BatchMode=yes sxnzlfun@108.174.195.142 'echo connected'
 
+      - name: Preflight single-file rsync
+        run: |
+          rsync -av -e "ssh -o BatchMode=yes" .github/workflows/deploy.yml \
+            sxnzlfun@108.174.195.142:/home/sxnzlfun/deploy-preflight.yml
+
       - name: Sync public files
         run: |
           rsync -rlvtz --delete -e ssh \
