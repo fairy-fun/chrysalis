@@ -35,7 +35,6 @@ return [
     'visible_files' => [
         'private/framework/procedures/procedure_registry_reader.php',
         'private/framework/procedures/procedure_source_inspector.php',
-        'private/framework/procedures/calendar_event_id.php',
         'private/framework/calendar/calendar_event_projection_target_guard.php',
         'private/framework/calendar/calendar_hierarchy_validator.php',
         'private/framework/calendar/calendar_node_ensurer.php',
