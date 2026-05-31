@@ -4,7 +4,7 @@
 
 Canonical.
 
-The calendar beat system resolves beat types through domain-specific beat classsets.
+The calendar beat system resolves beat types through event-type-owned beat classsets.
 
 The deprecated `calendar_beat_domain_map` table must not be used for beat resolution.
 
@@ -13,11 +13,11 @@ The deprecated `calendar_beat_domain_map` table must not be used for beat resolu
 ```text
 calendar_event.entity_id
     ↓
-calendar_events.domain_id
+calendar_events.event_type_id
     ↓
-calendar_domain_beat_classset_map
+calendar_event_type_classvals.beat_classset_id
     ↓
-classset_id
+calendar_beat_classsets
     ↓
 cvt_calendar_beat_type (set_id, code)
     ↓
@@ -31,15 +31,17 @@ Beat type identity is scoped by classset.
 
 Beat codes are not globally authoritative.
 
-The same beat code may exist in more than one classset and may resolve to a different beat type row depending on the parent event domain.
+The same beat code may exist in more than one classset and may resolve to a different beat type row depending on the parent event type.
 
 ## Classset Role
 
-calendar_domain_beat_classset_map is the authoritative bridge from calendar domain to beat classset.
+`calendar_event_type_classvals.beat_classset_id` is the authoritative bridge from event type to beat classset.
 
-cvt_calendar_beat_type.set_id partitions beat types by classset.
+`cvt_calendar_beat_type.set_id` partitions beat types by classset.
 
-The planner must resolve the parent event first, then resolve the parent event domain, then select the classset, then resolve the beat type by (set_id, code).
+The planner must resolve the parent event first, then resolve the parent event type, then select the classset, then resolve the beat type by `(set_id, code)`.
+
+`domain_entity_id` on event types remains valid as human-readable domain categorization, but it is not beat-resolution authority.
 
 ## Fallback
 
@@ -51,31 +53,31 @@ This fallback is defensive only.
 
 It is not the primary resolution mechanism and must not be used to mask missing or invalid parent event resolution.
 
-Failure Conditions
+## Failure Conditions
 
 The planner must fail if:
 
-* parent_event_entity_id is missing.
+* `parent_event_entity_id` is missing.
 * The parent event cannot be resolved.
 * The parent event is not a valid calendar event.
 * The beat code is unknown within the resolved classset.
 * Beat type resolution produces no row.
 * Beat type resolution produces more than one row.
 
-## Deprecated Table
+## Deprecated Tables and Paths
 
-calendar_beat_domain_map is deprecated.
+`calendar_beat_domain_map` is deprecated.
 
 It encodes the wrong relationship:
 
 domain → individual beat type
 
-The correct relationship is:
+`calendar_domain_beat_classset_map` is also legacy for beat resolution.
 
-domain → beat classset → beat types
+Beat resolution must not derive classsets from event domains.
 
-Do not read from calendar_beat_domain_map.
+Do not read either table for planner authority.
 
-Do not use it as validation authority.
+Do not use them as validation authority.
 
-Do not reintroduce planner logic that joins domain directly to beat type.
+Do not reintroduce planner logic that joins domain directly to beat type or classset.
