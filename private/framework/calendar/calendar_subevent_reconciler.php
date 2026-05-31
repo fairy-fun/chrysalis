@@ -95,7 +95,6 @@ function load_existing_calendar_subevents(
         SELECT
             ce.id,
             ce.entity_id,
-            ce.event_id,
             ce.parent_event_id,
             ce.layer_id,
             ce.summary,
@@ -112,7 +111,7 @@ function load_existing_calendar_subevents(
         FROM calendar_events ce
 
         INNER JOIN calendar_events parent
-            ON parent.event_id = ce.parent_event_id
+            ON parent.id = ce.parent_event_id
 
         WHERE parent.entity_id = :parent_entity_id
           AND parent.layer_id = 'calendar_layer_event'
@@ -183,8 +182,8 @@ function reconcile_existing_calendar_subevent(
         'status' => 'updated',
 
         'event' => [
+            'calendar_event_id' => (int)$updated['id'],
             'entity_id' => $updated['entity_id'],
-            'event_id' => $updated['event_id'],
             'chronology_address' => $updated['chronology_address'],
             'subevent_index' => $updated['subevent_index'],
             'sequence_index' => $updated['sequence_index'],
