@@ -28,7 +28,8 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         $violations[] = [
             'violation_code' => 'invalid_calendar_event_entity',
             'bad_count' => $badCalendarEventLinks,
-            'rule' => 'calendar_events.entity_id must resolve to entities.id with an entity_type_id matching calendar_events.layer_id',        ];
+            'rule' => 'calendar_events.entity_id must resolve to entities.id with an entity_type_id matching calendar_events.layer_id',
+        ];
     }
 
     $sql = "
@@ -64,5 +65,14 @@ function assert_event_graph_identity(PDO $pdo, string $schemaName): void
         return;
     }
 
-    throw new RuntimeException('Event graph identity contract violated.');
+    throw new RuntimeException(
+        'Event graph identity contract violated: ' . json_encode(
+            [
+                'bad_calendar_event_link_count' => $audit['bad_calendar_event_link_count'],
+                'bad_legacy_event_entity_count' => $audit['bad_legacy_event_entity_count'],
+                'violations' => $audit['violations'],
+            ],
+            JSON_UNESCAPED_SLASHES
+        )
+    );
 }
