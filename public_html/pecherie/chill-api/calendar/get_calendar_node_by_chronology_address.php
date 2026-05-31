@@ -34,7 +34,6 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             ce.entity_id,
-            ce.event_id,
             ce.parent_event_id,
             ce.layer_id,
             ce.sequence_index,
