@@ -50,8 +50,6 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['attribute_domains', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['calendar_events', 'domain_id', 'DOMAIN_ENTITY_FK'],
-        ['calendar_events_backup_pre_repair', 'domain_id', 'DOMAIN_ENTITY_FK'],
-        ['calendar_events_old', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['calendar_domain_beat_classset_map', 'domain_id', 'DOMAIN_CLASSVAL'],
         ['calendar_records', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'input_domain_id', 'DOMAIN_ENTITY_FK'],
@@ -62,7 +60,6 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         // adjudication status
         ['calendar_event_knowledge', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['calendar_events', 'adjudication_status_classval_id', 'CLASSVAL'],
-        ['calendar_events_backup_pre_repair', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['characters', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['dreams', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['entities', 'adjudication_status_classval_id', 'CLASSVAL'],
@@ -81,7 +78,6 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 // contradiction state
         ['calendar_event_knowledge', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['calendar_events', 'contradiction_state_classval_id', 'CLASSVAL'],
-        ['calendar_events_backup_pre_repair', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['dreams', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['entity_linked_facts_event', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
@@ -94,7 +90,6 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 // epistemic origin
         ['calendar_event_knowledge', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['calendar_events', 'epistemic_origin_classval_id', 'CLASSVAL'],
-        ['calendar_events_backup_pre_repair', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['characters', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['dreams', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['entities', 'epistemic_origin_classval_id', 'CLASSVAL'],
