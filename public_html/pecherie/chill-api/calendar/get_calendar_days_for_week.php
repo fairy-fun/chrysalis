@@ -70,7 +70,7 @@ try {
             ON cp.id = ce.projection_id
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_day'
-        ORDER BY ce.sequence_index ASC, ce.id ASC
+        ORDER BY ce.sequence_index ASC
     ");
 
     $daysStmt->execute([':parent_event_id' => (int)$week['_internal_id']]);
