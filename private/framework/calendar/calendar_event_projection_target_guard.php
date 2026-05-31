@@ -10,8 +10,6 @@ declare(strict_types=1);
  * Canonical identity:
  * - calendar_events.id is the structural node id.
  * - calendar_events.entity_id is "calendar_event:{calendar_events.id}".
- * - calendar_events.event_id is business identity and must not be used to parse
- *   or validate entity_id.
  */
 function require_calendar_event_projection_target_node(
     PDO $pdo,
@@ -47,7 +45,6 @@ function require_calendar_event_projection_target_node(
         SELECT
             ce.id,
             ce.entity_id,
-            ce.event_id,
             ce.layer_id,
             ce.parent_event_id,
             ce.sequence_index,
