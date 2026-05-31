@@ -2,40 +2,61 @@
 
 Canonical resolution path:
 
-event → domain_id
-→ classset_id (via calendar_domain_beat_classset_map)
+event
+→ event_type_id
+→ beat_classset_id (via calendar_event_type_classvals)
 → (set_id, code)
 → beat_type_id
-Deprecated Model (FORBIDDEN)
+
+Deprecated Models (FORBIDDEN)
+
 calendar_beat_domain_map
+calendar_domain_beat_classset_map
 
-This table must not be referenced anywhere in code.
+These tables must not be referenced anywhere in planner authority.
 
-Reason
+## Reason
 
 The old model encoded:
 
 domain → individual beat types
 
-This is incorrect and non-extensible.
-
-The new model enforces:
+and later:
 
 domain → classset → beat types
+
+Both are wrong as beat-resolution authority.
+
+The canonical model is:
+
+event type → classset → beat types
 
 which allows:
 
 * multiple beat vocabularies
-* domain-specific behaviour
-* deterministic (set_id, code) resolution
+* deterministic `(set_id, code)` resolution
+* user-defined human-readable domains without forcing beat semantics onto domain labels
 
 ## Enforcement
-* CI audit: deprecated calendar beat-domain usage
-* Identity classifier: excludes deprecated table from discovery
-* Planner: resolves via classset only
+
+* CI audit validates event-type-to-classset references
+* Identity classifier excludes deprecated beat-domain discovery paths
+* Planner resolves via `calendar_event_type_classvals.beat_classset_id`
+
+## Domain Model
+
+Domains remain valid first-class entities.
+
+They are human-readable categorizations such as:
+
+* work
+* social
+* private
+
+They are not the authority for beat classset selection.
 
 ## Rule
 
-If you see calendar_beat_domain_map in code:
+If you see `calendar_beat_domain_map` or `calendar_domain_beat_classset_map` used for beat resolution:
 
 → delete or refactor immediately
