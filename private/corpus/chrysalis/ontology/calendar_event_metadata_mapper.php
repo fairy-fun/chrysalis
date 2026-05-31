@@ -18,8 +18,8 @@ function map_chrysalis_scene_class_to_calendar_event_metadata(
 
     if ($sceneClass === 'character_introduction') {
         return chrysalis_calendar_event_scene_metadata(
-            'Shay encounters Kai Blackwood',
-            'The prose introduces Kai Blackwood through his entrance into the scene, Shay’s recognition of his role and reputation, and a brief exchange that establishes his controlled stillness, his awareness of her formation history, and the unsettling mutual recognition between them.',
+            'A salient figure is introduced',
+            'The prose introduces a newly salient figure through approach, first address, role or status framing, and the first stabilizing exchange that makes the figure narratively consequential within the scene.',
             'BEAT_ORIENTATION',
             $classification,
             $signals
