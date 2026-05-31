@@ -13,6 +13,7 @@ require_once __DIR__ . '/calendar_event_ontology_guards.php';
  * Writes only:
  * - calendar_events.summary
  * - calendar_events.notes
+ * - calendar_events.prose_body
  *
  * Does not write ontology linkage fields:
  * - calendar_events.beat_type_id
@@ -104,6 +105,77 @@ function apply_calendar_event_metadata(
         'semantic_text_surfaces' => [
             'calendar_events.summary',
             'calendar_events.notes',
+        ],
+        'ontology_linkage_fields_touched' => [],
+        'updated_rows' => $stmt->rowCount(),
+    ];
+}
+
+/**
+ * Apply lightweight prose-family discoverability linkage to an existing
+ * calendar event surface.
+ */
+function apply_calendar_event_prose_surface(
+    PDO $pdo,
+    int $calendarEventId,
+    string $proseSurface
+): array {
+
+    if ($calendarEventId <= 0) {
+        throw new InvalidArgumentException(
+            'Invalid calendar event id for prose surface apply.'
+        );
+    }
+
+    $surface = trim($proseSurface);
+
+    if ($surface === '') {
+        throw new InvalidArgumentException(
+            'Invalid prose surface for calendar event apply.'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE calendar_events
+        SET prose_body = :prose_body
+        WHERE id = :id
+          AND layer_id IN ('calendar_layer_event', 'calendar_layer_subevent')
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':prose_body' => $surface,
+        ':id' => $calendarEventId,
+    ]);
+
+    if ($stmt->rowCount() < 1) {
+        $verifyStmt = $pdo->prepare("
+            SELECT id
+            FROM calendar_events
+            WHERE id = :id
+              AND layer_id IN ('calendar_layer_event', 'calendar_layer_subevent')
+            LIMIT 1
+        ");
+
+        $verifyStmt->execute([
+            ':id' => $calendarEventId,
+        ]);
+
+        $existingRow = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($existingRow)) {
+            throw new RuntimeException(
+                'No calendar event found for prose surface apply: '
+                . $calendarEventId
+            );
+        }
+    }
+
+    return [
+        'calendar_event_id' => $calendarEventId,
+        'prose_body' => $surface,
+        'semantic_text_surfaces' => [
+            'calendar_events.prose_body',
         ],
         'ontology_linkage_fields_touched' => [],
         'updated_rows' => $stmt->rowCount(),
