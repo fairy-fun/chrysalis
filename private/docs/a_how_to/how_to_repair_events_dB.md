@@ -224,7 +224,7 @@ SELECT
     cep.id,
     cep.calendar_event_id,
     cep.calendar_projection_id,
-    cep.build_id,
+    cep.chronology_address,
     cp.projection_type_id
 FROM calendar_event_projections cep
 JOIN calendar_projections cp
@@ -254,31 +254,51 @@ LIMIT 1;
 
 ---
 
-# Projection Build Doctrine
+# Projection Materialization Doctrine
 
-Current canonical surviving projection lineage:
+`calendar_event_projections` is a derived projection surface.
 
-| build_id | meaning                                |
-|----------|----------------------------------------|
-| 1        | canonical surviving projection lineage |
+Current runtime doctrine:
 
-Obsolete chronology-era build lineage:
+- projection rows are rebuilt from source event membership
+- chronology locality is carried by `chronology_address`
+- no `build_id` column is required in the live projection table
 
-| build_id | status                |
-|----------|-----------------------|
-| 5        | intentionally deleted |
+If projection drift is suspected, inspect for:
 
-Cleanup performed:
+- source events present without projection membership
+- membership rows present without projection rows
+- stale projection rows that no longer correspond to membership
+
+Useful verification query:
 
 ```sql
-DELETE FROM calendar_event_projections
-WHERE build_id = 5;
+SELECT
+    e.id AS event_id,
+    e.entity_id,
+    e.book_time_id,
+    e.event_index,
+    m.id AS membership_id,
+    cep.id AS projection_row_id,
+    cep.chronology_address
+FROM calendar_events e
+LEFT JOIN calendar_event_projection_membership m
+    ON m.calendar_event_id = e.id
+LEFT JOIN calendar_event_projections cep
+    ON cep.calendar_event_id = e.id
+   AND cep.calendar_projection_id = m.projection_id
+WHERE e.projection_id = 1
+  AND e.book_time_id IS NOT NULL
+ORDER BY e.book_time_id, e.event_index, e.id;
 ```
 
-Future canonical inserts should currently use:
+Healthy Book projection output should show aligned membership and projection rows with sequential chronology addresses such as:
 
 ```text
-build_id = 1
+1.2.1.1
+1.2.1.2
+...
+1.2.1.10
 ```
 
 ---
