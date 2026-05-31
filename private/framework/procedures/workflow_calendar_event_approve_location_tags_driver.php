@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_place_suggester.php';
+require_once __DIR__ . '/../calendar/calendar_event_ontology_applier.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
 function fw_workflow_location_tag_approval_status(
@@ -181,7 +182,7 @@ function fw_fetch_calendar_event_attached_prose_for_location_approval(
 
 function fw_sync_calendar_event_primary_location_if_unambiguous(
     PDO $pdo,
-    int $eventId,
+    string $calendarEventEntityId,
     array $placeEntityIds
 ): ?string {
 
@@ -205,16 +206,11 @@ function fw_sync_calendar_event_primary_location_if_unambiguous(
 
     $primaryPlaceEntityId = $uniquePlaceEntityIds[0];
 
-    $updateStmt = $pdo->prepare("
-        UPDATE calendar_events
-        SET location_id = :location_id
-        WHERE id = :event_id
-    ");
-
-    $updateStmt->execute([
-        ':location_id' => $primaryPlaceEntityId,
-        ':event_id' => $eventId,
-    ]);
+    apply_calendar_event_location_id(
+        $pdo,
+        $calendarEventEntityId,
+        $primaryPlaceEntityId
+    );
 
     return $primaryPlaceEntityId;
 }
@@ -296,7 +292,7 @@ function fw_execute_workflow_calendar_event_prepare_location_tag_approval(
     if (!empty($existing)) {
         fw_sync_calendar_event_primary_location_if_unambiguous(
             $pdo,
-            $eventId,
+            $calendarEventEntityId,
             array_map(
                 static fn(array $row): string => (string)($row['place_id'] ?? ''),
                 $existing
@@ -513,7 +509,7 @@ function fw_execute_workflow_calendar_event_apply_location_tags(
 
     $primaryLocationId = fw_sync_calendar_event_primary_location_if_unambiguous(
         $pdo,
-        $eventId,
+        $calendarEventEntityId,
         $approvedPlaceEntityIds
     );
 
