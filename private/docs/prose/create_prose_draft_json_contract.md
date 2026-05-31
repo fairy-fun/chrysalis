@@ -475,7 +475,7 @@ not draft chronology and not projection type.
 
 
 ## Execution Input Rule
-executeCalendarBatchFromProse uses the provided "prose" string.
+nexecuteCalendarBatchFromProse uses the provided "prose" string.
 It does NOT read from stored prose_draft records.
 ### Execution Guarantees
 * Deterministic: same prose → same plan_id
@@ -638,17 +638,17 @@ Correct attachment requires:
 ```json
 {
   "projection_id": "...",
-  "week_id": "...",
-  "day_id": "...",
-  "time_id": "...",
-  "event_id": "..."
+  "week_entity_id": "...",
+  "day_entity_id": "...",
+  "time_entity_id": "...",
+  "target_event_entity_id": "calendar_event:..."
 }
 ```
 
 Subevent prose may only attach beneath a resolved:
 
 ```text
-calendar_layer_event:<event_id>
+calendar_event:<id>
 ```
 
 The prose runtime MUST reject any payload attempting to attach prose directly to:
@@ -672,7 +672,7 @@ The following distinction is mandatory:
 | Concept | Meaning | Valid Attachment Target |
 |---|---|---|
 | `calendar_layer_event` | A materialization layer class | NO |
-| `calendar_layer_event:<event_id>` | A concrete runtime event instance | YES |
+| `calendar_event:<id>` | A concrete runtime event instance | YES |
 
 Incorrect:
 
@@ -692,7 +692,7 @@ Correct runtime attachment requires a resolved concrete parent event:
 
 ```json
 {
-  "event_id": "evt_123"
+  "target_event_entity_id": "calendar_event:123"
 }
 ```
 
@@ -707,7 +707,7 @@ Projection
 → Subevent prose
 ```
 
-Prose attachment is only valid AFTER the runtime resolves a concrete `event_id`.
+Prose attachment is only valid AFTER the runtime resolves a concrete `target_event_entity_id`.
 ## Deterministic Hierarchy Resolution Requirements
 
 Book 1 prose is executable projection-backed calendar state.
@@ -737,10 +737,10 @@ The GPT/runtime MUST resolve:
 ```json
 {
   "projection_id": "...",
-  "week_id": "...",
-  "day_id": "...",
-  "time_id": "...",
-  "event_id": "..."
+  "week_entity_id": "...",
+  "day_entity_id": "...",
+  "time_entity_id": "...",
+  "target_event_entity_id": "calendar_event:..."
 }
 ```
 
@@ -761,7 +761,7 @@ The payload specifies a layer category but fails to resolve a concrete runtime e
 The runtime must instead resolve:
 
 ```text
-calendar_layer_event:<event_id>
+calendar_event:<id>
 ```
 
 Only after event resolution succeeds may prose materialize beneath:
