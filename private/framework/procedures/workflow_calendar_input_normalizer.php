@@ -82,22 +82,13 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
         throw new RuntimeException('Book day input is required');
     }
 
-        if ($timeInput === '') {
-            throw new RuntimeException('Book time input is required');
-        }
+    if ($timeInput === '') {
+        throw new RuntimeException('Book time input is required');
+    }
 
-        $projectionCode = fw_normalize_calendar_book_projection_code(
-            $projectionInput
-        );
-
-        throw new RuntimeException(
-            'DEBUG projectionCode=' .
-            var_export($projectionCode, true)
-        );
-
-    /*$projectionCode = fw_normalize_calendar_book_projection_code(
+    $projectionCode = fw_normalize_calendar_book_projection_code(
         $projectionInput
-    );*/
+    );
 
     $projectionStmt = $pdo->prepare('
         SELECT
@@ -175,7 +166,7 @@ function fw_normalize_calendar_book_projection_code(string $value): string
     }
 
     $normalized = strtolower(
-        preg_replace('/[^a-z0-9]/', '', $trimmed) ?? ''
+        preg_replace('/[^A-Za-z0-9]/', '', $trimmed) ?? ''
     );
 
     $bookNumber = null;
@@ -186,12 +177,11 @@ function fw_normalize_calendar_book_projection_code(string $value): string
         $bookNumber = (int)$matches[1];
     }
 
-    throw new RuntimeException(
-        'DEBUG trim=' . var_export($trimmed, true) .
-        ' normalized=' . var_export($normalized, true) .
-        ' matches=' . json_encode($matches ?? null) .
-        ' bookNumber=' . var_export($bookNumber, true)
-    );
+    if (!is_int($bookNumber) || $bookNumber < 1) {
+        throw new RuntimeException(
+            'Unable to normalize Book projection input'
+        );
+    }
 
     return 'book_projection_BOOK-' . str_pad(
         (string)$bookNumber,
