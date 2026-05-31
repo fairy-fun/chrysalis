@@ -125,6 +125,10 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H 108.174.195.142 >> ~/.ssh/known_hosts
 
+      - name: Preflight SSH connection
+        run: |
+          ssh -vvv -o BatchMode=yes sxnzlfun@108.174.195.142 'echo connected'
+
       - name: Sync public files
         run: |
           rsync -rlvtz --delete -e ssh \
