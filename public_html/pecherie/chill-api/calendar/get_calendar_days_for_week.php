@@ -58,7 +58,6 @@ try {
     $daysStmt = $pdo->prepare("
         SELECT
             ce.entity_id,
-            ce.event_id,
             cp.entity_id AS projection_entity_id,
             ce.layer_id,
             ce.sequence_index,
@@ -71,7 +70,7 @@ try {
             ON cp.id = ce.projection_id
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_day'
-        ORDER BY ce.sequence_index ASC, ce.event_id ASC
+        ORDER BY ce.sequence_index ASC, ce.id ASC
     ");
 
     $daysStmt->execute([':parent_event_id' => (int)$week['_internal_id']]);
