@@ -42,7 +42,6 @@ $eventLabel = $body['event_label'] ?? null;
 
 $eventTypeId = $body['event_type_id'] ?? null;
 $locationId = $body['location_id'] ?? null;
-$domainId = $body['domain_id'] ?? null;
 $classTypeId = $body['class_type_id'] ?? null;
 $notes = $body['notes'] ?? null;
 $sourceDocument = $body['source_document'] ?? null;
@@ -51,7 +50,6 @@ foreach ([
              'event_label' => $eventLabel,
              'event_type_id' => $eventTypeId,
              'location_id' => $locationId,
-             'domain_id' => $domainId,
              'class_type_id' => $classTypeId,
              'notes' => $notes,
              'source_document' => $sourceDocument,
@@ -68,7 +66,6 @@ $parentTimeEntityId = is_string($parentTimeEntityId) ? trim($parentTimeEntityId)
 $eventLabel = is_string($eventLabel) ? trim($eventLabel) : null;
 $eventTypeId = is_string($eventTypeId) ? trim($eventTypeId) : null;
 $locationId = is_string($locationId) ? trim($locationId) : null;
-$domainId = is_string($domainId) ? trim($domainId) : null;
 $classTypeId = is_string($classTypeId) ? trim($classTypeId) : null;
 $notes = is_string($notes) ? trim($notes) : null;
 $sourceDocument = is_string($sourceDocument) ? trim($sourceDocument) : null;
@@ -93,15 +90,6 @@ try {
         );
     }
 
-    if ($domainId !== null && $domainId !== '') {
-        assert_valid_classval(
-            $pdo,
-            'calendar_domain_classvals',
-            $domainId,
-            'domain_id'
-        );
-    }
-
     if ($classTypeId !== null && $classTypeId !== '') {
         assert_valid_classval(
             $pdo,
@@ -117,7 +105,6 @@ try {
             : 'Event',
         'event_type_id' => $eventTypeId !== '' ? $eventTypeId : null,
         'location_id' => $locationId !== '' ? $locationId : null,
-        'domain_id' => $domainId !== '' ? $domainId : null,
         'class_type_id' => $classTypeId !== '' ? $classTypeId : null,
         'notes' => $notes !== '' ? $notes : null,
         'source_document' => $sourceDocument !== '' ? $sourceDocument : null,
