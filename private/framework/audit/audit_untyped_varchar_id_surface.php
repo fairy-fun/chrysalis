@@ -43,8 +43,6 @@ function audit_untyped_varchar_id_surface(PDO $pdo, string $schemaName): array
 
         // legacy / transitional identifiers
         'calendar_event_id_map.old_calendar_id' => 'legacy identifier used for calendar event migration mapping',
-        'calendar_events_old.calendar_id' => 'legacy calendar event identifier retained in old table',
-        'calendar_events_old.parent_calendar_id' => 'legacy parent calendar event identifier retained in old table',
 
         // structural / grouping identifiers
         'calendar_records.cal_block_id' => 'internal calendar block identifier',
