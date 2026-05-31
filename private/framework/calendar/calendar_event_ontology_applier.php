@@ -64,3 +64,71 @@ function apply_calendar_event_beat_type(
         'updated_rows' => $stmt->rowCount(),
     ];
 }
+
+/**
+ * Apply canonical stable environment linkage to an existing calendar event.
+ */
+function apply_calendar_event_location_id(
+    PDO $pdo,
+    string $calendarEventEntityId,
+    string $locationId
+): array {
+
+    $entityId = trim($calendarEventEntityId);
+    $locationId = trim($locationId);
+
+    if ($entityId === '') {
+        throw new RuntimeException(
+            'Missing calendar event entity_id for location apply'
+        );
+    }
+
+    if ($locationId === '') {
+        throw new RuntimeException(
+            'Missing location_id for calendar event location apply'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE calendar_events
+        SET location_id = :location_id
+        WHERE entity_id = :entity_id
+          AND layer_id = 'calendar_layer_event'
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':location_id' => $locationId,
+        ':entity_id' => $entityId,
+    ]);
+
+    if ($stmt->rowCount() < 1) {
+        $verifyStmt = $pdo->prepare("
+            SELECT id
+            FROM calendar_events
+            WHERE entity_id = :entity_id
+              AND layer_id = 'calendar_layer_event'
+            LIMIT 1
+        ");
+
+        $verifyStmt->execute([
+            ':entity_id' => $entityId,
+        ]);
+
+        $existingRow = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($existingRow)) {
+            throw new RuntimeException(
+                'No calendar event location row found for entity_id: ' . $entityId
+            );
+        }
+    }
+
+    return [
+        'calendar_event_entity_id' => $entityId,
+        'location_id' => $locationId,
+        'ontology_linkage_field' => 'calendar_events.location_id',
+        'ontology_authority' => 'entities.id',
+        'updated_rows' => $stmt->rowCount(),
+    ];
+}
