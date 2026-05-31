@@ -34,6 +34,29 @@ function classify_chrysalis_calendar_event_scene(array $signals): ?array
     }
 
     if (
+        chrysalis_scene_has($signals, 'recognition.charged_mutual')
+        && chrysalis_scene_has_any($signals, [
+            'participant.named_identification',
+            'participant.named_authority_or_staff',
+        ])
+        && chrysalis_scene_has_any($signals, [
+            'interaction.first_direct_address',
+            'recognition.prior_reputation',
+            'role.team_role_identified',
+        ])
+    ) {
+        $classes[] = chrysalis_scene_classification(
+            'charged_recognition',
+            0.86,
+            [
+                'recognition.charged_mutual',
+                'named_participant',
+                'address_reputation_or_role_context',
+            ]
+        );
+    }
+
+    if (
         chrysalis_scene_has($signals, 'institution.rbds')
         && chrysalis_scene_has_any($signals, [
             'space.public_entry',
