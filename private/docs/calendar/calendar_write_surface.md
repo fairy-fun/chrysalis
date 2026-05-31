@@ -168,7 +168,6 @@ Each returned `calendar_layer_time` node MUST include:
 ```json
 {
   "entity_id": "calendar_event:303",
-  "event_id": 303,
   "projection_entity_id": "...",
   "layer_id": "calendar_layer_time",
   "sequence_index": 1,
@@ -225,7 +224,7 @@ location_id
 * direct INSERT INTO calendar_events ❌
 * manual sequence_index              ❌
 * chronology_address writes          ❌
-* event_id as parent                 ❌
+* structural parent lookup by legacy event_id ❌
 #### Final Rule
 The API does not define structure.
 
