@@ -527,6 +527,7 @@ function filter_calendar_node_payload(string $layerId, array $payload): array
             'prose_body',
             'event_type_id',
             'location_id',
+            'domain_id',
             'class_type_id',
             'beat_type_id',
             'beat_hash',
