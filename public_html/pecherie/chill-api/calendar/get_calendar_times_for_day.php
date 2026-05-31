@@ -59,38 +59,29 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             ce.entity_id,
-            ce.event_id,
             cp.entity_id AS projection_entity_id,
             ce.layer_id,
-        
             ce.sequence_index,
             ce.time_index,
             ce.time_label_id,
-        
             tl.code AS time_label_code,
             tl.label AS time_label,
             tl.sort_order AS time_sort_order,
-        
             ce.summary,
             ce.created_at,
             ce.updated_at,
             ce.chronology_address
-        
         FROM sxnzlfun_chrysalis.calendar_events ce
-        
         LEFT JOIN sxnzlfun_chrysalis.calendar_projections cp
             ON cp.id = ce.projection_id
-        
         LEFT JOIN sxnzlfun_chrysalis.calendar_time_label_classvals tl
             ON tl.id = ce.time_label_id
-        
         WHERE ce.parent_event_id = :parent_event_id
           AND ce.layer_id = 'calendar_layer_time'
-        
         ORDER BY
             tl.sort_order ASC,
             ce.sequence_index ASC,
-            ce.event_id ASC
+            ce.id ASC
     ");
 
     $stmt->execute([':parent_event_id' => (int)$day['_internal_id']]);
