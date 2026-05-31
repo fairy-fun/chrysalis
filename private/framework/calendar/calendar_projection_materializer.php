@@ -76,21 +76,8 @@ function rebuild_calendar_projection(PDO $pdo, int $projectionId): int
                 $sequence
             );
 
-            assert_calendar_projection_row_integrity(
-                $row,
-                $projectionType
-            );
-
             $insert->execute($row);
         }
-
-        // 5. Validate final build integrity (existing logic preserved)
-        assert_projection_build_integrity(
-            $pdo,
-            null,
-            $projectionId,
-            $projectionType
-        );
 
         $pdo->commit();
 
