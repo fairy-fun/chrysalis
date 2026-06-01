@@ -90,6 +90,7 @@ return [
         'getDreamJournalEntries' => 'public_html/pecherie/chill-api/dreams/get_dream_journal_entries.php',
         'getDreamAnnotations' => 'public_html/pecherie/chill-api/dreams/get_dream_annotations.php',
         'getCalendarTreeForEntity' => 'public_html/pecherie/chill-api/calendar/get_calendar_tree_for_entity.php',
+        'getCalendarEventsForProjectionSpan' => 'public_html/pecherie/chill-api/calendar/get_calendar_events_for_projection_span.php',
         'generateCalendarBatchFromProse' => 'public_html/pecherie/chill-api/calendar/generate_calendar_batch_from_prose.php',
         'executeCalendarBatchFromProse' => 'public_html/pecherie/chill-api/calendar/execute_calendar_batch_from_prose.php',
         'resolveProseExportText' => 'public_html/pecherie/chill-api/prose/resolve_prose_export_text.php',
@@ -97,6 +98,7 @@ return [
         'applyGovernedEventFact' => 'public_html/pecherie/chill-api/facts/apply_governed_event_fact.php',
         'resolveGlobalFact' => 'public_html/pecherie/chill-api/facts/resolve_global_fact.php',
         'getLatestEventProse' => 'public_html/pecherie/chill-api/prose/get_latest_event_prose.php',
+        'getEventProse' => 'public_html/pecherie/chill-api/prose/get_event_prose.php',
         'startWorkflowChat' => 'public_html/pecherie/chill-api/prose/start_workflow_chat.php',
     ],
 ];
