@@ -272,3 +272,5 @@ semantic_aliases
 
 Otherwise, canonical characters may remain invisible to prose scanning systems.
 
+---
+
