@@ -216,7 +216,7 @@ INSERT INTO calendar_event_participants (
     role_id,
     subsequence_index
 ) VALUES (
-             7,
+    7,
              'CHAR-MAIN-003',
              '',
              0
