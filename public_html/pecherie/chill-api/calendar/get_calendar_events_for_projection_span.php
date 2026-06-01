@@ -106,10 +106,8 @@ try {
 
     $eventsStmt = $pdo->prepare("
         SELECT
-            ce.id AS calendar_event_row_id,
             ce.entity_id,
-            ce.parent_event_id,
-            parent.entity_id AS parent_time_entity_id,
+            parent.entity_id AS parent_entity_id,
             ce.projection_id,
             ce.layer_id,
             ce.sequence_index,
@@ -159,10 +157,6 @@ try {
     $events = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($events as &$event) {
-        $event['calendar_event_row_id'] = (int) $event['calendar_event_row_id'];
-        $event['parent_event_id'] = $event['parent_event_id'] === null
-            ? null
-            : (int) $event['parent_event_id'];
         $event['projection_id'] = (int) $event['projection_id'];
         $event['sequence_index'] = $event['sequence_index'] === null
             ? null
