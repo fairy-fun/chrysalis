@@ -145,7 +145,7 @@ try {
             start_date_lookup.date_value ASC,
             COALESCE(end_date_lookup.date_value, start_date_lookup.date_value) ASC,
             ce.sequence_index ASC,
-            ce.id ASC
+            ce.entity_id ASC
     ");
 
     $eventsStmt->execute([
