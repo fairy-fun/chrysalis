@@ -52,7 +52,6 @@ public_html/pecherie/chill-api/calendar/create_calendar_event.php
 "event_label": "Foxtrot Technique — Centre vs Foot",
 
 "event_type_id": "EVENT_TYPE_CLASS",
-"domain_id": "DOMAIN_CLASS",
 "class_type_id": "CLASS_TYPE_CLASS",
 "location_id": "PLACE_ID",
 
@@ -65,8 +64,11 @@ parent_time_entity_id → required
 event_label → maps to summary
 
 event_type_id → classval (validated)
-domain_id → classval (validated)
 class_type_id → classval (validated)
+
+event_type_id is the canonical root-event input used for beat-classset resolution via `calendar_event_type_classvals.beat_classset_id`.
+
+domain categorization now lives on the event type registry, not on `calendar_events` rows.
 
 location_id → reference (NOT classval)
 ### Structural Behaviour
@@ -88,7 +90,6 @@ public_html/pecherie/chill-api/calendar/create_calendar_subevent.php
 "event_label": "Sub-beat",
 
 "event_type_id": "EVENT_TYPE_CLASS",
-"domain_id": "DOMAIN_CLASS",
 "class_type_id": "CLASS_TYPE_CLASS",
 "location_id": "PLACE_ID"
 }
@@ -96,7 +97,8 @@ public_html/pecherie/chill-api/calendar/create_calendar_subevent.php
 #### Rules
 parent_event_entity_id → must resolve to event node
 
-same semantic rules as event creation
+subevents inherit beat-classset context from the canonical parent event
+subevents do not accept or persist a separate domain_id
 same append behaviour
 
 ### Day Creation
@@ -205,7 +207,6 @@ Validated before calling ensurer:
 
 time_label_id
 event_type_id
-domain_id
 class_type_id
 
 #### Helper:
