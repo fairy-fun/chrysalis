@@ -145,6 +145,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/get_calendar_tree_for_entity.php';
         break;
 
+    case 'getCalendarEventsForProjectionSpan':
+        require __DIR__ . '/calendar/get_calendar_events_for_projection_span.php';
+        break;
+
     case 'createProseDraft':
         require __DIR__ . '/prose/create_prose_draft.php';
         break;
@@ -243,6 +247,10 @@ switch ($operation) {
 
     case 'getLatestEventProse':
         require __DIR__ . '/prose/get_latest_event_prose.php';
+        break;
+
+    case 'getEventProse':
+        require __DIR__ . '/prose/get_event_prose.php';
         break;
 
     default:
