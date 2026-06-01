@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/calendar_node_ensurer.php';
+require_once __DIR__ . '/calendar_event_projection_membership_service.php';
+require_once __DIR__ . '/calendar_projection_materializer.php';
 
 /**
  * Canonical Book event creation.
@@ -59,8 +61,15 @@ function ensure_calendar_book_event(
 
     if ($existing !== null) {
         ensure_calendar_event_entity_exists($pdo, (int)$existing['id']);
+        $existingId = (int)$existing['id'];
 
-        return get_calendar_node_by_id($pdo, (int)$existing['id']);
+        ensure_calendar_book_event_projection_surfaces(
+            $pdo,
+            $existingId,
+            $projectionId
+        );
+
+        return get_calendar_node_by_id($pdo, $existingId);
     }
 
     $payload['book_time_id'] = $bookTimeId;
@@ -79,7 +88,7 @@ function ensure_calendar_book_event(
         null
     );
 
-    return insert_calendar_node(
+    $event = insert_calendar_node(
         $pdo,
         $projectionId,
         'calendar_layer_event',
@@ -87,6 +96,67 @@ function ensure_calendar_book_event(
         $compatibilitySequenceIndex,
         $payload
     );
+
+    ensure_calendar_book_event_projection_surfaces(
+        $pdo,
+        (int)$event['id'],
+        $projectionId
+    );
+
+    return get_calendar_node_by_id($pdo, (int)$event['id']);
+}
+
+function ensure_calendar_book_event_projection_surfaces(
+    PDO $pdo,
+    int $calendarEventId,
+    int $bookProjectionId
+): void {
+    $projectionIds = [$bookProjectionId];
+    $realtimeProjectionId = find_realtime_main_projection_id($pdo);
+
+    if ($realtimeProjectionId !== null) {
+        $projectionIds[] = $realtimeProjectionId;
+    }
+
+    $projectionIds = array_values(array_unique(array_map('intval', $projectionIds)));
+
+    ensure_calendar_event_projection_memberships(
+        $pdo,
+        $calendarEventId,
+        $projectionIds
+    );
+
+    foreach ($projectionIds as $projectionId) {
+        rebuild_calendar_projection($pdo, $projectionId);
+    }
+}
+
+function find_realtime_main_projection_id(PDO $pdo): ?int
+{
+    $stmt = $pdo->prepare(
+        "
+        SELECT id
+        FROM sxnzlfun_chrysalis.calendar_projections
+        WHERE projection_code = :projection_code
+          AND projection_type_id = :projection_type_id
+        LIMIT 1
+        "
+    );
+
+    $stmt->execute([
+        ':projection_code' => 'realtime_projection_main',
+        ':projection_type_id' => 'projection_type_timeline_view',
+    ]);
+
+    $projectionId = $stmt->fetchColumn();
+
+    if ($projectionId === false) {
+        return null;
+    }
+
+    $projectionId = (int)$projectionId;
+
+    return $projectionId > 0 ? $projectionId : null;
 }
 
 function resolve_calendar_book_time(
