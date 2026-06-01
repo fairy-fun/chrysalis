@@ -228,5 +228,8 @@ You may also request prose by temporal position:
 Show me the prose for week 1 day 2
 
 #### Retrieve real-time calendar events
-Show me projection_id = 5; for a given time-span
+```text
+Call startWorkflowChat with message: Show me projection_id = 5
+```
 
+The runtime will ask for `start_date` and `end_date` in `YYYY-MM-DD` format.
