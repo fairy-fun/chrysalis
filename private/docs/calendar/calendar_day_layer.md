@@ -1,406 +1,162 @@
-# Calendar System — Day Layer
-> “See *Calendar Invariants* for system-wide rules.”
+# Calendar System - Day Layer
+> See `calendar_invariants.md` for system-wide rules.
+
 ## Overview
 
-Day-level calendar events represent the second layer in the hierarchy:
-```text
-Week → Day → Time → Event → Subevent
-```
+This document describes the current state of Day chronology in Chrysalis.
 
-Each layer owns its own index and is uniquely constrained within its immediate parent.
+The historical model stored Day containers as `calendar_layer_day` rows inside `calendar_events`.
+That model is no longer the canonical chronology architecture.
 
----
-
-## Core Invariants
-
-### 1. Entity-first rule
-
-Every calendar event **must have a corresponding entity** created first.
-
-```php
-$eventId = next_calendar_event_id($pdo);
-$entityId = 'calendar_event:' . $eventId;
-
-create_entity($pdo, $entityId, 'entity_type_calendar_event');
-```
-
-### 2. Dual ID model
-```text
-calendar_events.id        → primary key (used for joins)
-calendar_events.event_id  → sequential public ID
-```
-All relationships use:
-```text
-parent_event_id → calendar_events.id
-```
-
-### 3. Hierarchical structure
+The canonical Book chronology hierarchy is now:
 
 ```text
-   Week
-   └── Day (day_index)
-   └── Time (time_index)
-   └── Event (event_index)
-   └── Subevent (subevent_index)
+calendar_book_weeks
+    -> calendar_book_days
+        -> calendar_book_times
+            -> calendar_events
 ```
 
-Each layer:
+Meaning:
 
-* inherits context from parent
-* defines uniqueness using its own index
+- `calendar_book_weeks` owns Book week containers
+- `calendar_book_days` owns Book day containers
+- `calendar_book_times` owns Book time containers
+- `calendar_events` owns narrative event rows
 
-## Day Layer Specification
-### Required fields
+## Current Authority
+
+For Book chronology, the canonical Day container is a row in:
 
 ```text
-layer_id            = 'calendar_layer_day'
-parent_event_id     = <week.id>
-week_index          = inherited from parent
-day_index           = 1..7
-event_id            = allocated via sequence
-entity_id           = 'calendar_event:<event_id>'
-chronology_address  = '<week>.<day>'  (e.g. "3.1")
+calendar_book_days
 ```
-### Chronology Address
 
-Used for natural-language lookup:
+Its canonical containment is:
+
 ```text
-Week: 3
-Day:  3.1
-Time: 3.1.1
-Event: 3.1.1.1
+calendar_book_days.week_id -> calendar_book_weeks.id
 ```
 
-Query:
-```sql
-SELECT ce.*
-FROM calendar_events ce
-JOIN calendar_event_projection_membership cepm
-ON cepm.calendar_event_id = ce.id
-WHERE ce.chronology_address = :address
-AND cepm.projection_entity_id = :projection_id
-LIMIT 1;
-```
----
-## Uniqueness Constraint (Day Layer)
+Its canonical locality is:
 
-Enforced via generated columns:
-```sql
-ALTER TABLE calendar_events
-ADD COLUMN day_unique_parent_id BIGINT
-GENERATED ALWAYS AS (
-CASE
-WHEN layer_id = 'calendar_layer_day' THEN parent_event_id
-ELSE NULL
-END
-) STORED,
-ADD COLUMN day_unique_index TINYINT UNSIGNED
-GENERATED ALWAYS AS (
-CASE
-WHEN layer_id = 'calendar_layer_day' THEN day_index
-ELSE NULL
-END
-) STORED;
-ALTER TABLE calendar_events
-ADD UNIQUE KEY uniq_day_per_week (
-day_unique_parent_id,
-day_unique_index
-);
-```
-### Behavior
-* Enforces: one day per (week, day_index)
-* Allows: reuse of day_index in other layers
-* Prevents: duplicate day creation under concurrency
-
-## Idempotent Creation Pattern
-
-Day creation must be safe under retries and race conditions.
-
-### Algorithm
-1. Check for existing day:
-```sql
-SELECT id
-FROM calendar_events
-WHERE parent_event_id = :week_id
-AND layer_id = 'calendar_layer_day'
-AND day_index = :day_index
-LIMIT 1;
-```
-2. If found → return it
-3. Else:
-- allocate ID
-- create entity
-- insert row
-
-4. On duplicate key error:
-- re-select and return existing row
----
-## Projection Membership
-
-Day events inherit projection membership from their parent week:
-```sql
-INSERT INTO calendar_event_projection_membership (calendar_event_id, projection_entity_id)
-SELECT :new_event_id, projection_entity_id
-FROM calendar_event_projection_membership
-WHERE calendar_event_id = :week_id;
-```
----
-## Known Failure Mode (Resolved)
-### Duplicate day rows
-
-Example:
-
-parent_event_id = 1
-day_index = 3
-→ 2 rows existed
-
-Cause:
-
-* no uniqueness constraint
-* repeated insert
-
-Fix:
-
-* remove duplicate
-* enforce unique index
----
-## Design Principle
-
-Uniqueness is always defined at the level of the immediate parent.
-
-Not globally, not by index column alone.
-
-## Status
-- ✅ Entity-first pattern enforced
-- ✅ Day-level uniqueness enforced at DB level
-- ✅ Chronology address queryable
-- ✅ Idempotent creation pattern defined
----
-
-## Next Layers
-
-Apply the same pattern to:
-
-- Time layer → (parent_event_id, time_index)
-- Event layer → (parent_event_id, time_index, event_index)
-- Subevent layer → (parent_event_id, subevent_index)
-
-(with appropriate scoping)
-
-## Time Layer (Depth 3) — Day Subdivision
-
-### Overview
-
-The time layer subdivides a calendar day into ordered narrative containers.
-
-Each node at depth 3 represents a **time segment within a day**, providing structure for grouping events.
-
-Time nodes do not carry narrative meaning themselves. They exist to organize events temporally and support human-readable views.
-
----
-
-### Address Structure
-
-```
-W.D.T
+```text
+projection_id + week_id + day_index
 ```
 
-* `W` → week_index
-* `D` → day_index
-* `T` → time_index
+Day rows in `calendar_events` may still exist as legacy compatibility nodes, but they are not the target architecture.
 
-#### Required Fields
+## Canonical Day Semantics
 
+A canonical Book day row separates chronology position from semantic weekday meaning.
+
+Important fields:
+
+```text
+day_index
+    = position within the Book week
+
+day_of_week_id
+    = semantic weekday identity
+
+entity_id
+    = canonical external identity
 ```
-layer_id            = 'calendar_layer_time'
-parent_event_id     = <day.id>
-time_index          = 1..N
-time_label_id       = <classval id>
-event_id            = allocated via sequence
-entity_id           = 'calendar_event:<event_id>'
-chronology_address  = '<W>.<D>.<T>'
-summary             = ''
-```
-
-Time Label Assignment
-
-Each time node maps to a canonical label:
-
-calendar_events.time_label_id
-
-Defined in:
-
-calendar_time_label_classvals
-
-Ordered by:
-
-calendar_time_label_classvals.sort_order
-Canonical Time Labels
-1 → Pre-dawn
-2 → Early Morning
-3 → Morning
-4 → Lunch
-5 → Afternoon
-6 → Evening
-7 → Night
-8 → Late Night
-Creation Procedure
-Resolve or create parent day (W.D)
-Determine time_index
-Resolve time_label_id
-Allocate event_id and entity_id
-Insert time-layer row
-Inherit projection membership from parent
-Relationship to Events
-Events (depth 4) are created under time nodes
-Subevents (depth 5) are created under events
-Day (W.D)
-→ Time (W.D.T)
-→ Event (W.D.T.E)
-→ Subevent (W.D.T.E.S)
-Rendering Contract
-Time groups are ordered by label sort order
-Events are grouped under their time node
-
-Example:
-
-Saturday (Week 2)
-
-Late Night
-- Event A
-  Status
-  Entity-first pattern enforced
-  Day-level uniqueness enforced
-  Chronology address queryable
-  Idempotent creation defined
 
 Examples:
 
-```
-3.1.1 → Week 3, Day 1, Time 1
-3.1.2 → Week 3, Day 1, Time 2
-```
-
----
-
-### Time Labels
-
-Each time node MUST map to a canonical time label via:
-
-```
-calendar_events.time_label_id
+```text
+calendar_book_day:projection=1:week=3:day=1
+calendar_book_day:projection=1:week=3:day=2
 ```
 
-Time labels are defined in:
+## Uniqueness
 
-```
-calendar_time_label_classvals
-```
+The old Day-layer document described uniqueness through generated columns on `calendar_events`:
 
----
+- `day_unique_parent_id`
+- `day_unique_index`
+- `day_layer_unique_key`
 
-### Canonical Time Label Set (Ordered)
+That is historical schema guidance, not current architectural authority.
 
-Time labels are globally standardized and MUST follow this exact order:
+Current runtime doctrine has moved to:
 
-```
-1 → Pre-dawn
-2 → Early Morning
-3 → Morning
-4 → Lunch
-5 → Afternoon
-6 → Evening
-7 → Night
-8 → Late Night
+```text
+calendar_book_days
+    unique by Book containment locality
+
+calendar_events
+    unique by structural identity
+    projection + parent + layer + sequence_index
 ```
 
-Ordering is enforced via:
+For legacy `calendar_events` nodes, structural identity is enforced through the shared calendar node ensure path, not Day-specific generated columns.
 
-```
-calendar_time_label_classvals.sort_order
-```
+## Legacy Compatibility Surface
 
-This ordering is authoritative and MUST be used for all time-based rendering and grouping.
+Some runtime surfaces still accept or read legacy `calendar_layer_day` identities from `calendar_events`.
 
----
+Those compatibility paths exist to resolve older Day references into canonical Book chronology.
 
-### Structural Rules
+Important rule:
 
-* Time nodes exist at **depth 3 only**
-
-* Time nodes MUST belong to a valid day (`W.D`)
-
-* Time nodes MUST have:
-
-    * a valid `time_index`
-    * a valid `time_label_id`
-
-* Time nodes MUST NOT:
-
-    * contain narrative summaries
-    * be used as events
-    * carry narrative meaning
-
----
-
-### Relationship to Events
-
-* Events (depth 4) MUST belong to a time node
-* Subevents (depth 5) MUST belong to events, not time nodes
-
-Hierarchy:
-
-```
-Day (W.D)
-  → Time (W.D.T)
-      → Event (W.D.T.E)
-          → Subevent (W.D.T.E.S)
+```text
+legacy calendar_layer_day rows are compatibility bridges
+not the canonical Day storage model
 ```
 
----
+When compatibility code resolves a legacy Day node, it derives canonical Book locality from the legacy row and then resolves the corresponding `calendar_book_days` row.
 
-### Usage Rules
+## Historical Note
 
-* Time nodes SHOULD only be created when needed
-* Do NOT create all possible time slots by default
-* Empty time nodes are allowed but SHOULD be intentional
+The previous model treated Day containers as second-layer `calendar_events` rows and documented generated-column uniqueness such as:
 
----
-
-### Rendering Contract (Human Readable)
-
-When displaying a day, time nodes define grouping:
-
-Example:
-
-```
-Sunday (Week 3)
-
-Pre-dawn
-  - —
-
-Early Morning
-  - Event A
-
-Morning
-  - Event B
-
-Afternoon
-  - Event C
+```text
+(parent_event_id, day_index)
 ```
 
-* Events MUST be grouped by `time_index`
-* Time groups MUST be ordered by `sort_order`
-* Empty groups MAY be omitted unless explicitly required
+That guidance pre-dates the Book chronology split and should not be used as the source of truth for new schema or runtime work.
 
----
+In particular, the following are now historical residues rather than architectural requirements:
 
-### Anti-Patterns (Disallowed)
+- generated Day-only uniqueness columns on `calendar_events`
+- Day-only unique keys built from those generated columns
+- treating `calendar_layer_day` rows as the canonical Day container model
 
-* Using time nodes as narrative containers
-* Skipping time labels or leaving them NULL
-* Inconsistent or custom time label sets
-* Encoding time meaning in event summaries instead of labels
-* Creating unnecessary empty time nodes
+## Design Rule
 
-Violations MUST be rejected at the API layer.
+For new work:
+
+```text
+Book chronology containers belong in:
+- calendar_book_weeks
+- calendar_book_days
+- calendar_book_times
+
+Narrative events belong in:
+- calendar_events
+```
+
+If a code path still depends on `calendar_layer_day`, it should be treated as compatibility or migration residue unless it is explicitly required for legacy read/write support.
+
+## Practical Guidance
+
+Use `calendar_book_days` when the task is about:
+
+- creating a Book day
+- locating a Book day within a week
+- attaching canonical times beneath a day
+- enforcing canonical Book chronology containment
+
+Use legacy `calendar_layer_day` rows only when:
+
+- resolving older identities still emitted by compatibility surfaces
+- mapping historical `calendar_events` chronology references into canonical Book rows
+
+## Status
+
+- canonical Day chronology lives in `calendar_book_days`
+- canonical containment is `calendar_book_days.week_id`
+- Book chronology no longer requires Day containers to live inside `calendar_events`
+- Day-specific generated-column uniqueness on `calendar_events` is historical guidance, not current architecture
