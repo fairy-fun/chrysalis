@@ -61,6 +61,12 @@ function apply_calendar_event_projection_source_fields(
         $changes
     );
 
+    $normalized = apply_inherited_book_time_real_dates_to_projection_changes(
+        $pdo,
+        $event,
+        $normalized
+    );
+
     $assignments = [];
     $params = [
         ':entity_id' => $entityId,
@@ -170,6 +176,100 @@ function collect_calendar_event_affected_projection_ids(
     }
 
     return array_values(array_unique($projectionIds));
+}
+
+function apply_inherited_book_time_real_dates_to_projection_changes(
+    PDO $pdo,
+    array $event,
+    array $changes
+): array {
+    $currentBookTimeId = (int)($event['book_time_id'] ?? 0);
+    $nextBookTimeId = array_key_exists('book_time_id', $changes)
+        ? (int)($changes['book_time_id'] ?? 0)
+        : $currentBookTimeId;
+
+    if ($nextBookTimeId < 1) {
+        return $changes;
+    }
+
+    $resolvedDates = resolve_book_time_inherited_real_dates_for_projection_source(
+        $pdo,
+        $nextBookTimeId
+    );
+
+    $currentStartDateId = trim((string)(
+        $changes['real_date_start_id']
+        ?? $event['real_date_start_id']
+        ?? ''
+    ));
+
+    $currentEndDateId = trim((string)(
+        $changes['real_date_end_id']
+        ?? $event['real_date_end_id']
+        ?? ''
+    ));
+
+    if ($currentStartDateId === '') {
+        $changes['real_date_start_id'] = $resolvedDates['real_date_start_id'];
+    }
+
+    if ($currentEndDateId === '') {
+        $changes['real_date_end_id'] = $resolvedDates['real_date_end_id'];
+    }
+
+    return $changes;
+}
+
+function resolve_book_time_inherited_real_dates_for_projection_source(
+    PDO $pdo,
+    int $bookTimeId
+): array {
+    if ($bookTimeId < 1) {
+        throw new InvalidArgumentException('book_time_id must be positive');
+    }
+
+    $stmt = $pdo->prepare(
+        "
+        SELECT
+            cbd.real_date_start_id,
+            cbd.real_date_end_id
+        FROM calendar_book_times cbt
+        INNER JOIN calendar_book_days cbd
+            ON cbd.id = cbt.day_id
+        WHERE cbt.id = :book_time_id
+        LIMIT 1
+        "
+    );
+
+    $stmt->execute([
+        ':book_time_id' => $bookTimeId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($row)) {
+        throw new RuntimeException(
+            'Cannot inherit Book event dates from missing calendar_book_time'
+        );
+    }
+
+    $realDateStartId = trim((string)($row['real_date_start_id'] ?? ''));
+    $realDateEndId = trim((string)($row['real_date_end_id'] ?? ''));
+
+    if ($realDateStartId === '') {
+        throw new RuntimeException(
+            'Book event cannot localize without calendar_book_day.real_date_start_id'
+        );
+    }
+
+    if ($realDateEndId === '') {
+        $realDateEndId = $realDateStartId;
+    }
+
+    return [
+        'real_date_start_id' => $realDateStartId,
+        'real_date_end_id' => $realDateEndId,
+    ];
 }
 
 function normalize_calendar_event_projection_source_changes(
