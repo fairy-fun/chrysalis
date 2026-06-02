@@ -133,6 +133,13 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
+        'rebuildCalendarProjections' => [
+            'handler' => 'public_html/pecherie/chill-api/calendar/rebuild_calendar_projections.php',
+            'visibility' => 'public',
+            'writes' => true,
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'createProseDraft' => [
             'handler' => 'public_html/pecherie/chill-api/prose/create_prose_draft.php',
             'behaviour_tested' => false,
