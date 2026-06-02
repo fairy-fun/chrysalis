@@ -114,12 +114,12 @@ function clear_calendar_projection_rows_for_rebuild(
     int $projectionId
 ): bool {
 
-    $delete = $pdo->prepare("
-        DELETE FROM calendar_event_projections
-        WHERE calendar_projection_id = :calendar_projection_id
-    ");
-
     try {
+        $delete = $pdo->prepare("
+            DELETE FROM calendar_event_projections
+            WHERE calendar_projection_id = :calendar_projection_id
+        ");
+
         $delete->execute([
             'calendar_projection_id' => $projectionId,
         ]);
