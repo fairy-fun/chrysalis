@@ -167,6 +167,10 @@ function reviewProseAnnotationSuggestions(
 ): array {
     $suggestions = suggestProseAnnotations($pdo, $proseEntityId, $subjectEntityId);
 
+    if (($suggestions['status'] ?? null) !== 'ok') {
+        return $suggestions;
+    }
+
     $stmt = $pdo->prepare("
         SELECT
             annotation_type_id,
