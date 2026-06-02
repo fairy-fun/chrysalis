@@ -14,6 +14,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_node_ensurer.php'
     );
 
+    $allowedBookEventEnsurerFile = realpath(
+        $repoRoot . '/private/framework/calendar/calendar_book_event_ensurer.php'
+    );
+
     $allowedMetadataApplierFile = realpath(
         $repoRoot . '/private/framework/calendar/calendar_event_metadata_applier.php'
     );
@@ -122,6 +126,7 @@ function assert_calendar_event_creation_paths(): void
         ) {
             if (
                 $path !== $allowedInsertFile &&
+                $path !== $allowedBookEventEnsurerFile &&
                 $path !== $allowedChronologyMaterializerFile &&
                 $path !== $allowedMetadataApplierFile &&
                 $path !== $allowedOntologyApplierFile &&
