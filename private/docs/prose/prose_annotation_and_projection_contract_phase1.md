@@ -177,8 +177,45 @@ Until granularity is needed:
 
 ---
 
+## 5.6 Person-Linked Annotation Contract
 
-## 5.6 Annotation Write Semantics (Idempotency & Concurrency Contract)
+When the annotation is about a specific character or person, the link is carried by:
+
+* `subject_entity_id`
+
+### Authoring Rule
+
+For person-targeted tagging, always:
+
+1. annotate the prose span
+2. set `subject_entity_id` to the character/person entity id
+3. use canonical entity-backed `annotation_type_id` / `annotation_value_id` ids
+
+### Meaning
+
+In this model:
+
+* `annotation_type_id` describes the layer such as expression, limbic, or voice
+* `annotation_value_id` describes the normalized tagged value
+* `subject_entity_id` identifies who the annotation is about
+
+`annotation_type_expression` is therefore a first-class entity-backed annotation type, but it does **not** itself carry the person linkage. The person linkage lives on `subject_entity_id`.
+
+### Discoverability Rule
+
+This is the NL-oriented discovery contract for later retrieval.
+
+If future workflows need to discover “where was Shay tagged as contained” or “show all stressed annotations attached to this character,” they should rely on:
+
+* prose span text
+* `subject_entity_id`
+* entity-backed annotation type/value ids
+
+Do not treat person-linking as implicit from prose text alone when structured annotation is available.
+
+---
+
+## 5.7 Annotation Write Semantics (Idempotency & Concurrency Contract)
 Model
 
 Annotations are treated as a set of uniquely identified spans, not an append-only log.
@@ -327,6 +364,12 @@ When inserting prose:
     * using only valid types and values
     * across the full text span
 
+4. For character/person tagging:
+
+    * annotate the relevant prose span
+    * set `subject_entity_id` to the character/person entity id
+    * keep the annotation type/value ids canonical and entity-backed
+
 ---
 
 ## 10. Future Expansion (Phase 2+)
@@ -435,7 +478,6 @@ This is a strict structural guard.
 
 ---
 
-
 ###### 2. Dream Journals
 
    dream_journal:{entity_id}
@@ -500,14 +542,12 @@ Calendar projections are structurally safe
 Dream journal projections are type-safe
 Projection domains are explicit and controlled
 
-
 #### Adding a New Target Domain
 
 To introduce a new projection target type:
 
 1. Define a new prefix:
    example_domain:*
-
 
 2. Extend `prose_projection_guard_target_if_needed`:
 - Add prefix to allowed list
