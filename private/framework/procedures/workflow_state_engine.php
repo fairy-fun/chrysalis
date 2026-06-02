@@ -290,5 +290,9 @@ function fw_workflow_terminal_response(
             );
     }
 
+    if (isset($context['operator_sql_dropin'])) {
+        $response['operator_sql_dropin'] = $context['operator_sql_dropin'];
+    }
+
     return $response;
 }
