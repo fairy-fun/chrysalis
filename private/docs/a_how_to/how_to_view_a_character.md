@@ -240,3 +240,19 @@ Combine all resolved sources.
 Only then assess profile completeness.
 
 A character is the resolved aggregate of all character-related data, not any single row in the database.
+
+Current State
+
+Character resolution is currently manual.
+
+Future State
+
+Consumers should query:
+
+    v_character_resolved
+
+as the primary entry point for character inspection.
+
+Underlying tables remain authoritative,
+but the resolver view becomes the canonical
+read model for characters.
