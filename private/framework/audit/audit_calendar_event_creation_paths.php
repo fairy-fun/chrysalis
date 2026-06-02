@@ -68,6 +68,12 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_projection_materializer.php'
     );
 
+    $allowedProjectionMaterializerPgFile = (
+        realpath(
+            $repoRoot . '/private/framework-pg/calendar/calendar_projection_materializer_pg.php'
+        ) ?: ''
+    );
+
     $tierOneEventCreationPaths = [
         '/private/framework/calendar/calendar_event_creation_service.php',
         '/private/framework/calendar/calendar_book_event_ensurer.php',
@@ -191,7 +197,10 @@ function assert_calendar_event_creation_paths(): void
         if (
             preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|REPLACE\s+INTO)\s+(?:sxnzlfun_chrysalis\.)?(?:calendar_event_projections|calendar_projection_builds)\b/i', $contents)
         ) {
-            if ($path !== $allowedProjectionMaterializerFile) {
+            if (
+                $path !== $allowedProjectionMaterializerFile &&
+                $path !== $allowedProjectionMaterializerPgFile
+            ) {
                 throw new RuntimeException(
                     "Calendar projection mutation must go through calendar_projection_materializer in {$path}"
                 );
