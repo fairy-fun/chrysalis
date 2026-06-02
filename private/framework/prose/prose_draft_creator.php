@@ -92,12 +92,24 @@ function prose_entity_exists_for_type(PDO $pdo, string $entityId, string $entity
     return (int) $stmt->fetchColumn() === 1;
 }
 
+function prose_annotation_type_entity_exists(PDO $pdo, string $annotationTypeId): bool
+{
+    return prose_entity_exists_for_type(
+        $pdo,
+        $annotationTypeId,
+        'entity_type_classval'
+    );
+}
+
 function prose_annotation_value_is_valid_for_type(
     PDO $pdo,
     string $annotationTypeId,
     string $annotationValueId
 ): bool {
     $allowedEntityTypeByAnnotationType = [
+        'annotation_type_expression' => 'entity_type_classval',
+        'annotation_type_limbic' => 'entity_type_classval',
+        'annotation_type_voice' => 'entity_type_classval',
         'prose_annotation_type_character_presence' => 'entity_type_character',
         'prose_annotation_type_theme_observation' => 'entity_type_theme',
     ];
@@ -300,7 +312,7 @@ function prose_validate_annotation(
         }
     }
 
-    if (!prose_classval_exists_for_type($pdo, $annotationTypeId, 'cvt_prose_annotation_type')) {
+    if (!prose_annotation_type_entity_exists($pdo, $annotationTypeId)) {
         throw new InvalidArgumentException($prefix . 'invalid annotation_type_id: ' . $annotationTypeId);
     }
 
