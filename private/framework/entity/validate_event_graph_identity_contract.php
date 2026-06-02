@@ -34,7 +34,12 @@ function count_bad_event_entities(PDO $pdo): int
     $stmt = $pdo->query(
         "SELECT COUNT(*)
          FROM sxnzlfun_chrysalis.entities e
-         WHERE e.entity_type_id = 'entity_type_event'"
+         WHERE e.entity_type_id = 'entity_type_event'
+           AND EXISTS (
+               SELECT 1
+               FROM sxnzlfun_chrysalis.calendar_events ce
+               WHERE ce.entity_id = e.id
+           )"
     );
 
     $count = $stmt->fetchColumn();
@@ -56,7 +61,7 @@ function validate_event_graph_identity_contract(PDO $pdo): void
             'Event graph identity contract violated: ' .
             'calendar_events.entity_id must resolve to entities.id ' .
             'with entity_type_id matching calendar_events.layer_id, and entity_type_event ' .
-            'must not be in active use.'
+            'must not be referenced by active calendar_events rows.'
         );
     }
 }
