@@ -67,7 +67,7 @@ function suggestProseAnnotations(
                 continue;
             }
 
-            $spanEnd = $offset + mb_strlen($needle) - 1;
+            $spanEnd = $offset + mb_strlen($needle);
 
             $suggestions[] = [
                 'prose_entity_id' => $proseEntityId,
