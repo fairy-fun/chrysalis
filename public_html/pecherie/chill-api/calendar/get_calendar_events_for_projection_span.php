@@ -108,7 +108,7 @@ try {
         SELECT
             ce.entity_id,
             parent.entity_id AS parent_entity_id,
-            ce.projection_id,
+            cep.calendar_projection_id AS projection_id,
             ce.layer_id,
             ce.sequence_index,
             ce.event_index,
@@ -129,21 +129,38 @@ try {
                 WHERE pp.target_entity_id = ce.entity_id
                   AND TRIM(COALESCE(pd.prose_body, '')) <> ''
             ) AS has_prose
-        FROM sxnzlfun_chrysalis.calendar_events ce
+        FROM sxnzlfun_chrysalis.calendar_event_projections cep
+        INNER JOIN sxnzlfun_chrysalis.calendar_events ce
+            ON ce.id = cep.calendar_event_id
         LEFT JOIN sxnzlfun_chrysalis.calendar_events parent
             ON parent.id = ce.parent_event_id
-           AND parent.projection_id = ce.projection_id
-        INNER JOIN sxnzlfun_chrysalis.dates start_date_lookup
+        LEFT JOIN sxnzlfun_chrysalis.dates start_date_lookup
             ON start_date_lookup.id = ce.real_date_start_id
         LEFT JOIN sxnzlfun_chrysalis.dates end_date_lookup
             ON end_date_lookup.id = ce.real_date_end_id
-        WHERE ce.projection_id = :projection_id
+        WHERE cep.calendar_projection_id = :projection_id
           AND ce.layer_id = 'calendar_layer_event'
-          AND start_date_lookup.date_value <= :end_date
-          AND COALESCE(end_date_lookup.date_value, start_date_lookup.date_value) >= :start_date
+          AND COALESCE(
+                DATE(cep.projection_starts_at),
+                start_date_lookup.date_value
+              ) <= :end_date
+          AND COALESCE(
+                DATE(cep.projection_ends_at),
+                DATE(cep.projection_starts_at),
+                end_date_lookup.date_value,
+                start_date_lookup.date_value
+              ) >= :start_date
         ORDER BY
-            start_date_lookup.date_value ASC,
-            COALESCE(end_date_lookup.date_value, start_date_lookup.date_value) ASC,
+            COALESCE(
+                DATE(cep.projection_starts_at),
+                start_date_lookup.date_value
+            ) ASC,
+            COALESCE(
+                DATE(cep.projection_ends_at),
+                DATE(cep.projection_starts_at),
+                end_date_lookup.date_value,
+                start_date_lookup.date_value
+            ) ASC,
             ce.sequence_index ASC,
             ce.entity_id ASC
     ");
