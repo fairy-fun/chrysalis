@@ -140,6 +140,29 @@ executed via:
 
 private/framework/ci/run_all_audits.php
 
+## Character knowledge packet must remain resolver-assembled
+
+- Element: Character knowledge packet
+- Type: Resolver assembly contract
+- New home:
+  - `private/framework/character/resolve_knowledge_packet.php`
+  - `public_html/pecherie/chill-api/character/resolve_knowledge_packet.php`
+  - `private/docs/identity/character_knowledge_packet_resolver_index.md`
+- Invariant:
+  - the knowledge packet is a resolver-assembled read model
+  - the knowledge packet is not a source of canon
+  - `characters.entity_id` is the canonical bridge for downstream relationship and fact resolution
+  - existing relationship and fact views remain the source surfaces
+  - any new helper file that feeds the knowledge packet must be indexed in the dedicated resolver index doc
+- Enforcement:
+  - keep the endpoint thin and the resolver procedural
+  - prefer existing resolved SQL views over PHP reconstruction
+  - do not extend `v_character_resolved` to carry knowledge-packet payloads
+- Repair path:
+  - move new helper logic behind the resolver boundary
+  - add the helper to `private/docs/identity/character_knowledge_packet_resolver_index.md`
+  - restore `character_id -> characters.entity_id` bridge discipline
+
 ## Expression outputs must encode exactly one transformation per POV run
 
 - Element: Expression constraint outputs
