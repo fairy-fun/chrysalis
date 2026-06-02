@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/workflow_value_resolver.php';
+require_once __DIR__ . '/workflow_sql_dropin_builder.php';
 
 require_once __DIR__
     . '/../calendar/admin/calendar_book_chronology_materializer.php';
@@ -287,6 +288,10 @@ function fw_execute_workflow_calendar_book_day_create(
         $projectionId
     );
 
+    $operatorSqlDropin = fw_workflow_calendar_book_day_sql_dropin(
+        (int)$day['id']
+    );
+
     return [
 
         'success' => true,
@@ -296,6 +301,7 @@ function fw_execute_workflow_calendar_book_day_create(
             [
 
                 'calendar_book_day' => $day,
+                'operator_sql_dropin' => $operatorSqlDropin,
 
                 'calendar_book_day_create' => [
 
