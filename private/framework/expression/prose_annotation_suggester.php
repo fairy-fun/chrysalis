@@ -1,5 +1,13 @@
 <?php
 
+const PROSE_ANNOTATION_TYPE_EXPRESSION_ID = 'annotation_type_expression';
+const PROSE_ANNOTATION_TYPE_LIMBIC_ID = 'annotation_type_limbic';
+const PROSE_ANNOTATION_TYPE_VOICE_ID = 'annotation_type_voice';
+
+const PROSE_ANNOTATION_VALUE_EXPRESSION_CONTAINED_ID = 'expression_contained';
+const PROSE_ANNOTATION_VALUE_LIMBIC_STRESSED_ID = 'limbic_stressed';
+const PROSE_ANNOTATION_VALUE_VOICE_SHAY_ID = 'voice_shay';
+
 function suggestProseAnnotations(
     PDO $pdo,
     string $proseEntityId,
@@ -36,6 +44,7 @@ function suggestProseAnnotations(
     /*
      * Baseline heuristic layer.
      * This is suggestion-only. Do not persist these as curated truth.
+     * Annotation type/value ids are treated as entity-backed ids.
      * Later, this can be replaced or enriched by expression_constraint_outputs.
      */
 
@@ -43,18 +52,18 @@ function suggestProseAnnotations(
 
     $patterns = [
         [
-            'annotation_type_id' => 'annotation_type_expression',
-            'annotation_value_id' => 'expression_contained',
+            'annotation_type_id' => PROSE_ANNOTATION_TYPE_EXPRESSION_ID,
+            'annotation_value_id' => PROSE_ANNOTATION_VALUE_EXPRESSION_CONTAINED_ID,
             'needles' => ['contained', 'held still', 'kept still', 'swallowed', 'composed'],
         ],
         [
-            'annotation_type_id' => 'annotation_type_limbic',
-            'annotation_value_id' => 'limbic_stressed',
+            'annotation_type_id' => PROSE_ANNOTATION_TYPE_LIMBIC_ID,
+            'annotation_value_id' => PROSE_ANNOTATION_VALUE_LIMBIC_STRESSED_ID,
             'needles' => ['tightened', 'could not breathe', 'panic', 'shame', 'embarrassment'],
         ],
         [
-            'annotation_type_id' => 'annotation_type_voice',
-            'annotation_value_id' => 'voice_shay',
+            'annotation_type_id' => PROSE_ANNOTATION_TYPE_VOICE_ID,
+            'annotation_value_id' => PROSE_ANNOTATION_VALUE_VOICE_SHAY_ID,
             'needles' => ['That’s nice', 'That’s cute', 'I’m obsessed', 'Yes, girl'],
         ],
     ];
