@@ -90,7 +90,7 @@ function buildProseTrainingView(
             $annotation['span_text'] = mb_substr(
                 $proseText,
                 $annotation['span_start'],
-                $annotation['span_end'] - $annotation['span_start'] + 1
+                $annotation['span_end'] - $annotation['span_start']
             );
         } else {
             $annotation['span_text'] = null;
