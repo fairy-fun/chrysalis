@@ -22,6 +22,10 @@ function assert_calendar_event_creation_paths(): void
         $repoRoot . '/private/framework/calendar/calendar_event_ontology_applier.php'
     );
 
+    $allowedProjectionSourceApplierFile = realpath(
+        $repoRoot . '/private/framework/calendar/calendar_event_projection_source_applier.php'
+    );
+
     $allowedChronologyMaterializerFile = realpath(
         $repoRoot . '/private/framework/procedures/materialize_calendar_chronology.php'
     );
@@ -121,6 +125,7 @@ function assert_calendar_event_creation_paths(): void
                 $path !== $allowedChronologyMaterializerFile &&
                 $path !== $allowedMetadataApplierFile &&
                 $path !== $allowedOntologyApplierFile &&
+                $path !== $allowedProjectionSourceApplierFile &&
                 !preg_match('/\bensure_calendar_node\s*\(/', $contents)
             ) {
                 throw new RuntimeException(
