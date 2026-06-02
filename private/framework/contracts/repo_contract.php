@@ -60,6 +60,7 @@ const FW_REPO_CONTRACT = [
             => 'public_html/pecherie/chill-api/prose/start_workflow_chat.php',
             'visibility' => 'public',
             'writes' => false,
+            'description' => 'Natural-language workflow entrypoint for prose/calendar tasks, including person-linked prose tagging flows.',
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
@@ -128,11 +129,13 @@ const FW_REPO_CONTRACT = [
         ],
         'createProseDraft' => [
             'handler' => 'public_html/pecherie/chill-api/prose/create_prose_draft.php',
+            'description' => 'Create prose and optional span annotations; person-linked annotations attach through subject_entity_id using entity-backed annotation ids.',
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
         'addProseAnnotations' => [
             'handler' => 'public_html/pecherie/chill-api/prose/add_prose_annotations.php',
+            'description' => 'Append span annotations to prose; for character/person tagging, annotate the span and set subject_entity_id to the target entity.',
             'behaviour_tested' => false,
             'audit_visibility_required' => true,
         ],
