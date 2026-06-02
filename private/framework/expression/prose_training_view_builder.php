@@ -1,5 +1,10 @@
 <?php
 
+const PROSE_TRAINING_ANNOTATION_TYPE_VOICE_ID = 'annotation_type_voice';
+const PROSE_TRAINING_ANNOTATION_TYPE_LIMBIC_ID = 'annotation_type_limbic';
+const PROSE_TRAINING_ANNOTATION_TYPE_EXPRESSION_ID = 'annotation_type_expression';
+const PROSE_TRAINING_ANNOTATION_TYPE_THEME_ID = 'annotation_type_theme';
+
 function buildProseTrainingView(
     PDO $pdo,
     string $proseEntityId
@@ -112,13 +117,13 @@ function buildProseTrainingView(
             $characters[$annotation['subject_entity_id']] = true;
         }
 
-        if ($type === 'annotation_type_voice') {
+        if ($type === PROSE_TRAINING_ANNOTATION_TYPE_VOICE_ID) {
             $voiceLabels[] = $value;
-        } elseif ($type === 'annotation_type_limbic') {
+        } elseif ($type === PROSE_TRAINING_ANNOTATION_TYPE_LIMBIC_ID) {
             $limbicLabels[] = $value;
-        } elseif ($type === 'annotation_type_expression') {
+        } elseif ($type === PROSE_TRAINING_ANNOTATION_TYPE_EXPRESSION_ID) {
             $expressionLabels[] = $value;
-        } elseif ($type === 'annotation_type_theme') {
+        } elseif ($type === PROSE_TRAINING_ANNOTATION_TYPE_THEME_ID) {
             $themeLabels[] = $value;
         }
     }
