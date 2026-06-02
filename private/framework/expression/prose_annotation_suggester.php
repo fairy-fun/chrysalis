@@ -1,46 +1,59 @@
 <?php
 
-function prose_suggester_resolve_entity_backed_classval_ids(
+function prose_suggester_resolve_entity_backed_classval_ids_by_label(
     PDO $pdo,
-    array $codes
+    array $specs
 ): array {
-    $codes = array_values(array_unique(array_filter(
-        $codes,
-        static fn ($value): bool => is_string($value) && trim($value) !== ''
-    )));
-
-    if ($codes === []) {
+    if ($specs === []) {
         return [];
     }
 
-    $placeholders = [];
-    $params = [];
-
-    foreach ($codes as $index => $code) {
-        $placeholder = ':code_' . $index;
-        $placeholders[] = $placeholder;
-        $params[$placeholder] = $code;
-    }
-
-    $stmt = $pdo->prepare(
-        "
-        SELECT
-            c.code,
-            e.id
-        FROM sxnzlfun_chrysalis.entities e
-        INNER JOIN sxnzlfun_chrysalis.classvals c
-            ON c.id = e.id
-        WHERE e.entity_type_id = 'entity_type_classval'
-          AND c.code IN (" . implode(', ', $placeholders) . ")
-        "
-    );
-
-    $stmt->execute($params);
-
     $resolved = [];
 
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $resolved[$row['code']] = $row['id'];
+    foreach ($specs as $key => $spec) {
+        $label = $spec['label'] ?? null;
+
+        if (!is_string($label) || trim($label) === '') {
+            throw new InvalidArgumentException(
+                'Missing prose annotation suggester label for key: ' . $key
+            );
+        }
+
+        $stmt = $pdo->prepare(
+            "
+            SELECT
+                e.id
+            FROM sxnzlfun_chrysalis.entities e
+            INNER JOIN sxnzlfun_chrysalis.classvals c
+                ON c.id = e.id
+            LEFT JOIN sxnzlfun_chrysalis.entity_texts et
+                ON et.entity_id = e.id
+            WHERE e.entity_type_id = 'entity_type_classval'
+              AND (
+                    c.label = :label
+                 OR et.canonical_label = :label
+              )
+            GROUP BY e.id
+            ORDER BY e.id ASC
+            "
+        );
+
+        $stmt->execute([
+            ':label' => trim($label),
+        ]);
+
+        $matches = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (count($matches) !== 1) {
+            throw new RuntimeException(
+                'Expected exactly one entity-backed classval for prose annotation suggester label "'
+                . $label
+                . '", found '
+                . count($matches)
+            );
+        }
+
+        $resolved[$key] = (string) $matches[0];
     }
 
     return $resolved;
@@ -87,44 +100,45 @@ function suggestProseAnnotations(
 
     $body = $draft['prose_body'];
 
+    $annotationEntitySpecs = [
+        'expression_type' => ['label' => 'Expression'],
+        'expression_value' => ['label' => 'Contained'],
+        'limbic_type' => ['label' => 'Limbic'],
+        'limbic_value' => ['label' => 'Stressed'],
+        'voice_type' => ['label' => 'Voice'],
+        'voice_value' => ['label' => 'Shay'],
+    ];
+
+    try {
+        $resolvedIds = prose_suggester_resolve_entity_backed_classval_ids_by_label(
+            $pdo,
+            $annotationEntitySpecs
+        );
+    } catch (Throwable $e) {
+        return [
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'prose_entity_id' => $proseEntityId,
+        ];
+    }
+
     $patterns = [
         [
-            'annotation_type_code' => 'annotation_type_expression',
-            'annotation_value_code' => 'expression_contained',
+            'annotation_type_id' => $resolvedIds['expression_type'],
+            'annotation_value_id' => $resolvedIds['expression_value'],
             'needles' => ['contained', 'held still', 'kept still', 'swallowed', 'composed'],
         ],
         [
-            'annotation_type_code' => 'annotation_type_limbic',
-            'annotation_value_code' => 'limbic_stressed',
+            'annotation_type_id' => $resolvedIds['limbic_type'],
+            'annotation_value_id' => $resolvedIds['limbic_value'],
             'needles' => ['tightened', 'could not breathe', 'panic', 'shame', 'embarrassment'],
         ],
         [
-            'annotation_type_code' => 'annotation_type_voice',
-            'annotation_value_code' => 'voice_shay',
+            'annotation_type_id' => $resolvedIds['voice_type'],
+            'annotation_value_id' => $resolvedIds['voice_value'],
             'needles' => ['That’s nice', 'That’s cute', 'I’m obsessed', 'Yes, girl'],
         ],
     ];
-
-    $requiredCodes = [];
-    foreach ($patterns as $pattern) {
-        $requiredCodes[] = $pattern['annotation_type_code'];
-        $requiredCodes[] = $pattern['annotation_value_code'];
-    }
-
-    $resolvedIdsByCode = prose_suggester_resolve_entity_backed_classval_ids(
-        $pdo,
-        $requiredCodes
-    );
-
-    foreach ($requiredCodes as $requiredCode) {
-        if (!isset($resolvedIdsByCode[$requiredCode])) {
-            return [
-                'status' => 'error',
-                'message' => 'Missing entity-backed classval for prose annotation suggester code: ' . $requiredCode,
-                'prose_entity_id' => $proseEntityId,
-            ];
-        }
-    }
 
     foreach ($patterns as $pattern) {
         foreach ($pattern['needles'] as $needle) {
@@ -139,8 +153,8 @@ function suggestProseAnnotations(
             $suggestions[] = [
                 'prose_entity_id' => $proseEntityId,
                 'subject_entity_id' => $subjectEntityId,
-                'annotation_type_id' => $resolvedIdsByCode[$pattern['annotation_type_code']],
-                'annotation_value_id' => $resolvedIdsByCode[$pattern['annotation_value_code']],
+                'annotation_type_id' => $pattern['annotation_type_id'],
+                'annotation_value_id' => $pattern['annotation_value_id'],
                 'span_start' => $offset,
                 'span_end' => $spanEnd,
                 'span_text' => mb_substr($body, $offset, mb_strlen($needle)),
