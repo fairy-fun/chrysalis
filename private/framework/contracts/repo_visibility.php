@@ -19,6 +19,7 @@ return [
         'public_html/pecherie/chill-api/',
         'public_html/pecherie/chill-api/repo',
         'public_html/pecherie/chill-api/choreography',
+        'public_html/pecherie/chill-api/character',
         'public_html/pecherie/chill-api/entity',
         'public_html/pecherie/chill-api/expression',
         'public_html/pecherie/chill-api/facts',
