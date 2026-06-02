@@ -149,6 +149,10 @@ switch ($operation) {
         require __DIR__ . '/calendar/get_calendar_events_for_projection_span.php';
         break;
 
+    case 'rebuildCalendarProjections':
+        require __DIR__ . '/calendar/rebuild_calendar_projections.php';
+        break;
+
     case 'createProseDraft':
         require __DIR__ . '/prose/create_prose_draft.php';
         break;
