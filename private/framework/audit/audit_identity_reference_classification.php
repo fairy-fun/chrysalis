@@ -193,12 +193,18 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 
         // view-projected classval references
         ['v_character_appearance_resolved', 'value_classval_id', 'CLASSVAL'],
+        ['v_character_relationship_resolved', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'status_classval_id', 'CLASSVAL'],
         ['v_medley_2025_v1_final', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_2025_v1_final', 'status_classval_id', 'CLASSVAL'],
         ['v_medley_pairings', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_pairings', 'status_classval_id', 'CLASSVAL'],
+        ['v_relationship_fact_resolved', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['v_relationship_fact_resolved', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['v_relationship_fact_resolved', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['v_relationship_resolved', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['v_relationship_resolved', 'status_classval_id', 'CLASSVAL'],
         ['v_relationship_resolver', 'status_classval_id', 'CLASSVAL'],
 
         /*
