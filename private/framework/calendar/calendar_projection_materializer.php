@@ -180,14 +180,22 @@ function build_calendar_projection_row(
     ];
 
     if ($projectionType === 'projection_type_timeline_view') {
+        $timelineStartDateId = select_calendar_projection_timeline_start_date_id(
+            $event
+        );
+
+        $timelineEndDateId = select_calendar_projection_timeline_end_date_id(
+            $event
+        );
+
         $row['projection_starts_at'] = resolve_calendar_datetime(
             $pdo,
-            $event['real_date_start_id'] ?? null
+            $timelineStartDateId
         );
 
         $row['projection_ends_at'] = resolve_calendar_datetime(
             $pdo,
-            $event['real_date_end_id'] ?? null
+            $timelineEndDateId
         );
 
     } elseif ($projectionType === 'projection_type_book') {
@@ -207,6 +215,40 @@ function build_calendar_projection_row(
     }
 
     return $row;
+}
+
+function select_calendar_projection_timeline_start_date_id(array $event): ?string
+{
+    $eventStartDateId = trim((string)($event['real_date_start_id'] ?? ''));
+
+    if ($eventStartDateId !== '') {
+        return $eventStartDateId;
+    }
+
+    $bookDayStartDateId = trim((string)(
+        $event['book_day_real_date_start_id'] ?? ''
+    ));
+
+    return $bookDayStartDateId === '' ? null : $bookDayStartDateId;
+}
+
+function select_calendar_projection_timeline_end_date_id(array $event): ?string
+{
+    $eventEndDateId = trim((string)($event['real_date_end_id'] ?? ''));
+
+    if ($eventEndDateId !== '') {
+        return $eventEndDateId;
+    }
+
+    $bookDayEndDateId = trim((string)(
+        $event['book_day_real_date_end_id'] ?? ''
+    ));
+
+    if ($bookDayEndDateId !== '') {
+        return $bookDayEndDateId;
+    }
+
+    return select_calendar_projection_timeline_start_date_id($event);
 }
 
 function build_materialized_book_chronology_address(
@@ -316,6 +358,8 @@ function fetch_projection_source_events(
             e.projection_id,
             cbw.week_index AS book_week_index,
             cbd.day_index AS book_day_index,
+            cbd.real_date_start_id AS book_day_real_date_start_id,
+            cbd.real_date_end_id AS book_day_real_date_end_id,
             cbt.time_index AS book_time_index
         FROM calendar_events e
         INNER JOIN calendar_event_projection_membership m
