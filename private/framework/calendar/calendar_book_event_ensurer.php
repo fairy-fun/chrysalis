@@ -63,6 +63,12 @@ function ensure_calendar_book_event(
         ensure_calendar_event_entity_exists($pdo, (int)$existing['id']);
         $existingId = (int)$existing['id'];
 
+        ensure_calendar_book_event_real_dates(
+            $pdo,
+            $existingId,
+            $bookTime
+        );
+
         ensure_calendar_book_event_projection_surfaces(
             $pdo,
             $existingId,
@@ -74,6 +80,11 @@ function ensure_calendar_book_event(
 
     $payload['book_time_id'] = $bookTimeId;
     $payload['event_index'] = $eventIndex;
+    $payload = apply_calendar_book_event_inherited_real_dates(
+        $pdo,
+        $bookTime,
+        $payload
+    );
 
     /*
      * Compatibility only.
@@ -104,6 +115,119 @@ function ensure_calendar_book_event(
     );
 
     return get_calendar_node_by_id($pdo, (int)$event['id']);
+}
+
+function apply_calendar_book_event_inherited_real_dates(
+    PDO $pdo,
+    array $bookTime,
+    array $payload
+): array {
+    $inheritedDates = resolve_calendar_book_time_inherited_real_dates(
+        $pdo,
+        $bookTime
+    );
+
+    if (($payload['real_date_start_id'] ?? null) === null) {
+        $payload['real_date_start_id'] = $inheritedDates['real_date_start_id'];
+    }
+
+    if (($payload['real_date_end_id'] ?? null) === null) {
+        $payload['real_date_end_id'] = $inheritedDates['real_date_end_id'];
+    }
+
+    return $payload;
+}
+
+function ensure_calendar_book_event_real_dates(
+    PDO $pdo,
+    int $calendarEventId,
+    array $bookTime
+): void {
+    $event = get_calendar_node_by_id($pdo, $calendarEventId);
+
+    $existingStartDateId = trim((string)($event['real_date_start_id'] ?? ''));
+    $existingEndDateId = trim((string)($event['real_date_end_id'] ?? ''));
+
+    if ($existingStartDateId !== '' && $existingEndDateId !== '') {
+        return;
+    }
+
+    $inheritedDates = resolve_calendar_book_time_inherited_real_dates(
+        $pdo,
+        $bookTime
+    );
+
+    $update = $pdo->prepare("
+        UPDATE sxnzlfun_chrysalis.calendar_events
+        SET real_date_start_id = :real_date_start_id,
+            real_date_end_id = :real_date_end_id,
+            updated_at = NOW()
+        WHERE id = :id
+          AND layer_id = 'calendar_layer_event'
+        LIMIT 1
+    ");
+
+    $update->execute([
+        ':real_date_start_id' => $existingStartDateId !== ''
+            ? $existingStartDateId
+            : $inheritedDates['real_date_start_id'],
+        ':real_date_end_id' => $existingEndDateId !== ''
+            ? $existingEndDateId
+            : $inheritedDates['real_date_end_id'],
+        ':id' => $calendarEventId,
+    ]);
+}
+
+function resolve_calendar_book_time_inherited_real_dates(
+    PDO $pdo,
+    array $bookTime
+): array {
+    $dayId = (int)($bookTime['day_id'] ?? 0);
+
+    if ($dayId < 1) {
+        throw new RuntimeException(
+            'calendar_book_time missing canonical day_id for real date inheritance'
+        );
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            real_date_start_id,
+            real_date_end_id
+        FROM sxnzlfun_chrysalis.calendar_book_days
+        WHERE id = :day_id
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':day_id' => $dayId,
+    ]);
+
+    $day = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($day)) {
+        throw new RuntimeException(
+            'calendar_book_day not found for Book event real date inheritance'
+        );
+    }
+
+    $realDateStartId = trim((string)($day['real_date_start_id'] ?? ''));
+    $realDateEndId = trim((string)($day['real_date_end_id'] ?? ''));
+
+    if ($realDateStartId === '') {
+        throw new RuntimeException(
+            'Book event cannot localize without calendar_book_day.real_date_start_id'
+        );
+    }
+
+    if ($realDateEndId === '') {
+        $realDateEndId = $realDateStartId;
+    }
+
+    return [
+        'real_date_start_id' => $realDateStartId,
+        'real_date_end_id' => $realDateEndId,
+    ];
 }
 
 function ensure_calendar_book_event_projection_surfaces(
