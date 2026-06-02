@@ -63,9 +63,6 @@ function resolve_prose_by_chronology_address(
 
         FROM calendar_event_projections cep
 
-        INNER JOIN calendar_projection_builds cpb
-            ON cpb.id = cep.build_id
-
         INNER JOIN calendar_events ce
             ON ce.id = cep.calendar_event_id
 
@@ -76,12 +73,6 @@ function resolve_prose_by_chronology_address(
           AND (
                 cep.chronology_address = :chronology_address
                 OR cep.chronology_address LIKE CONCAT(:chronology_address, '.%')
-          )
-          AND cpb.id = (
-                SELECT MAX(id)
-                FROM calendar_projection_builds
-                WHERE calendar_projection_id = :projection_id
-                  AND status = 'valid'
           )
 
         ORDER BY cep.chronology_address ASC, cep.id ASC
@@ -205,9 +196,6 @@ function resolve_prose_by_week_day(
 
         FROM calendar_event_projections cep
 
-        INNER JOIN calendar_projection_builds cpb
-            ON cpb.id = cep.build_id
-
         INNER JOIN calendar_events ce
             ON ce.id = cep.calendar_event_id
 
@@ -217,12 +205,6 @@ function resolve_prose_by_week_day(
         WHERE cep.calendar_projection_id = :projection_id
           AND ce.week_index = :week_index
           AND ce.day_index = :day_index
-          AND cpb.id = (
-                SELECT MAX(id)
-                FROM calendar_projection_builds
-                WHERE calendar_projection_id = :projection_id
-                  AND status = 'valid'
-          )
 
         ORDER BY
             ce.time_index ASC,
