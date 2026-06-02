@@ -7,6 +7,18 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_creator.php';
 
+/**
+ * Annotation augmentation contract.
+ *
+ * For person-targeted narrative tagging:
+ *   - annotate the prose span
+ *   - set subject_entity_id to the character/person entity id
+ *   - use canonical entity-backed annotation_type_id / annotation_value_id ids
+ *
+ * This preserves later NL-oriented retrieval over both prose text and
+ * character-linked annotation metadata.
+ */
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(405, ['error' => 'Method not allowed']);
 }
