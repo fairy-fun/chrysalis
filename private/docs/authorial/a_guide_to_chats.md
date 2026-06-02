@@ -63,7 +63,6 @@ startWorkflowChat create book event
 
 ##### Create an event that only attaches to the real-time calendar
 
-
 ### Tier 2
 
 #### Add prose to an existing event
@@ -163,6 +162,30 @@ CHAR-MAIN-001 CHAR-SUP-998 CHAR-SUP-997
 
 → approve only those entities
 
+#### 3d: tag prose annotations for a specific person
+
+Use this when you want expression, limbic, or voice annotations to remain discoverable as person-linked structure later.
+
+```text
+startWorkflowChat I want to tag a character's expression from attached prose
+```
+
+```text
+startWorkflowChat Tag Shay's prose spans with expression and limbic annotations
+```
+
+```text
+Call startWorkflowChat with message: annotate attached prose for CHAR-MAIN-001 using expression tags
+```
+
+Authoring rule to preserve:
+
+1. annotate the prose span
+2. set `subject_entity_id` to the character/person entity id
+3. use canonical entity-backed annotation type/value ids
+
+This is the contract that makes later NL retrieval work reliably.
+
 #### Process attached prose into calendar subevents
 
 To process prose already attached to a calendar event into subevents, tell the chat:
@@ -207,13 +230,5 @@ To retrieve prose already attached to a calendar event by label, tell the chat:
 startWorkflowChat Show me the prose for 20250120-a
 ```
 
-
-#### Retrieve prose by week/day position
-
-You may also request prose by temporal position:
-
-Show me the prose for week 1 day 2
-
 #### Retrieve real-time calendar events
 Show me projection_id = 5; for a given time-span
-
