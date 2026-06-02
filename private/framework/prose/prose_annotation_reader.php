@@ -26,6 +26,67 @@ function prose_draft_exists_for_reader(PDO $pdo, string $proseEntityId): bool
     return (int) $stmt->fetchColumn() === 1;
 }
 
+function prose_fetch_entity_summaries(PDO $pdo, array $entityIds): array
+{
+    $entityIds = array_values(array_unique(array_filter(
+        $entityIds,
+        static fn ($value): bool => is_string($value) && trim($value) !== ''
+    )));
+
+    if ($entityIds === []) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+
+    foreach ($entityIds as $index => $entityId) {
+        $placeholder = ':entity_id_' . $index;
+        $placeholders[] = $placeholder;
+        $params[$placeholder] = $entityId;
+    }
+
+    $sql = "
+        SELECT
+            e.id,
+            e.entity_type_id,
+            c.classval_type_id,
+            c.code AS classval_code,
+            c.label AS classval_label,
+            MIN(et.canonical_label) AS canonical_label
+        FROM sxnzlfun_chrysalis.entities e
+        LEFT JOIN sxnzlfun_chrysalis.classvals c
+            ON c.id = e.id
+        LEFT JOIN sxnzlfun_chrysalis.entity_texts et
+            ON et.entity_id = e.id
+        WHERE e.id IN (" . implode(', ', $placeholders) . ")
+        GROUP BY
+            e.id,
+            e.entity_type_id,
+            c.classval_type_id,
+            c.code,
+            c.label
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $summaries = [];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $summaries[$row['id']] = [
+            'id' => $row['id'],
+            'entity_type_id' => $row['entity_type_id'],
+            'canonical_label' => $row['canonical_label'],
+            'classval_type_id' => $row['classval_type_id'],
+            'classval_code' => $row['classval_code'],
+            'classval_label' => $row['classval_label'],
+        ];
+    }
+
+    return $summaries;
+}
+
 function get_prose_annotations(PDO $pdo, string $proseEntityId): array
 {
     if (!prose_draft_exists_for_reader($pdo, $proseEntityId)) {
@@ -55,13 +116,34 @@ function get_prose_annotations(PDO $pdo, string $proseEntityId): array
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $entityIds = [];
+    foreach ($rows as $row) {
+        $entityIds[] = $row['annotation_type_id'];
+        $entityIds[] = $row['annotation_value_id'];
+
+        if (is_string($row['subject_entity_id']) && trim($row['subject_entity_id']) !== '') {
+            $entityIds[] = $row['subject_entity_id'];
+        }
+    }
+
+    $entitySummaries = prose_fetch_entity_summaries($pdo, $entityIds);
+
     return array_map(
-        static function (array $row): array {
+        static function (array $row) use ($entitySummaries): array {
+            $typeId = $row['annotation_type_id'];
+            $valueId = $row['annotation_value_id'];
+            $subjectId = $row['subject_entity_id'];
+
             return [
                 'id' => (int) $row['id'],
-                'type' => $row['annotation_type_id'],
-                'value' => $row['annotation_value_id'],
-                'subject' => $row['subject_entity_id'],
+                'type' => $typeId,
+                'value' => $valueId,
+                'subject' => $subjectId,
+                'type_entity' => $entitySummaries[$typeId] ?? null,
+                'value_entity' => $entitySummaries[$valueId] ?? null,
+                'subject_entity' => is_string($subjectId)
+                    ? ($entitySummaries[$subjectId] ?? null)
+                    : null,
                 'span' => $row['span_start'] === null
                     ? null
                     : [(int) $row['span_start'], (int) $row['span_end']],
