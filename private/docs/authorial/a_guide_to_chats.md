@@ -8,12 +8,6 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 
 #### I want to create a Book week
 
-#### I want to create a Book day
-
-#### I want to create a Book time
-
-#### I want to create a character
-
 ### Tier 1
 #### Show me all prose for Week [x]
 
@@ -21,58 +15,57 @@ To start a workflow in a new natural-language chat, simply describe what you wan
 startWorkflowChat Show me all prose for week 1
 ```
 
-#### 1.1 Show me published prose for Week [x]
+#### Show me published prose for Week [x]
 
 ```text
 startWorkflowChat Show me published prose for Week 1
 ```
 
-#### 1.2 Show me all prose for Week [x], Day [y]
+#### Show me all prose for Week [x], Day [y]
 
 ```text
 startWorkflowChat show me all prose for Week 1, Day 2
 ```
 
-#### 1.3 Show me published prose for Week [x], Day [y]
+#### Show me published prose for Week [x], Day [y]
 
 ```text
 startWorkflowChat Show me published prose for Week 1, Day 2
 ```
-#### 1.4 Show me all prose for Week [x].[y]
+#### Show me all prose for Week [x].[y]
 
 ```text
 startWorkflowChat Show me all prose for 1.2
 ```
 
-#### 1.5 Show me published prose for `[x].[y]`
+#### Show me published prose for `[x].[y]`
 
 ```text
-Call startWorkflowChat with message: Show me published prose for 1.2
+startWorkflowChat Show me published prose for 1.2
 ```
 
-#### 1.6 Show me published prose for `[year][month][day]-[x]`
+#### Show me published prose for `[year][month][day]-[x]`
 
 ```text
-startWorkflowChat Show me all prose for 20250122-e
+startWorkflowChat Show me all prose for 1.2
 ```
 Expected output:
 
-_1.2.1.2 — Week 1, Day 2, Morning, 20250120-a (calendar_event:2)_
+1.2.1.2 — Week 1, Day 2, Morning, 20250120-a (calendar_event:2)
 
-#### 1.7 Create an event in the correct projection
+#### Create an event in the correct projection
 
-##### 1.7.1 Create a book event
+##### Create a book event
 Write: 
 ```text
-Call startWorkflowChat with message: create book event
+startWorkflowChat create book event
 ```
 
-##### 1.7.2 Create an event that only attaches to the real-time calendar
-
+##### Create an event that only attaches to the real-time calendar
 
 ### Tier 2
 
-#### 2.1 Add prose to an existing event
+#### Add prose to an existing event
 
 To add prose to an existing calendar event whose entity ID you already know, tell the chat:
 
@@ -103,13 +96,13 @@ ___
 
 ### Tier 3
 
-#### 3.1 add a new prose draft to a family
+#### add a new prose draft to a family
 
 ```text
 startWorkflowChat I want to add a new prose draft to a prose family
 ```
 
-#### 3.2 publish a selected draft
+#### publish a selected draft
 ```text
 startWorkflowChat set published prose draft
 
@@ -119,6 +112,12 @@ startWorkflowChat set published prose draft
 ```
 
 #### 3A: derive beat/title metadata from attached prose
+
+```text
+startWorkflowChat I want to process attached prose into its beat and title
+```
+
+or
 
 ```text
 Call startWorkflowChat with message: derive beat/title metadata from attached prose
@@ -163,18 +162,29 @@ CHAR-MAIN-001 CHAR-SUP-998 CHAR-SUP-997
 
 → approve only those entities
 
-#### 3d: I want to tag Locations from an event's attached prose
+#### 3d: tag prose annotations for a specific person
+
+Use this when you want expression, limbic, or voice annotations to remain discoverable as person-linked structure later.
 
 ```text
-Call startWorkflowChat with message: I want to tag locations from an event's attached prose
+startWorkflowChat I want to tag a character's expression from attached prose
 ```
 
-#### 3e: I want to approve Locations from an event's attached prose
 ```text
-Call startWorkflowChat with message: I want to approve locations from attached prose
+startWorkflowChat Tag Shay's prose spans with expression and limbic annotations
 ```
 
----
+```text
+Call startWorkflowChat with message: annotate attached prose for CHAR-MAIN-001 using expression tags
+```
+
+Authoring rule to preserve:
+
+1. annotate the prose span
+2. set `subject_entity_id` to the character/person entity id
+3. use canonical entity-backed annotation type/value ids
+
+This is the contract that makes later NL retrieval work reliably.
 
 #### Process attached prose into calendar subevents
 
@@ -204,7 +214,7 @@ ___
 To retrieve prose already attached to a calendar event or subevent by chronology position, tell the chat:
 
 ```text
-Call startWorkflowChat with message: Show me the prose for 1.2.1.3
+Show me the prose for 1.2.1.3
 ```
 or
 ```text
@@ -220,16 +230,5 @@ To retrieve prose already attached to a calendar event by label, tell the chat:
 startWorkflowChat Show me the prose for 20250120-a
 ```
 
-
-#### Retrieve prose by week/day position
-
-You may also request prose by temporal position:
-
-Show me the prose for week 1 day 2
-
 #### Retrieve real-time calendar events
-```text
-Call startWorkflowChat with message: Show me projection_id = 5
-```
-
-The runtime will ask for `start_date` and `end_date` in `YYYY-MM-DD` format.
+Show me projection_id = 5; for a given time-span

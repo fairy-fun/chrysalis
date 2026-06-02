@@ -1,12 +1,63 @@
 <?php
 
-const PROSE_ANNOTATION_TYPE_EXPRESSION_ID = 'annotation_type_expression';
-const PROSE_ANNOTATION_TYPE_LIMBIC_ID = 'annotation_type_limbic';
-const PROSE_ANNOTATION_TYPE_VOICE_ID = 'annotation_type_voice';
+function prose_suggester_resolve_entity_backed_classval_ids_by_label(
+    PDO $pdo,
+    array $specs
+): array {
+    if ($specs === []) {
+        return [];
+    }
 
-const PROSE_ANNOTATION_VALUE_EXPRESSION_CONTAINED_ID = 'expression_contained';
-const PROSE_ANNOTATION_VALUE_LIMBIC_STRESSED_ID = 'limbic_stressed';
-const PROSE_ANNOTATION_VALUE_VOICE_SHAY_ID = 'voice_shay';
+    $resolved = [];
+
+    foreach ($specs as $key => $spec) {
+        $label = $spec['label'] ?? null;
+
+        if (!is_string($label) || trim($label) === '') {
+            throw new InvalidArgumentException(
+                'Missing prose annotation suggester label for key: ' . $key
+            );
+        }
+
+        $stmt = $pdo->prepare(
+            "
+            SELECT
+                e.id
+            FROM sxnzlfun_chrysalis.entities e
+            INNER JOIN sxnzlfun_chrysalis.classvals c
+                ON c.id = e.id
+            LEFT JOIN sxnzlfun_chrysalis.entity_texts et
+                ON et.entity_id = e.id
+            WHERE e.entity_type_id = 'entity_type_classval'
+              AND (
+                    c.label = :label
+                 OR et.canonical_label = :label
+              )
+            GROUP BY e.id
+            ORDER BY e.id ASC
+            "
+        );
+
+        $stmt->execute([
+            ':label' => trim($label),
+        ]);
+
+        $matches = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (count($matches) !== 1) {
+            throw new RuntimeException(
+                'Expected exactly one entity-backed classval for prose annotation suggester label "'
+                . $label
+                . '", found '
+                . count($matches)
+            );
+        }
+
+        $resolved[$key] = (string) $matches[0];
+    }
+
+    return $resolved;
+}
 
 function suggestProseAnnotations(
     PDO $pdo,
@@ -44,26 +95,47 @@ function suggestProseAnnotations(
     /*
      * Baseline heuristic layer.
      * This is suggestion-only. Do not persist these as curated truth.
-     * Annotation type/value ids are treated as entity-backed ids.
      * Later, this can be replaced or enriched by expression_constraint_outputs.
      */
 
     $body = $draft['prose_body'];
 
+    $annotationEntitySpecs = [
+        'expression_type' => ['label' => 'Expression'],
+        'expression_value' => ['label' => 'Contained'],
+        'limbic_type' => ['label' => 'Limbic'],
+        'limbic_value' => ['label' => 'Stressed'],
+        'voice_type' => ['label' => 'Voice'],
+        'voice_value' => ['label' => 'Shay'],
+    ];
+
+    try {
+        $resolvedIds = prose_suggester_resolve_entity_backed_classval_ids_by_label(
+            $pdo,
+            $annotationEntitySpecs
+        );
+    } catch (Throwable $e) {
+        return [
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'prose_entity_id' => $proseEntityId,
+        ];
+    }
+
     $patterns = [
         [
-            'annotation_type_id' => PROSE_ANNOTATION_TYPE_EXPRESSION_ID,
-            'annotation_value_id' => PROSE_ANNOTATION_VALUE_EXPRESSION_CONTAINED_ID,
+            'annotation_type_id' => $resolvedIds['expression_type'],
+            'annotation_value_id' => $resolvedIds['expression_value'],
             'needles' => ['contained', 'held still', 'kept still', 'swallowed', 'composed'],
         ],
         [
-            'annotation_type_id' => PROSE_ANNOTATION_TYPE_LIMBIC_ID,
-            'annotation_value_id' => PROSE_ANNOTATION_VALUE_LIMBIC_STRESSED_ID,
+            'annotation_type_id' => $resolvedIds['limbic_type'],
+            'annotation_value_id' => $resolvedIds['limbic_value'],
             'needles' => ['tightened', 'could not breathe', 'panic', 'shame', 'embarrassment'],
         ],
         [
-            'annotation_type_id' => PROSE_ANNOTATION_TYPE_VOICE_ID,
-            'annotation_value_id' => PROSE_ANNOTATION_VALUE_VOICE_SHAY_ID,
+            'annotation_type_id' => $resolvedIds['voice_type'],
+            'annotation_value_id' => $resolvedIds['voice_value'],
             'needles' => ['That’s nice', 'That’s cute', 'I’m obsessed', 'Yes, girl'],
         ],
     ];
@@ -76,7 +148,7 @@ function suggestProseAnnotations(
                 continue;
             }
 
-            $spanEnd = $offset + mb_strlen($needle) - 1;
+            $spanEnd = $offset + mb_strlen($needle);
 
             $suggestions[] = [
                 'prose_entity_id' => $proseEntityId,
@@ -108,6 +180,10 @@ function reviewProseAnnotationSuggestions(
     ?string $subjectEntityId = null
 ): array {
     $suggestions = suggestProseAnnotations($pdo, $proseEntityId, $subjectEntityId);
+
+    if (($suggestions['status'] ?? null) !== 'ok') {
+        return $suggestions;
+    }
 
     $stmt = $pdo->prepare("
         SELECT
