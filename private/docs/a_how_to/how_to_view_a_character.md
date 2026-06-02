@@ -256,3 +256,185 @@ as the primary entry point for character inspection.
 Underlying tables remain authoritative,
 but the resolver view becomes the canonical
 read model for characters.
+
+Viewing a Character Through the Resolver
+Why the Resolver Exists
+
+Character information in Chrysalis is not stored in a single place.
+
+A character may have information spread across:
+
+characters
+character_profiles
+character_profile_attributes
+classvals
+character_measurements
+
+As a result, inspecting only one table can produce an incorrect understanding of the character.
+
+For example:
+
+{}
+
+in a profile's profile_json does not necessarily mean the profile is empty.
+
+The character may still have substantial structured data stored elsewhere.
+
+The Problem
+
+Consider CHAR-MAIN-001 (Shay).
+
+Looking only at the appearance profile:
+
+{}
+
+suggests:
+
+Shay has no appearance data.
+
+This conclusion is incorrect.
+
+The appearance profile is linked to structured appearance attributes:
+
+Hair Color
+Eye Color
+Skin Tone
+Appearance Contrast
+Appearance Presence
+
+And height is stored separately in:
+
+character_measurements
+
+Without resolving these relationships, the profile appears empty even though meaningful information exists.
+
+The Resolver View
+
+To solve this problem, Chrysalis provides:
+
+v_character_resolved
+
+The purpose of this view is to assemble information from multiple character-related tables into a single consumable representation.
+
+Instead of manually traversing relationships, consumers can query:
+
+SELECT *
+FROM v_character_resolved
+WHERE character_id = 'CHAR-MAIN-001';
+
+and receive a consolidated view of the character.
+
+Example
+
+For Shay, the resolver returns:
+
+Public Name:
+Shay Aurelia Vertue
+
+Legal Name:
+Shay Aurelia Vertue Young
+
+Hair Color:
+Brown
+
+Eye Color:
+Hazel
+
+Skin Tone:
+Fair
+
+Appearance Contrast:
+Medium Contrast
+
+Appearance Presence:
+Balanced Presence
+
+Height:
+5'4"
+
+Even though:
+
+appearance_json = {}
+
+the character clearly has appearance information.
+
+Structural vs Narrative Population
+
+The resolver helps distinguish between two different kinds of profile content.
+
+Structural Population
+
+Information exists through linked systems.
+
+Examples:
+
+Hair Color
+Eye Color
+Skin Tone
+Height
+Classified Attributes
+
+These facts may be stored outside the profile JSON.
+
+Narrative Population
+
+Information exists as authored descriptive content.
+
+Examples:
+
+Biography Summary
+Appearance Description
+Personality Description
+Social Role Notes
+
+This content is typically stored in profile_json.
+
+Why This Matters
+
+Without resolution:
+
+Appearance Profile = {}
+
+appears empty.
+
+With resolution:
+
+Hair Color = Brown
+Eye Color = Hazel
+Height = 5'4"
+
+the profile is recognized as populated.
+
+This distinction is critical when auditing character completeness.
+
+Recommended Workflow
+
+When evaluating a character:
+
+Query v_character_resolved.
+Review the resolved character representation.
+Determine which information already exists.
+Identify genuine gaps.
+Author new profile content only where information is truly missing.
+
+Avoid evaluating profile completeness from profile_json alone.
+
+Rule of Thumb
+
+A character is not defined by a single table.
+
+A character is the resolved aggregate of:
+
+characters
++
+character_profiles
++
+character_profile_attributes
++
+classvals
++
+character_measurements
++
+other resolver-backed sources
+
+v_character_resolved is the primary entry point for viewing that aggregate.
