@@ -22,6 +22,14 @@ require_once __DIR__ . '/../../../../private/framework/prose/prose_draft_creator
  * Structural metadata such as beat summaries,
  * projection recommendations, chronology inference,
  * and export recommendations are derived by the system.
+ *
+ * Person-linked annotation contract:
+ *   - annotations remain span-based
+ *   - subject_entity_id links an annotation to the character/person entity
+ *   - annotation_type_id / annotation_value_id are entity-backed symbolic ids
+ *
+ * For natural-language discoverability later, author person-targeted
+ * annotations by tagging the prose span and supplying subject_entity_id.
  */
 
 function normalise_projection_payload(array $body): array
