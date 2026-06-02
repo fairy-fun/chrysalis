@@ -1,3 +1,216 @@
+==================================================
+CHARACTER RESOLUTION WORKFLOW
+==================================================
+
+Step 1
+
+Resolve Character
+
+    SELECT *
+    FROM v_character_resolved
+    WHERE character_id = ?
+
+Output:
+
+    Character Resolution
+
+--------------------------------------------------
+
+Step 2
+
+Resolve Relationships
+
+    SELECT *
+    FROM v_relationship_resolved
+    WHERE entity_a_id = ?
+       OR entity_b_id = ?
+
+Output:
+
+    Relationship Resolution
+
+Includes:
+
+    Relationship Metadata
+    Relationship Fact Count
+    Relationship Fact Packets
+
+--------------------------------------------------
+
+Step 3
+
+Resolve Character Facts
+
+    SELECT *
+    FROM canonical_entity_linked_facts_global
+    WHERE subject_entity_id = ?
+
+Output:
+
+    Character Fact Resolution
+
+--------------------------------------------------
+
+Step 4
+
+Resolve Relationship Facts
+
+Already surfaced through:
+
+    v_relationship_resolved
+
+Fact packets include:
+
+    Fact Type
+    Object Entity
+    Qualifiers
+    Governance Metadata
+
+Example:
+
+    First Met
+        Age = 8
+
+Output:
+
+    Relationship Fact Resolution
+
+--------------------------------------------------
+
+Step 5
+
+Build Character Knowledge Packet
+
+Combine:
+
+    Character Resolution
+    Relationship Resolution
+    Character Facts
+    Existing Profile Content
+
+Output:
+
+    Character Knowledge Packet
+
+--------------------------------------------------
+
+Step 6
+
+Gap Analysis
+
+Ask:
+
+What information already exists?
+
+What information is actually missing?
+
+Do NOT ask for information already present in:
+
+    Attributes
+    Measurements
+    Relationships
+    Relationship Facts
+    Character Facts
+
+Output:
+
+    Gap Analysis
+
+--------------------------------------------------
+
+Step 7
+
+Generate Profiles
+
+Generate:
+
+    Biography
+    Appearance Narrative
+    Personality
+    Social Role
+
+From:
+
+    Character Resolution
+    Relationship Resolution
+    Relationship Facts
+    Character Facts
+    Human Input
+
+Output:
+
+    Profile Generation
+
+==================================================
+RELATIONSHIP RESOLUTION PRINCIPLE
+==================================================
+
+Relationships define connections.
+
+Facts define assertions.
+
+Qualifiers define structured details.
+
+Example:
+
+    Relationship:
+        Sebastian ↔ Kai
+
+    Fact:
+        First Met
+
+    Qualifier:
+        Age = 8
+
+Profiles summarize resolved information.
+
+Profiles are not the authoritative source of canon.
+
+==================================================
+CURRENT RESOLVER ENTRY POINTS
+==================================================
+
+Character:
+
+    v_character_resolved
+
+Relationship:
+
+    v_relationship_resolved
+
+Relationship Fact:
+
+    v_relationship_fact_resolved
+
+Canonical Facts:
+
+    canonical_entity_linked_facts_global
+
+==================================================
+CURRENT CANONICAL PROOF OF CONCEPT
+==================================================
+
+Relationship:
+
+    rel_seb_kai_foundational
+
+Fact:
+
+    fact_type_first_met
+
+Object:
+
+    entity_event_seb_kai_first_meeting
+
+Qualifier:
+
+    qualifier_type_age = 8
+
+Resolved through:
+
+    v_relationship_fact_resolved
+    v_relationship_resolved
+
 How to View a Character
 Purpose
 
@@ -438,3 +651,202 @@ character_measurements
 other resolver-backed sources
 
 v_character_resolved is the primary entry point for viewing that aggregate.
+
+he key is to stop thinking of profile population as a process that starts with profiles.
+
+Instead, it should start with resolution.
+
+Character Resolution Workflow
+Goal
+
+Before writing or editing a character profile:
+
+Resolve existing character knowledge.
+Identify authoritative sources.
+Identify gaps.
+Write only the information that is not already represented elsewhere.
+Step 1 — Resolve Character
+
+Start with:
+
+SELECT *
+FROM v_character_resolved
+WHERE character_id = ?;
+
+This provides:
+
+Identity
+Existing profile JSON
+Structured appearance
+Measurements
+Population indicators
+
+Output:
+
+Character Resolution
+Step 2 — Resolve Relationships
+
+Query:
+
+SELECT *
+FROM v_relationship_resolver
+WHERE entity_a_id = ?
+OR entity_b_id = ?;
+
+Collect:
+
+Family relationships
+Friendships
+Romantic relationships
+Authority structures
+Team structures
+Memberships
+Affiliations
+
+Output:
+
+Relationship Resolution
+Step 3 — Resolve Facts
+
+Query relationship-linked and character-linked facts.
+
+Goal:
+
+What facts are already known?
+
+Examples:
+
+Met Kai at age 8
+
+Attended Oxford
+
+Attended Sandhurst
+
+Member of RBDS
+
+Former roommate of Jorge
+
+Output:
+
+Fact Resolution
+Step 4 — Build Character Knowledge Packet
+
+Aggregate:
+
+Identity
+Appearance
+Relationships
+Facts
+Existing Profile Content
+
+into:
+
+Character Knowledge Packet
+
+This becomes the canonical source for profile generation.
+
+Step 5 — Gap Analysis
+
+Ask:
+
+Biography
+
+Do we already know:
+
+origin
+education
+profession
+major life events
+
+from facts?
+
+If yes:
+
+Don't ask again.
+
+Social Role
+
+Do we already know:
+
+leadership
+family role
+membership
+authority position
+
+from relationships?
+
+If yes:
+
+Don't ask again.
+
+Appearance
+
+Do we already know:
+
+height
+hair
+eyes
+skin
+
+from attributes?
+
+If yes:
+
+Don't ask again.
+
+Personality
+
+Usually requires authored content.
+
+This is often the first place where human input is genuinely needed.
+
+Step 6 — Generate Profile Drafts
+
+Only after resolution.
+
+Generate:
+
+Biography
+Appearance Narrative
+Personality
+Social Role
+
+using:
+
+Resolved Facts
++
+Resolved Relationships
++
+Resolved Attributes
++
+Human Input
+Result
+
+The workflow becomes:
+
+Resolve
+↓
+
+Review
+↓
+
+Identify Gaps
+↓
+
+Author
+
+instead of:
+
+Ask Questions
+↓
+
+Hope The Answers Aren't Already In The Database
+
+For Sebastian, this workflow has already proven its value:
+
+Appearance came from attributes and measurements.
+Leadership role came from relationships.
+Oxford and Sandhurst came from relationships.
+The "met at Oxford" statement was identified as incorrect because it conflicted with a deeper story fact.
+
+That's exactly the kind of discrepancy the workflow should surface before profile authoring begins.
