@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/workflow_value_resolver.php';
+require_once __DIR__ . '/workflow_sql_dropin_builder.php';
 require_once __DIR__ . '/../calendar/calendar_book_event_ensurer.php';
 require_once __DIR__ . '/../calendar/calendar_event_projection_membership_service.php';
 require_once __DIR__ . '/../calendar/calendar_projection_materializer.php';
@@ -98,6 +99,10 @@ function fw_execute_workflow_calendar_create_book_event(
         $resolvedEventIndex
     );
 
+    $operatorSqlDropin = fw_workflow_calendar_book_event_sql_dropin(
+        (int)($event['id'] ?? 0)
+    );
+
     return [
         'success' => true,
 
@@ -107,6 +112,7 @@ function fw_execute_workflow_calendar_create_book_event(
                 'calendar_event' => $event,
                 'projection_memberships' => $memberships,
                 'projection_build_id' => $projectionBuildId,
+                'operator_sql_dropin' => $operatorSqlDropin,
 
                 'handoff_packet' => [
                     'workflow_stage' => 'event_created',
