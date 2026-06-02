@@ -36,6 +36,11 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         SELECT COUNT(*) AS bad_count
         FROM entities AS e
         WHERE e.entity_type_id = 'entity_type_event'
+          AND EXISTS (
+              SELECT 1
+              FROM calendar_events AS ce
+              WHERE ce.entity_id = e.id
+          )
     ";
 
     $badLegacyEventEntities = (int) $pdo->query($sql)->fetchColumn();
@@ -44,7 +49,7 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         $violations[] = [
             'violation_code' => 'legacy_entity_type_event_in_active_use',
             'bad_count' => $badLegacyEventEntities,
-            'rule' => 'entities.entity_type_id = entity_type_event must not be in active use',
+            'rule' => 'entities.entity_type_id = entity_type_event must not be referenced by active calendar_events rows',
         ];
     }
 
