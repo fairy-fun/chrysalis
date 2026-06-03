@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../prose/prose_metadata_deriver.php';
 require_once __DIR__ . '/../calendar/calendar_event_metadata_applier.php';
+require_once __DIR__ . '/../calendar/calendar_event_ontology_applier.php';
 require_once __DIR__ . '/workflow_value_resolver.php';
 
 function fw_execute_workflow_calendar_event_derive_beat_title(
@@ -120,6 +121,7 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
 
     $derivedTitle = trim((string)($metadata['title'] ?? ''));
     $derivedBeat = trim((string)($metadata['beat_summary'] ?? ''));
+    $resolvedBeatTypeId = trim((string)($metadata['beat_type_id'] ?? ''));
 
     if (
         $derivationMode !== 'semantic_rule'
@@ -142,10 +144,12 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                         'prose_projection_id' => (int)$proseRow['prose_projection_id'],
                         'derivation_mode' => $derivationMode,
                         'semantic_resolved' => false,
+                        'resolved_beat_type_id' => null,
                         'extractive_title_candidate' => $metadata['extractive_title_candidate'] ?? null,
                         'extractive_summary' => $metadata['summary'] ?? null,
                         'evidence' => $metadata['evidence'] ?? [],
                         'applied_calendar_event_metadata' => null,
+                        'applied_calendar_event_beat_type' => null,
                         'diagnostic' => 'No deterministic semantic beat/title rule matched this attached prose. Calendar metadata was not mutated.',
                     ],
                 ]
@@ -159,6 +163,16 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
         $derivedTitle,
         $derivedBeat
     );
+
+    $appliedBeatType = null;
+
+    if ($resolvedBeatTypeId !== '') {
+        $appliedBeatType = apply_calendar_event_beat_type(
+            $pdo,
+            $entityId,
+            $resolvedBeatTypeId
+        );
+    }
 
     $characterSuggestionHandoff = [
         'recommended_next_workflow_family' => 'semantic_suggestions',
@@ -246,9 +260,11 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     'prose_projection_id' => (int)$proseRow['prose_projection_id'],
                     'derived_title' => $derivedTitle,
                     'derived_beat' => $derivedBeat,
+                    'resolved_beat_type_id' => ($resolvedBeatTypeId !== '') ? $resolvedBeatTypeId : null,
                     'derivation_mode' => $derivationMode,
                     'evidence' => $metadata['evidence'] ?? [],
                     'applied_calendar_event_metadata' => $appliedMetadata,
+                    'applied_calendar_event_beat_type' => $appliedBeatType,
                 ],
                 'handoff_packet' => [
                     'workflow_stage' => 'beat_title_derived_and_applied',
@@ -265,11 +281,16 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     'derived' => [
                         'title' => $derivedTitle,
                         'beat' => $derivedBeat,
+                        'beat_type_id' => ($resolvedBeatTypeId !== '') ? $resolvedBeatTypeId : null,
                     ],
                     'apply_state' => [
-                        'persisted' => true,
+                        'semantic_text_persisted' => true,
+                        'beat_ontology_persisted' => ($appliedBeatType !== null),
                         'topology_generated' => false,
-                        'updated_rows' => $appliedMetadata['updated_rows'] ?? null,
+                        'updated_rows' => [
+                            'semantic_text' => $appliedMetadata['updated_rows'] ?? null,
+                            'beat_type' => $appliedBeatType['updated_rows'] ?? null,
+                        ],
                     ],
                     'future_workflow' => [
                         'workflow_id' => 'calendar_event_process_attached_prose',
