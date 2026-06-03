@@ -170,7 +170,7 @@ function normalise_expression_candidate(array $row): ?array
 
 function compare_expression_candidates(array $a, array $b): int
 {
-    $priorityCompare = $a['priority'] <=> $b['priority'];
+    $priorityCompare = $b['priority'] <=> $a['priority'];
     if ($priorityCompare !== 0) {
         return $priorityCompare;
     }
