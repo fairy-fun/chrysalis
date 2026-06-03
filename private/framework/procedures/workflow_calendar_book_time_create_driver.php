@@ -57,6 +57,14 @@ function fw_execute_workflow_calendar_book_time_create(
 
     $timeIndex = (int)($payload['time_index'] ?? 0);
 
+    $timeLabelId = array_key_exists('time_label_id', $payload)
+        ? trim((string)$payload['time_label_id'])
+        : null;
+
+    if ($timeLabelId === '') {
+        $timeLabelId = null;
+    }
+
     $summary = array_key_exists('summary', $payload)
         ? trim((string)$payload['summary'])
         : null;
@@ -71,6 +79,31 @@ function fw_execute_workflow_calendar_book_time_create(
 
     if ($notes === '') {
         $notes = null;
+    }
+
+    if ($timeLabelId !== null) {
+        $labelStmt = $pdo->prepare(
+            '
+            SELECT label
+            FROM calendar_time_label_classvals
+            WHERE TRIM(id) = TRIM(:id)
+            LIMIT 1
+            '
+        );
+
+        $labelStmt->execute([
+            ':id' => $timeLabelId,
+        ]);
+
+        $classvalLabel = $labelStmt->fetchColumn();
+
+        if (!is_string($classvalLabel) || trim($classvalLabel) === '') {
+            throw new RuntimeException(
+                'Invalid calendar Book time label id'
+            );
+        }
+
+        $summary = trim($classvalLabel);
     }
 
     /*
@@ -204,6 +237,13 @@ function fw_execute_workflow_calendar_book_time_create(
         ':id' => (int)$time['id'],
     ];
 
+    if ($timeLabelId !== null) {
+
+        $updateFields[] = 'time_label_id = :time_label_id';
+
+        $updateParams[':time_label_id'] = $timeLabelId;
+    }
+
     if ($summary !== null) {
 
         $updateFields[] = 'summary = :summary';
@@ -276,6 +316,7 @@ function fw_execute_workflow_calendar_book_time_create(
             [
 
                 'calendar_book_time' => $time,
+                'book_time' => $time,
                 'operator_sql_dropin' => $operatorSqlDropin,
 
                 'calendar_book_time_create' => [
