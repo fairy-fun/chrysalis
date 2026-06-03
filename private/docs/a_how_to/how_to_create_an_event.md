@@ -43,6 +43,8 @@ Book
 
 location.
 
+After creation, the workflow hands off to beat design guidance for the new event.
+
 ---
 
 ## State Machine
@@ -160,6 +162,7 @@ Examples:
 ```text
 Day 2
 2
+Tuesday
 ```
 
 Stores:
@@ -187,7 +190,6 @@ Which time slot should this event belong to?
 Examples:
 
 ```text
-Morning
 Time 1
 1
 ```
@@ -197,6 +199,9 @@ Stores:
 ```text
 input.time_index
 ```
+
+The current normalizer accepts numeric time-slot input such as `1` or `Time 1`.
+It does not currently normalize semantic labels such as `Morning`.
 
 ---
 
@@ -405,6 +410,14 @@ Calendar event shell created successfully.
 Continue with beat generation for the attached author handoff.
 ```
 
+The live driver also emits a handoff packet whose intent is:
+
+```text
+beat_generation_author_handoff
+```
+
+and whose guidance explicitly says beat design precedes prose authoring.
+
 ---
 
 ## What Gets Created
@@ -427,18 +440,21 @@ with a placeholder summary.
 The event now exists in chronology and can be:
 
 ```text
-1. assigned prose
-2. processed into beat/title metadata
-3. tagged with characters
-4. tagged with locations
-5. linked to ontology
+1. used for beat design handoff
+2. assigned prose
+3. processed for beat/title derivation
+4. processed into subevent structure if needed
+5. tagged with characters
+6. tagged with locations
 ```
 
 ---
 
 ## Recommended Follow-On Workflow
 
-After event creation:
+Immediately after event creation, follow the emitted author handoff and begin with beat design for the existing event.
+
+When prose is ready to attach:
 
 ```text
 calendar_event_add_prose
@@ -446,13 +462,19 @@ calendar_event_add_prose
 
 Attach prose to the newly created event.
 
-After prose exists:
+After prose exists, there are two distinct repo-supported next steps depending on intent.
+
+For event-level beat/title derivation and ontology persistence:
+
+```text
+calendar_event_title_narrative_ontology
+```
+
+For structural processing of attached prose into subevents / beat structure:
 
 ```text
 calendar_event_process_attached_prose
 ```
-
-to derive metadata and ontology from the prose.
 
 ---
 
@@ -461,15 +483,21 @@ to derive metadata and ontology from the prose.
 ```text
 calendar_book_event_create
         ↓
+beat generation author handoff
+        ↓
 calendar_event_add_prose
         ↓
-calendar_event_process_attached_prose
+calendar_event_title_narrative_ontology
         ↓
-beat/title derivation
+calendar_event_suggest_characters
         ↓
-character suggestions
-        ↓
-location suggestions
-        ↓
-ontology persistence
+calendar_event_suggest_locations
 ```
+
+Optional structural branch after prose attachment:
+
+```text
+calendar_event_process_attached_prose
+```
+
+Use that workflow when the goal is to segment or orchestrate attached prose into subevent structure, rather than only derive event-level beat/title metadata.
