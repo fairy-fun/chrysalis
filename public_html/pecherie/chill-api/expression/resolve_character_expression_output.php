@@ -7,6 +7,13 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
 require_once __DIR__ . '/../../../../private/framework/expression/expression_output_resolver.php';
 
+/*
+ * Sole authority note:
+ *
+ * This endpoint is the canonical API surface for expression output resolution.
+ * Compatibility aliases must delegate here or to the same framework resolver.
+ */
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(405, ['error' => 'Method not allowed']);
 }
@@ -27,14 +34,16 @@ if (!is_string($rawCharacterId) || trim($rawCharacterId) === '') {
 
 $characterId = trim($rawCharacterId);
 
-if (is_int($rawDomainId) && $rawDomainId > 0) {
+if ($rawDomainId === null || $rawDomainId === '') {
+    $domainId = null;
+} elseif (is_int($rawDomainId) && $rawDomainId > 0) {
     $domainId = (string)$rawDomainId;
 } elseif (is_string($rawDomainId) && trim($rawDomainId) !== '' && ctype_digit(trim($rawDomainId)) && (int)trim($rawDomainId) > 0) {
     $domainId = trim($rawDomainId);
 } else {
     respond(400, [
         'status' => 'error',
-        'error' => 'domain_id must be a positive integer',
+        'error' => 'domain_id must be a positive integer when provided',
     ]);
 }
 
