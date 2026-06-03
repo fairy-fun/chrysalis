@@ -21,6 +21,16 @@ declare(strict_types=1);
  *
  * See:
  * private/docs/reference_promotion_pattern.md
+ *
+ * Retirement tracking note:
+ *
+ * attribute_domains and profile_type_domain_map remain classified here so CI
+ * can continue to verify their references during transition. Their inclusion
+ * does not imply active runtime authority.
+ *
+ * Retired materialized read-model surfaces must be removed from this audit
+ * when their backing tables are deleted. Do not keep deleted infrastructure
+ * in the enforced classification list.
  */
 
 function audit_identity_reference_classification(PDO $pdo, string $schemaName): array
@@ -30,15 +40,15 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
      *
      * DOMAIN_ENTITY_FK indicates:
      *
-     * - Database enforces existence via FK → entities.id
+     * - Database enforces existence via FK â†’ entities.id
      * - CI enforces semantic correctness:
      *       entity_type_id = 'entity_type_domain'
      *
      * This is no longer a soft classification.
      * It is a split enforcement model:
      *
-     *     DB → existence
-     *     CI → type correctness
+     *     DB â†’ existence
+     *     CI â†’ type correctness
      *
      * Do not downgrade DOMAIN_ENTITY_FK references back to audit-only.
      */
@@ -199,7 +209,6 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['unresolved_entity_fact_contradictions_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
 
         // view-projected classval references
-        ['v_character_appearance_resolved', 'value_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'status_classval_id', 'CLASSVAL'],
         ['v_medley_2025_v1_final', 'group_classval_id', 'CLASSVAL'],
