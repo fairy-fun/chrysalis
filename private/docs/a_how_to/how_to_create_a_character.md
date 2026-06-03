@@ -72,7 +72,7 @@ INSERT INTO characters (
 
 ---
 
-# Canonical ID Doctrine
+### Canonical ID Doctrine
 
 Recommended canonical identity format:
 
@@ -91,6 +91,87 @@ CHAR-MAIN-003
 `character_id` and `entity_id` should remain aligned unless a future ontology split becomes necessary.
 
 ---
+
+### Step 1A — Select a Gender Classification (When Known)
+
+Character gender is stored on the canonical character record via:
+
+`characters.gender_id`
+
+The value must come from the table:
+```text
+gender_classvals
+```
+#### Inspect Available Gender Values
+```sql
+SELECT
+id,
+code,
+label
+FROM gender_classvals
+ORDER BY label;
+```
+Typical values include:
+
+|id | 	label      |
+|---|-------------|
+|gender_agender	| Agender     |
+|gender_genderfluid	| Genderfluid |
+|gender_man	| Man         |
+|gender_nonbinary	| Nonbinary   |
+|gender_woman	| Woman       |
+
+#### Character Insert Example
+
+When the character's gender is known, populate gender_id using the canonical classval identifier:
+```sql
+INSERT INTO characters (
+character_id,
+character_code_type_id,
+character_number,
+entity_id,
+char_name_full,
+char_name_first,
+char_name_last,
+gender_id
+) VALUES (
+'CHAR-MAIN-006',
+'character_code_type_main',
+6,
+'CHAR-MAIN-006',
+'Kai Lysander Blackwood',
+'Kai',
+'Blackwood',
+'gender_man'
+);
+```
+#### Doctrine
+
+Gender classification is metadata attached to the character record.
+
+Use the canonical identifier from:
+
+gender_classvals.id
+
+Do not store:
+```text
+Man
+Woman
+Nonbinary
+```
+directly in `characters.gender_id`.
+
+Always use the registry value:
+```text
+gender_man
+gender_woman
+gender_nonbinary
+gender_agender
+gender_genderfluid
+```
+or another value present in gender_classvals.
+
+If a character's gender is unknown or intentionally unspecified, leave gender_id NULL until a canonical classification is established.
 
 # Step 2 — Create the Entity Row
 
