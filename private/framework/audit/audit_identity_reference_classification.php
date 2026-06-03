@@ -21,6 +21,16 @@ declare(strict_types=1);
  *
  * See:
  * private/docs/reference_promotion_pattern.md
+ *
+ * Retirement tracking note:
+ *
+ * attribute_domains and profile_type_domain_map remain classified here so CI
+ * can continue to verify their references during transition. Their inclusion
+ * does not imply active runtime authority.
+ *
+ * Retired materialized read-model surfaces must be removed from this audit
+ * when their backing tables are deleted. Do not keep deleted infrastructure
+ * in the enforced classification list.
  */
 
 function audit_identity_reference_classification(PDO $pdo, string $schemaName): array
@@ -30,15 +40,15 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
      *
      * DOMAIN_ENTITY_FK indicates:
      *
-     * - Database enforces existence via FK → entities.id
+     * - Database enforces existence via FK â†’ entities.id
      * - CI enforces semantic correctness:
      *       entity_type_id = 'entity_type_domain'
      *
      * This is no longer a soft classification.
      * It is a split enforcement model:
      *
-     *     DB → existence
-     *     CI → type correctness
+     *     DB â†’ existence
+     *     CI â†’ type correctness
      *
      * Do not downgrade DOMAIN_ENTITY_FK references back to audit-only.
      */
@@ -49,7 +59,11 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         // domain entity references
         ['attribute_domain_map', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['attribute_domains', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['calendar_events', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['calendar_events_backup_pre_repair', 'domain_id', 'DOMAIN_ENTITY_FK'],
+        ['calendar_events_old', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['calendar_domain_beat_classset_map', 'domain_id', 'DOMAIN_CLASSVAL'],
+        ['calendar_records', 'domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'input_domain_id', 'DOMAIN_ENTITY_FK'],
         ['expression_domain_aliases', 'target_domain_id', 'DOMAIN_ENTITY_FK'],
         ['idea_classifications', 'domain_id', 'DOMAIN_ENTITY_FK'],
@@ -58,6 +72,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         // adjudication status
         ['calendar_event_knowledge', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['calendar_events', 'adjudication_status_classval_id', 'CLASSVAL'],
+        ['calendar_events_backup_pre_repair', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['characters', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['dreams', 'adjudication_status_classval_id', 'CLASSVAL'],
         ['entities', 'adjudication_status_classval_id', 'CLASSVAL'],
@@ -76,6 +91,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 // contradiction state
         ['calendar_event_knowledge', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['calendar_events', 'contradiction_state_classval_id', 'CLASSVAL'],
+        ['calendar_events_backup_pre_repair', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['dreams', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['entity_linked_facts_event', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['entity_linked_facts_global', 'contradiction_state_classval_id', 'CLASSVAL'],
@@ -88,6 +104,7 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
 // epistemic origin
         ['calendar_event_knowledge', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['calendar_events', 'epistemic_origin_classval_id', 'CLASSVAL'],
+        ['calendar_events_backup_pre_repair', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['characters', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['dreams', 'epistemic_origin_classval_id', 'CLASSVAL'],
         ['entities', 'epistemic_origin_classval_id', 'CLASSVAL'],
@@ -192,19 +209,12 @@ function audit_identity_reference_classification(PDO $pdo, string $schemaName): 
         ['unresolved_entity_fact_contradictions_global', 'epistemic_origin_classval_id', 'CLASSVAL'],
 
         // view-projected classval references
-        ['v_character_appearance_resolved', 'value_classval_id', 'CLASSVAL'],
-        ['v_character_relationship_resolved', 'contradiction_state_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_2025_display', 'status_classval_id', 'CLASSVAL'],
         ['v_medley_2025_v1_final', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_2025_v1_final', 'status_classval_id', 'CLASSVAL'],
         ['v_medley_pairings', 'group_classval_id', 'CLASSVAL'],
         ['v_medley_pairings', 'status_classval_id', 'CLASSVAL'],
-        ['v_relationship_fact_resolved', 'adjudication_status_classval_id', 'CLASSVAL'],
-        ['v_relationship_fact_resolved', 'contradiction_state_classval_id', 'CLASSVAL'],
-        ['v_relationship_fact_resolved', 'epistemic_origin_classval_id', 'CLASSVAL'],
-        ['v_relationship_resolved', 'contradiction_state_classval_id', 'CLASSVAL'],
-        ['v_relationship_resolved', 'status_classval_id', 'CLASSVAL'],
         ['v_relationship_resolver', 'status_classval_id', 'CLASSVAL'],
 
         /*
