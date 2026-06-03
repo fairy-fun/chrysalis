@@ -11,8 +11,6 @@ public_html/pecherie/chill-api/calendar/create_calendar_time.php
 private/framework/calendar/admin/calendar_book_chronology_materializer.php
 ```
 
-Only behaviors observed in the implementation are documented.
-
 ---
 
 ## Required Inputs
@@ -50,7 +48,11 @@ must exist in:
 ```text
 calendar_time_label_classvals
 ```
-
+```sql
+SELECT id, label
+FROM calendar_time_label_classvals
+ORDER BY sort_order, id;
+```
 Current examples include:
 
 ```text
@@ -174,13 +176,15 @@ calendar_book_days
 
 record.
 
-Produces:
+Produces a canonical calendar_book_days record including:
 
 ```text
+id
 projection_id
 week_id
-day_id
+week_index
 day_index
+entity_id
 ```
 The operation may resolve:
 
@@ -373,10 +377,17 @@ day_id
 time_index
 ```
 
-Only one canonical Book Time may exist for a given:
-
-```text
-Projection
-    → Day
-        → Time Index
+What the code actually guarantees is:
+```sql
+SELECT *
+FROM calendar_book_times
+WHERE projection_id = :projection_id
+AND day_id = :day_id
+AND time_index = :time_index
+LIMIT 1
 ```
+followed by insert-if-missing.
+
+The materializer treats
+(projection_id, day_id, time_index)
+as the canonical identity of a Book Time and reuses an existing row when one is found.
