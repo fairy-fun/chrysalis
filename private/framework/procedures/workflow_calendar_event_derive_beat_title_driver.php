@@ -109,6 +109,7 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
     $derivedTitle = trim((string)($metadata['title'] ?? ''));
     $derivedBeat = trim((string)($metadata['beat_summary'] ?? ''));
     $resolvedBeatTypeId = trim((string)($metadata['beat_type_id'] ?? ''));
+    $derivedBeatCode = mb_strtolower(trim((string)($metadata['beat_code'] ?? '')));
 
     $isSemanticDerivation = in_array(
         $derivationMode,
@@ -142,12 +143,14 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                         'prose_projection_id' => 'attachment_topology',
                         'derivation_mode' => $derivationMode,
                         'semantic_resolved' => false,
+                        'beat_code_hint' => ($derivedBeatCode !== '') ? $derivedBeatCode : null,
                         'resolved_beat_type_id' => null,
                         'extractive_title_candidate' => $metadata['extractive_title_candidate'] ?? null,
                         'extractive_summary' => $metadata['summary'] ?? null,
                         'evidence' => $metadata['evidence'] ?? [],
                         'applied_calendar_event_metadata' => null,
                         'applied_calendar_event_beat_type' => null,
+                        'ontology_linkage_fields_touched' => [],
                         'diagnostic' => 'No deterministic semantic beat/title rule matched the attached prose. Calendar metadata was not mutated.',
                     ],
                 ]
@@ -164,13 +167,38 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
 
     $appliedBeatType = null;
 
-    if ($resolvedBeatTypeId !== '') {
+    if ($derivedBeatCode !== '') {
+        $appliedBeatType = apply_calendar_event_beat_code(
+            $pdo,
+            $entityId,
+            $derivedBeatCode
+        );
+    } elseif ($resolvedBeatTypeId !== '') {
         $appliedBeatType = apply_calendar_event_beat_type(
             $pdo,
             $entityId,
             $resolvedBeatTypeId
         );
     }
+
+    $finalBeatTypeId = trim((string)(
+        $appliedBeatType['beat_type_id']
+        ?? $resolvedBeatTypeId
+    ));
+
+    $finalBeatCode = trim((string)(
+        $appliedBeatType['beat_code']
+        ?? $derivedBeatCode
+    ));
+
+    $ontologyLinkageFieldsTouched = array_values(array_unique(array_merge(
+        is_array($appliedMetadata['ontology_linkage_fields_touched'] ?? null)
+            ? $appliedMetadata['ontology_linkage_fields_touched']
+            : [],
+        is_array($appliedBeatType['ontology_linkage_fields_touched'] ?? null)
+            ? $appliedBeatType['ontology_linkage_fields_touched']
+            : []
+    )));
 
     $characterSuggestionHandoff = [
         'recommended_next_workflow_family' => 'semantic_suggestions',
@@ -262,11 +290,14 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     'prose_projection_id' => 'attachment_topology',
                     'derived_title' => $derivedTitle,
                     'derived_beat' => $derivedBeat,
-                    'resolved_beat_type_id' => ($resolvedBeatTypeId !== '') ? $resolvedBeatTypeId : null,
+                    'beat_code_hint' => ($derivedBeatCode !== '') ? $derivedBeatCode : null,
+                    'resolved_beat_code' => ($finalBeatCode !== '') ? $finalBeatCode : null,
+                    'resolved_beat_type_id' => ($finalBeatTypeId !== '') ? $finalBeatTypeId : null,
                     'derivation_mode' => $derivationMode,
                     'evidence' => $metadata['evidence'] ?? [],
                     'applied_calendar_event_metadata' => $appliedMetadata,
                     'applied_calendar_event_beat_type' => $appliedBeatType,
+                    'ontology_linkage_fields_touched' => $ontologyLinkageFieldsTouched,
                 ],
                 'handoff_packet' => [
                     'workflow_stage' => 'beat_title_derived_and_applied',
@@ -285,11 +316,13 @@ function fw_execute_workflow_calendar_event_derive_beat_title(
                     'derived' => [
                         'title' => $derivedTitle,
                         'beat' => $derivedBeat,
-                        'beat_type_id' => ($resolvedBeatTypeId !== '') ? $resolvedBeatTypeId : null,
+                        'beat_code' => ($finalBeatCode !== '') ? $finalBeatCode : null,
+                        'beat_type_id' => ($finalBeatTypeId !== '') ? $finalBeatTypeId : null,
                     ],
                     'apply_state' => [
                         'semantic_text_persisted' => true,
                         'beat_ontology_persisted' => ($appliedBeatType !== null),
+                        'ontology_linkage_fields_touched' => $ontologyLinkageFieldsTouched,
                         'topology_generated' => false,
                         'updated_rows' => [
                             'semantic_text' => $appliedMetadata['updated_rows'] ?? null,
