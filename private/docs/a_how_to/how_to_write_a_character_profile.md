@@ -407,15 +407,24 @@ So appearance should be treated as structured resolved data, not only prose.
 
 # Voice Profiles
 
-Verified current classval-backed attribute types:
+Current voice attribute-type codes should be derived directly from:
 
 ```text
-voice_tone
-voice_cadence
-voice_rhythm
+character_profile_attribute_type_classvals
+```
+
+Do not assume shortened or normalized names are exact.
+
+Examples of possible normalization drift include cases like:
+
+```text
+voice_vocabulary_level
+```
+
+versus a shortened documentation form such as:
+
+```text
 voice_vocab
-voice_quirk
-voice_emotional_baseline
 ```
 
 Questions to answer:
@@ -431,18 +440,13 @@ What emotional tone do they project?
 
 # Psychological Profiles
 
-Verified current classval-backed attribute families:
+Current psychological attribute-type codes should be derived directly from:
 
 ```text
-psych_origin_mother
-psych_origin_father
-psych_god_filter
-psych_family_bind
-psych_naming_block
-psych_community_enforcement
-psych_religious_context
-psych_kaiju_model
+character_profile_attribute_type_classvals
 ```
+
+Use the exact DB codes rather than normalized documentation shorthand.
 
 Questions to answer:
 
@@ -457,17 +461,24 @@ What fears and loyalties constrain them?
 
 # Limbic Profile Attributes
 
-Verified current classval-backed attribute families:
+Current limbic attribute-type codes should be derived directly from:
 
 ```text
-limbic_window_of_tolerance
+character_profile_attribute_type_classvals
+```
+
+Do not collapse exact DB names into shorter labels.
+
+Examples of possible normalization drift include cases like:
+
+```text
+limbic_threat_signature
+```
+
+versus a shortened documentation form such as:
+
+```text
 limbic_threat
-limbic_safety
-limbic_attachment
-limbic_coreg
-limbic_discharge
-limbic_suppression
-limbic_arc
 ```
 
 These represent enduring patterns and tendencies.
@@ -497,9 +508,9 @@ LEGAL_NAME
 FORMER_NAME
 ALIAS
 appearance
-voice_tone
+voice_vocabulary_level
 psych_origin_mother
-limbic_window_of_tolerance
+limbic_threat_signature
 ```
 
 When this guide and the live database disagree, prefer the live classval vocabulary exposed by:
