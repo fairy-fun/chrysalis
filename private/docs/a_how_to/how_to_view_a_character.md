@@ -118,6 +118,227 @@ Output:
 
 --------------------------------------------------
 
+==================================================
+HONORIFIC AND NOBILITY RESOLUTION
+==================================================
+
+Character identity is not limited to names.
+
+Some characters also possess:
+
+    Honorifics
+    Noble Ranks
+    Territorial Styles
+    Spoken Titles
+    Written Styles
+
+These must be resolved separately.
+
+--------------------------------------------------
+
+Primary Sources
+
+Base Character Record:
+
+    characters
+
+Supplemental Honorific Assignment:
+
+    character_honorific_assignments
+
+Honorific Registry:
+
+    character_honorific
+
+Nobility Rank Registry:
+
+    honorific_nobility_ranks
+
+--------------------------------------------------
+
+Do Not Assume
+
+A character's visible title is not necessarily stored in:
+
+    characters.char_name_full
+
+For example:
+
+    Sebastian Bennett
+
+may resolve as:
+
+    Lord St George
+
+depending on:
+
+    honorific assignment
+    nobility rank
+    naming mode
+    territorial association
+
+--------------------------------------------------
+
+Resolve Honorific Assignments
+
+Query:
+
+    SELECT *
+    FROM character_honorific_assignments
+    WHERE character_id = ?;
+
+This provides:
+
+    honorific_id
+    nobility_rank_id
+    naming_mode
+    territorial_place_id
+    territorial_label
+    written configuration
+    spoken configuration
+
+Output:
+
+    Character Honorific Resolution
+
+--------------------------------------------------
+
+Resolve Honorific Metadata
+
+Query:
+
+    SELECT *
+    FROM character_honorific
+    WHERE honorific_id = ?;
+
+This provides:
+
+    code
+    label
+    written_label
+    spoken_label
+    usage_type
+
+Examples:
+
+    LORD
+    DUKE
+    MARQUESS
+    EARL
+    VISCOUNT
+    BARON
+    SIR
+    CAPTAIN
+
+--------------------------------------------------
+
+Resolve Noble Rank
+
+Query:
+
+    SELECT *
+    FROM honorific_nobility_ranks
+    WHERE rank_id = ?;
+
+Current canonical ranks include:
+
+    Duke
+    Marquess
+    Earl
+    Viscount
+    Baron
+
+Output:
+
+    Noble Rank Resolution
+
+--------------------------------------------------
+
+Territorial Naming
+
+Some honorific assignments use:
+
+    naming_mode = TERRITORIAL
+
+When present, consumers should inspect:
+
+    territorial_place_id
+    territorial_label
+
+Example:
+
+    Character Name:
+        Sebastian Bennett
+
+    Honorific:
+        Lord
+
+    Territorial Label:
+        St George
+
+    Rendered Form:
+        Lord St George
+
+The rendered identity may differ substantially from
+the underlying personal name.
+
+--------------------------------------------------
+
+Viewing a Noble Character
+
+Recommended sequence:
+
+    Resolve Character
+
+        ↓
+
+    Resolve Honorific Assignments
+
+        ↓
+
+    Resolve Honorific Metadata
+
+        ↓
+
+    Resolve Noble Rank
+
+        ↓
+
+    Resolve Relationships
+
+        ↓
+
+    Resolve Facts
+
+        ↓
+
+    Build Character Knowledge Packet
+
+Without honorific resolution, a consumer may receive
+an incomplete representation of the character's
+social identity.
+
+--------------------------------------------------
+
+Working Rule
+
+When viewing a character, resolve:
+
+    character identity
+    profile data
+    measurements
+    relationships
+    facts
+    honorific assignments
+    noble ranks
+
+before determining how the character should be
+presented to readers.
+
+A character's title, rank, and territorial style are
+part of the resolved character model and should not
+be inferred solely from character names.
+
 Step 7
 
 Generate Profiles

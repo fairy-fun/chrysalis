@@ -173,6 +173,54 @@ or another value present in gender_classvals.
 
 If a character's gender is unknown or intentionally unspecified, leave gender_id NULL until a canonical classification is established.
 
+### Step 1B — Assign Honorific and Noble Rank (When Applicable)
+
+Characters may carry social titles, military ranks,
+styles, and noble ranks.
+
+Canonical honorific metadata is sourced from:
+
+`character_honorific`
+
+and assigned through:
+
+`character_honorific_assignments
+`
+Valid noble ranks currently include:
+```text
+DUKE
+MARQUESS
+EARL
+VISCOUNT
+BARON
+```
+and are sourced from:
+
+`honorific_nobility_ranks`
+
+Example assignment:
+```sql
+INSERT INTO character_honorific_assignments (
+character_id,
+honorific_id,
+nobility_rank_id,
+is_active,
+written_enabled,
+spoken_enabled,
+naming_mode
+)
+VALUES (
+'CHAR-MAIN-006',
+16,
+1,
+1,
+1,
+1,
+'PERSONAL_LAST'
+)
+```
+---
+
 # Step 2 — Create the Entity Row
 
 ## Table
