@@ -87,28 +87,12 @@ return [
             'type' => 'terminal',
 
             'message' =>
-                'Beat and title derived from attached prose.',
+                'Beat, title, and canonical beat linkage derived from attached prose.',
 
             'response' => [
-                'summary' => 'Beat and title derived from attached prose. These values are proposed metadata and have not been applied to the calendar event yet.',
+                'summary' => 'Beat and title derived from attached prose and applied to the calendar event. When a canonical beat_type_id is resolved, it is also persisted to calendar_events.beat_type_id in the same authority step.',
 
                 'derived' => '$context.beat_title_derivation',
-
-                'next_chat_handoff' => [
-                    'workflow_id' => 'calendar_event_apply_beat_title',
-                    'message' => 'Apply the derived beat and title metadata to this calendar event.',
-                    'canonical_context' => [
-                        'calendar_event_entity_id'
-                            => '$context.beat_title_derivation.calendar_event_entity_id',
-
-                        'prose_entity_id'
-                            => '$context.beat_title_derivation.prose_entity_id',
-
-                        'prose_projection_id'
-                            => '$context.beat_title_derivation.prose_projection_id',
-                    ],
-                    'proposed_calendar_event_metadata' => '$context.beat_title_derivation.proposed_calendar_event_metadata',
-                ],
 
                 'future_chat_handoff' => [
                     'workflow_id' => 'calendar_event_process_attached_prose',
