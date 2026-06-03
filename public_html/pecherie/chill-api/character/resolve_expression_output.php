@@ -44,7 +44,7 @@ function parse_optional_domain_id(mixed $value): ?string
         return trim($value);
     }
 
-    throw new InvalidArgumentException('domain_id must be a positive integer when provided');
+    throw new InvalidArgumentException('Invalid integer parameter');
 }
 
 function parse_optional_compat_int(mixed $value): ?int
