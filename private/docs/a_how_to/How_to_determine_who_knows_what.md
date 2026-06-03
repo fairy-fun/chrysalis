@@ -370,6 +370,120 @@ The existence of a fact does not imply awareness.
 
 ---
 
+# Live Examples
+
+The live database currently contains explicit knowledge records that demonstrate asymmetric awareness.
+
+## Example: One-Sided Relationship Knowledge
+
+Knowledge record:
+
+```text
+learner_id = CHAR-MAIN-003
+knowledge_type_id = kt_known_initial
+relationship_id = REL-002
+```
+
+Notes:
+
+```text
+Kai is aware of his attraction to Shay at their first meeting.
+Shay is not aware of it.
+```
+
+Interpretation:
+
+```text
+Relationship exists.
+
+Kai knows.
+
+Shay does not know.
+```
+
+This demonstrates that relationship existence and relationship awareness are separate concerns.
+
+---
+
+## Example: Hidden Administrative Knowledge
+
+Knowledge record:
+
+```text
+learner_id = CHAR-SUP-998
+knowledge_type_id = kt_known_initial
+target_record_type = team_admin_assignments
+target_record_id = TAA-002
+```
+
+Notes:
+
+```text
+Lenore knows she has assigned Shay the narrative consultant role.
+```
+
+A separate knowledge record exists for Shay:
+
+```text
+learner_id = CHAR-MAIN-001
+knowledge_type_id = kt_known_initial
+target_record_type = team_admin_assignments
+target_record_id = TAA-002
+```
+
+Notes:
+
+```text
+Shay knows she has been given the narrative consultant responsibility.
+The team does not know.
+```
+
+Interpretation:
+
+```text
+Assignment exists.
+
+Lenore knows.
+
+Shay knows.
+
+Other characters may not know.
+```
+
+Knowledge must therefore be evaluated per learner rather than inferred from the existence of the underlying record.
+
+---
+
+## Doctrine Derived From These Examples
+
+Never assume:
+
+```text
+A relationship is mutually understood.
+
+An assignment is publicly known.
+
+A participant knows what another participant knows.
+```
+
+Instead:
+
+```text
+Find the knowledge record.
+
+Identify the learner.
+
+Determine how the knowledge was acquired.
+
+Determine whether other learners possess equivalent records.
+```
+
+Knowledge is explicit.
+
+Awareness must be demonstrated through knowledge records rather than inferred from the underlying fact.
+
+---
+
 # Scope Boundary
 
 This guide documents:
