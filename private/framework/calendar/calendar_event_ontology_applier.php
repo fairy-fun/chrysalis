@@ -60,8 +60,161 @@ function apply_calendar_event_beat_type(
         'calendar_event_entity_id' => $entityId,
         'beat_type_id' => $beatTypeId,
         'ontology_linkage_field' => 'calendar_events.beat_type_id',
+        'ontology_linkage_fields_touched' => [
+            'calendar_events.beat_type_id',
+        ],
         'ontology_authority' => 'cvt_calendar_beat_type.id',
         'updated_rows' => $stmt->rowCount(),
+    ];
+}
+
+/**
+ * Resolve a semantic beat code through the event's authoritative beat classset.
+ */
+function resolve_calendar_event_beat_type_by_code(
+    PDO $pdo,
+    string $calendarEventEntityId,
+    string $beatCode
+): array {
+
+    static $eventStmt = null;
+    static $beatStmt = null;
+
+    $entityId = trim($calendarEventEntityId);
+    $beatCode = mb_strtolower(trim($beatCode));
+
+    if ($entityId === '') {
+        throw new RuntimeException(
+            'Missing calendar event entity_id for beat code resolution'
+        );
+    }
+
+    if ($beatCode === '') {
+        throw new RuntimeException(
+            'Missing beat code for calendar event beat resolution'
+        );
+    }
+
+    if ($eventStmt === null) {
+        $eventStmt = $pdo->prepare("
+            SELECT
+                COALESCE(
+                    NULLIF(TRIM(et.beat_classset_id), ''),
+                    'CLASSSET-CALENDAR-BEAT-001'
+                ) AS beat_classset_id,
+                cs.code AS beat_classset_code
+            FROM calendar_events e
+            LEFT JOIN calendar_event_type_classvals et
+                ON et.id = e.event_type_id
+            LEFT JOIN calendar_beat_classsets cs
+                ON cs.id = COALESCE(
+                    NULLIF(TRIM(et.beat_classset_id), ''),
+                    'CLASSSET-CALENDAR-BEAT-001'
+                )
+            WHERE e.entity_id = :entity_id
+              AND e.layer_id = 'calendar_layer_event'
+            LIMIT 1
+        ");
+    }
+
+    $eventStmt->execute([
+        ':entity_id' => $entityId,
+    ]);
+
+    $eventRow = $eventStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($eventRow)) {
+        throw new RuntimeException(
+            'No calendar event found for beat code resolution: ' . $entityId
+        );
+    }
+
+    $beatClasssetId = trim((string)($eventRow['beat_classset_id'] ?? ''));
+    $beatClasssetCode = trim((string)($eventRow['beat_classset_code'] ?? ''));
+
+    if ($beatClasssetId === '') {
+        throw new RuntimeException(
+            'Missing beat classset id for calendar event: ' . $entityId
+        );
+    }
+
+    if ($beatClasssetCode === '') {
+        throw new RuntimeException(
+            'Missing beat classset code for calendar event classset: '
+            . $beatClasssetId
+        );
+    }
+
+    if ($beatStmt === null) {
+        $beatStmt = $pdo->prepare("
+            SELECT id
+            FROM cvt_calendar_beat_type
+            WHERE set_id = :set_id
+              AND code = :code
+            LIMIT 1
+        ");
+    }
+
+    $beatStmt->execute([
+        ':set_id' => $beatClasssetId,
+        ':code' => $beatCode,
+    ]);
+
+    $beatTypeId = $beatStmt->fetchColumn();
+
+    if (!is_string($beatTypeId) || $beatTypeId === '') {
+        throw new RuntimeException(
+            'Unknown beat code for classset '
+            . $beatClasssetCode
+            . ' (' . $beatClasssetId . '): '
+            . $beatCode
+        );
+    }
+
+    return [
+        'calendar_event_entity_id' => $entityId,
+        'beat_code' => $beatCode,
+        'beat_type_id' => $beatTypeId,
+        'beat_classset_id' => $beatClasssetId,
+        'beat_classset_code' => $beatClasssetCode,
+        'ontology_authority'
+            => 'calendar_event_type_classvals.beat_classset_id -> cvt_calendar_beat_type (set_id, code)',
+    ];
+}
+
+/**
+ * Resolve and apply a semantic beat code through the event classset model.
+ */
+function apply_calendar_event_beat_code(
+    PDO $pdo,
+    string $calendarEventEntityId,
+    string $beatCode
+): array {
+
+    $resolved = resolve_calendar_event_beat_type_by_code(
+        $pdo,
+        $calendarEventEntityId,
+        $beatCode
+    );
+
+    $applied = apply_calendar_event_beat_type(
+        $pdo,
+        $calendarEventEntityId,
+        (string)$resolved['beat_type_id']
+    );
+
+    return [
+        'calendar_event_entity_id' => $calendarEventEntityId,
+        'beat_code' => (string)$resolved['beat_code'],
+        'beat_type_id' => (string)$resolved['beat_type_id'],
+        'beat_classset_id' => (string)$resolved['beat_classset_id'],
+        'beat_classset_code' => (string)$resolved['beat_classset_code'],
+        'ontology_linkage_field' => 'calendar_events.beat_type_id',
+        'ontology_linkage_fields_touched' => [
+            'calendar_events.beat_type_id',
+        ],
+        'ontology_authority' => (string)$resolved['ontology_authority'],
+        'updated_rows' => (int)($applied['updated_rows'] ?? 0),
     ];
 }
 

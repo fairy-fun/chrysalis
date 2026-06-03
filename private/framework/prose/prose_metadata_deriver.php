@@ -15,6 +15,8 @@ declare(strict_types=1);
  * - extractive metadata may be produced deterministically here;
  * - semantic metadata must be provided by an explicit caller/corpus hook;
  * - beat_type_id is canonical ontology linkage, not semantic text;
+ * - beat_code is a semantic hint that must be resolved through workflow/runtime
+ *   authority before calendar_events.beat_type_id is mutated;
  * - framework code must not contain corpus names, event IDs, fixtures,
  *   character names, or publication/export topology assumptions.
  */
@@ -133,6 +135,7 @@ function derive_prose_metadata(
             'summary' => prose_truncated_summary($proseBody),
             'beat_summary' => $semantic['beat_summary'],
             'beat_type_id' => $semantic['beat_type_id'] ?? null,
+            'beat_code' => $semantic['beat_code'] ?? null,
             'derivation_mode' => $semantic['derivation_mode'] ?? 'semantic_rule',
             'evidence' => $semantic['evidence'] ?? [],
             'projection_recommendations' => [],
@@ -152,6 +155,7 @@ function derive_prose_metadata(
         'summary' => prose_truncated_summary($proseBody),
         'beat_summary' => null,
         'beat_type_id' => null,
+        'beat_code' => null,
         'derivation_mode' => 'extractive_only',
         'evidence' => [],
         'projection_recommendations' => [],
