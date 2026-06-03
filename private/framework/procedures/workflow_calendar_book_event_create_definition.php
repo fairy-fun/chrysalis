@@ -56,7 +56,7 @@ return [
 
         'await_time_index' => [
             'type' => 'input',
-            'prompt' => 'Which time slot should this event belong to? You can answer with a number or a label such as Time 1.',
+            'prompt' => 'Which time slot should this event belong to? You can answer with an existing number such as Time 1 or a canonical label such as Morning. If the labeled block does not exist for that day yet, the workflow will create it first.',
             'expected_input' => 'time_index',
 
             'transition' => [
@@ -204,14 +204,25 @@ return [
                             NULLIF(TRIM(cv.label), \'\'),
                             NULLIF(TRIM(t.notes), \'\'),
                             NULLIF(TRIM(t.summary), \'\'),
-                            CONCAT(\'Time \', t.time_index)
+                            CONCAT(\'Time \\', t.time_index)
                         ) AS display_label
                     FROM calendar_book_times t
                     LEFT JOIN calendar_time_label_classvals cv
                         ON TRIM(cv.id) = TRIM(t.time_label_id)
                     WHERE t.projection_id = :projection_id
                       AND t.day_id = :day_id
-                      AND t.time_index = :time_index
+                      AND (
+                            (:time_index > 0 AND t.time_index = :time_index)
+                         OR (
+                                :time_label_id <> \'\'
+                            AND (
+                                   TRIM(COALESCE(t.time_label_id, \'\')) = TRIM(:time_label_id)
+                                OR LOWER(TRIM(COALESCE(cv.label, \'\'))) = LOWER(TRIM(:time_label))
+                                OR LOWER(TRIM(COALESCE(t.summary, \'\'))) = LOWER(TRIM(:time_label))
+                            )
+                         )
+                      )
+                    ORDER BY t.time_index ASC
                     LIMIT 1
                 ',
 
@@ -219,6 +230,8 @@ return [
                     'projection_id' => '$context.calendar_normalized_input.projection_id',
                     'day_id' => '$context.book_day.id',
                     'time_index' => '$context.calendar_normalized_input.time_index',
+                    'time_label_id' => '$context.calendar_normalized_input.time_label_id',
+                    'time_label' => '$context.calendar_normalized_input.time_label',
                 ],
             ],
 
@@ -227,7 +240,78 @@ return [
             'transition' => [
                 'driver' => 'boolean',
                 'next' => 'create_book_calendar_event',
+                'failure_state' => 'allow_missing_label_time_creation',
+            ],
+        ],
+
+        'allow_missing_label_time_creation' => [
+            'type' => 'action',
+
+            'assert' => [
+                'left' => '$context.calendar_normalized_input.time_lookup_mode',
+                'operator' => 'equals',
+                'right' => 'time_label',
+            ],
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'resolve_next_time_index',
                 'failure_state' => 'terminal_book_time_not_found',
+            ],
+        ],
+
+        'resolve_next_time_index' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'db',
+                'operation' => 'select_one',
+                'store' => 'next_book_time',
+
+                'sql' => '
+                    SELECT
+                        COALESCE(MAX(time_index), 0) + 1 AS next_time_index
+                    FROM calendar_book_times
+                    WHERE projection_id = :projection_id
+                      AND day_id = :day_id
+                ',
+
+                'bindings' => [
+                    'projection_id' => '$context.calendar_normalized_input.projection_id',
+                    'day_id' => '$context.book_day.id',
+                ],
+            ],
+
+            'success_if' => 'row_exists',
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'create_missing_book_time',
+                'failure_state' => 'terminal_book_time_not_found',
+            ],
+        ],
+
+        'create_missing_book_time' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'calendar',
+                'operation' => 'create_book_time',
+
+                'payload' => [
+                    'projection_id' => '$context.calendar_normalized_input.projection_id',
+                    'week_id' => '$context.book_week.id',
+                    'day_id' => '$context.book_day.id',
+                    'time_index' => '$context.next_book_time.next_time_index',
+                    'time_label_id' => '$context.calendar_normalized_input.time_label_id',
+                    'summary' => '$context.calendar_normalized_input.time_label',
+                ],
+            ],
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'create_book_calendar_event',
+                'failure_state' => 'terminal_event_creation_failed',
             ],
         ],
 
