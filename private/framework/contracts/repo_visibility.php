@@ -62,6 +62,8 @@ return [
         'resolveEntityTraversal' => 'public_html/pecherie/chill-api/entity/resolve_entity_traversal.php',
         'resolveEntityMeasurements' => 'public_html/pecherie/chill-api/entity/resolve_entity_measurements.php',
         'resolveCharacterExpressionOutput' => 'public_html/pecherie/chill-api/expression/resolve_character_expression_output.php',
+        'resolveCharacterAppearance' => 'public_html/pecherie/chill-api/character/resolve_character_appearance.php',
+        'rebuildCharacterAppearanceResolved' => 'public_html/pecherie/chill-api/character/rebuild_character_appearance_resolved.php',
         'createCalendarWeek' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
         'createCalendarDay' => 'public_html/pecherie/chill-api/calendar/create_calendar_day.php',
         'createCalendarTime' => 'public_html/pecherie/chill-api/calendar/create_calendar_time.php',
