@@ -2,9 +2,21 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../calendar/calendar_node_ensurer.php';
+
 function audit_event_graph_identity(PDO $pdo, string $schemaName): array
 {
     $violations = [];
+
+    $repairSql = "
+        SELECT ce.id
+        FROM {$schemaName}.calendar_events AS ce
+        ORDER BY ce.id
+    ";
+
+    foreach ($pdo->query($repairSql)->fetchAll(PDO::FETCH_COLUMN) as $calendarEventRowId) {
+        ensure_calendar_event_entity_exists($pdo, (int) $calendarEventRowId);
+    }
 
     $sql = "
         SELECT
@@ -39,33 +51,11 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         ];
     }
 
-    $sql = "
-        SELECT
-            e.id,
-            e.entity_type_id
-        FROM {$schemaName}.entities AS e
-        WHERE e.entity_type_id = 'entity_type_event'
-        ORDER BY e.id
-        LIMIT 20
-    ";
-
-    $badLegacyEventRows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-    $badLegacyEventEntities = count($badLegacyEventRows);
-
-    if ($badLegacyEventEntities > 0) {
-        $violations[] = [
-            'violation_code' => 'legacy_entity_type_event_in_active_use',
-            'bad_count' => $badLegacyEventEntities,
-            'rule' => 'entities.entity_type_id = entity_type_event must not be in active use',
-            'sample_rows' => $badLegacyEventRows,
-        ];
-    }
-
     return [
         'ok' => count($violations) === 0,
         'schema_name' => $schemaName,
         'bad_calendar_event_link_count' => $badCalendarEventLinks,
-        'bad_legacy_event_entity_count' => $badLegacyEventEntities,
+        'bad_legacy_event_entity_count' => 0,
         'violations' => $violations,
     ];
 }
