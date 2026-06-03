@@ -8,18 +8,17 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
 
     $sql = "
         SELECT COUNT(*) AS bad_count
-        FROM calendar_events AS ce
-        LEFT JOIN entities AS e
+        FROM {$schemaName}.calendar_events AS ce
+        LEFT JOIN {$schemaName}.entities AS e
             ON e.id = ce.entity_id
-        WHERE e.id IS NULL
-           OR e.entity_type_id <> CASE ce.layer_id
-                WHEN 'calendar_layer_week' THEN 'entity_type_calendar_week'
-                WHEN 'calendar_layer_day' THEN 'entity_type_calendar_day'
-                WHEN 'calendar_layer_time' THEN 'entity_type_calendar_time'
-                WHEN 'calendar_layer_event' THEN 'entity_type_calendar_event'
-               WHEN 'calendar_layer_subevent' THEN 'entity_type_calendar_event'
-                ELSE '__invalid_calendar_layer__'
-           END
+        WHERE ce.entity_id <> CONCAT('calendar_event:', ce.id)
+           OR e.id IS NULL
+           OR e.entity_type_id NOT IN (
+                'entity_type_calendar_week',
+                'entity_type_calendar_day',
+                'entity_type_calendar_time',
+                'entity_type_calendar_event'
+           )
     ";
 
     $badCalendarEventLinks = (int) $pdo->query($sql)->fetchColumn();
@@ -28,19 +27,14 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         $violations[] = [
             'violation_code' => 'invalid_calendar_event_entity',
             'bad_count' => $badCalendarEventLinks,
-            'rule' => 'calendar_events.entity_id must resolve to entities.id with an entity_type_id matching calendar_events.layer_id',
+            'rule' => 'calendar_events.entity_id must equal calendar_event:{calendar_events.id}, resolve to entities.id, and use a canonical calendar entity type',
         ];
     }
 
     $sql = "
         SELECT COUNT(*) AS bad_count
-        FROM entities AS e
+        FROM {$schemaName}.entities AS e
         WHERE e.entity_type_id = 'entity_type_event'
-          AND EXISTS (
-              SELECT 1
-              FROM calendar_events AS ce
-              WHERE ce.entity_id = e.id
-          )
     ";
 
     $badLegacyEventEntities = (int) $pdo->query($sql)->fetchColumn();
@@ -49,7 +43,7 @@ function audit_event_graph_identity(PDO $pdo, string $schemaName): array
         $violations[] = [
             'violation_code' => 'legacy_entity_type_event_in_active_use',
             'bad_count' => $badLegacyEventEntities,
-            'rule' => 'entities.entity_type_id = entity_type_event must not be referenced by active calendar_events rows',
+            'rule' => 'entities.entity_type_id = entity_type_event must not be in active use',
         ];
     }
 
@@ -70,14 +64,5 @@ function assert_event_graph_identity(PDO $pdo, string $schemaName): void
         return;
     }
 
-    throw new RuntimeException(
-        'Event graph identity contract violated: ' . json_encode(
-            [
-                'bad_calendar_event_link_count' => $audit['bad_calendar_event_link_count'],
-                'bad_legacy_event_entity_count' => $audit['bad_legacy_event_entity_count'],
-                'violations' => $audit['violations'],
-            ],
-            JSON_UNESCAPED_SLASHES
-        )
-    );
+    throw new RuntimeException('Event graph identity contract violated.');
 }
