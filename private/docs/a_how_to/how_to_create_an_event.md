@@ -274,9 +274,8 @@ validate_book_week
 
 Checks:
 
-```sql
-calendar_book_weeks
-```
+`calendar_book_weeks`
+
 
 using:
 
@@ -303,9 +302,9 @@ validate_book_day
 
 Checks:
 
-```sql
-calendar_book_days
-```
+
+`calendar_book_days`
+
 
 using:
 
@@ -333,9 +332,9 @@ validate_book_time
 
 Checks:
 
-```sql
-calendar_book_times
-```
+
+`calendar_book_times`
+
 
 using:
 
@@ -392,6 +391,51 @@ Initial summary:
 ```text
 [Beat pending]
 ```
+---
+
+## Step 10A — Attach Projection Memberships
+
+The event's canonical source projection is:
+
+```text
+projection_id
+```
+
+used during event creation.
+
+Some events must also participate in additional projections.
+
+For example:
+
+```text
+Projection 1
+    Icehearts
+    (Book)
+
+Projection 5
+    Real-Time Continuity
+    (Timeline View)
+```
+
+In these cases, create projection memberships using:
+
+```text
+calendar_event_projection_membership
+```
+
+The event should remain canonically localized in the Book projection while also being attached to any required downstream projections.
+
+Example:
+
+```text
+calendar_event_id
+        ↓
+Projection 1
+Projection 5
+```
+
+This allows the event to appear in both chronology views.
+
 
 ---
 
