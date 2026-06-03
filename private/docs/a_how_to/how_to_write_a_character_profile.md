@@ -30,7 +30,7 @@ What do they look like?
 How do they speak?
 How do they tend to regulate?
 What psychological structures shape them?
-``
+```
 
 Character profiles describe the character.
 
@@ -69,6 +69,8 @@ character_profiles
 character_profile_attributes
 ```
 
+But in the live system, those two tables are only the center of the profile model, not the entire model.
+
 ---
 
 ## Event-Scoped Limbic State
@@ -100,11 +102,15 @@ Not part of the profile system.
 
 # Database Model
 
-Verified tables:
+Verified live tables relevant to profile architecture include:
 
 ```text
 character_profiles
+character_profile_type_classvals
 character_profile_attributes
+character_profile_attribute_type_classvals
+character_profile_attribute_classvals
+character_profile_attribute_tags
 ```
 
 Conceptual structure:
@@ -112,12 +118,116 @@ Conceptual structure:
 ```text
 Character
     ↓
-Profile
+Profile Container
     ↓
-Attributes
+Structured Attributes
+    ↓
+Classval and Tag Resolution
 ```
 
 A single character may have many profiles.
+
+The profile system is classval-backed, not just profile rows plus free-text attributes.
+
+## Profile Containers
+
+Primary table:
+
+```text
+character_profiles
+```
+
+This table defines the profile row itself:
+
+- which character the profile belongs to
+- which profile type it represents
+- any profile-level JSON or prose payload stored on that row
+
+It should be treated as the profile container layer.
+
+## Profile-Type Classval Layer
+
+Live table:
+
+```text
+character_profile_type_classvals
+```
+
+This table links profile types to classval vocabulary.
+
+That means profile semantics are not defined only by the existence of a row in `character_profiles`.
+Some profile structure is governed by classval-backed definitions attached to the profile type.
+
+## Structured Attribute Layer
+
+Primary table:
+
+```text
+character_profile_attributes
+```
+
+This table stores structured facts attached to a profile.
+
+Attributes may be represented as:
+
+- text values
+- classval-backed values
+
+In particular, `character_profile_attributes.value_classval_id` is an actively used storage path in the live DB.
+
+It should not be treated as an edge case.
+
+## Attribute-Type Classval Layer
+
+Live table:
+
+```text
+character_profile_attribute_type_classvals
+```
+
+This table defines the classval vocabulary expected or allowed for a given attribute type.
+
+For many structured domains, this is the vocabulary layer behind the profile attribute system.
+
+## Attribute/Classval Binding Layer
+
+Live table:
+
+```text
+character_profile_attribute_classvals
+```
+
+This table participates in the attribute-to-classval architecture at the stored-value layer.
+
+Together with `character_profile_attributes.value_classval_id`, it shows that many attributes are expected to resolve through controlled values rather than raw prose.
+
+## Attribute Tag Layer
+
+Live table:
+
+```text
+character_profile_attribute_tags
+```
+
+This table stores tags attached to specific profile-attribute rows.
+
+These tags are part of the structured profile model.
+They do not live only in profile JSON.
+
+## Practical Consequence
+
+Any description of the profile system that documents only:
+
+```text
+character_profiles
+character_profile_attributes
+```
+
+is materially incomplete relative to the live schema.
+
+As of the current database snapshot referenced for this update, `character_profile_attributes.value_classval_id` is used by 30 of 45 current attribute rows.
+
+That usage level means classval-backed attribute storage is a normal path, not a special case.
 
 ---
 
@@ -269,6 +379,16 @@ Contrast: Medium
 Presence: Balanced
 ```
 
+Many appearance values resolve through classvals rather than free text.
+
+Appearance-oriented profile attributes may also carry tags through:
+
+```text
+character_profile_attribute_tags
+```
+
+So appearance should be treated as structured resolved data, not only prose.
+
 ---
 
 # Voice Profiles
@@ -375,6 +495,28 @@ Safety conditions
 
 ---
 
+## Resolve Structured Values Before Writing Prose
+
+Before drafting narrative text:
+
+```text
+Read the profile container
+Read the profile attributes
+Check whether each attribute is text-backed or classval-backed
+Resolve value_classval_id values to display labels
+Check for attribute-level tags that affect interpretation
+```
+
+Do not assume:
+
+```text
+profile_json contains the whole profile
+free text is the default storage format
+an empty JSON payload means the profile is empty
+```
+
+---
+
 ## Avoid Event Narration
 
 Do not use profiles to record:
@@ -425,6 +567,8 @@ Relevant notes
 ```
 
 while avoiding scene-by-scene event history.
+
+It should also respect the structured layer already present in the database.
 
 ---
 
