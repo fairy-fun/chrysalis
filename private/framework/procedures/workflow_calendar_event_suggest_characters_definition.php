@@ -88,7 +88,7 @@ return [
             'message' => 'Character suggestions generated from attached prose.',
 
             'response' => [
-                'summary' => 'Character suggestions generated from attached prose. These are advisory suggestions only and have not been applied to canonical ontology.',
+                'summary' => 'Character identity suggestions generated from attached prose. These are advisory suggestions only, they have not been applied to canonical ontology, and they do not assign event-relative participant roles.',
                 'suggestions' => '$context.character_suggestions',
             ],
         ],
