@@ -100,9 +100,9 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
         $dayInput
     );
 
-    $timeIndex = fw_normalize_calendar_index_value(
-        $timeInput,
-        'time'
+    $timeSelector = fw_resolve_calendar_book_time_selector(
+        $pdo,
+        $timeInput
     );
 
     return [
@@ -117,7 +117,11 @@ function fw_execute_workflow_calendar_normalize_book_event_input(
                     'book_projection_code' => $projection['projection_code'],
                     'week_index' => $weekIndex,
                     'day_index' => $dayIndex,
-                    'time_index' => $timeIndex,
+                    'time_lookup_mode' => $timeSelector['time_lookup_mode'],
+                    'time_index' => $timeSelector['time_index'],
+                    'time_label_id' => $timeSelector['time_label_id'],
+                    'time_label' => $timeSelector['time_label'],
+                    'time_label_code' => $timeSelector['time_label_code'],
                 ],
             ]
         ),
@@ -361,6 +365,66 @@ function fw_normalize_calendar_index_value(
     }
 
     return (int)$normalized;
+}
+
+function fw_resolve_calendar_book_time_selector(
+    PDO $pdo,
+    string $value
+): array {
+
+    $trimmed = trim($value);
+
+    if ($trimmed === '') {
+        throw new RuntimeException(
+            'Book time input is required'
+        );
+    }
+
+    try {
+        return [
+            'time_lookup_mode' => 'time_index',
+            'time_index' => fw_normalize_calendar_index_value(
+                $trimmed,
+                'time'
+            ),
+            'time_label_id' => null,
+            'time_label' => null,
+            'time_label_code' => null,
+        ];
+    } catch (RuntimeException $e) {
+        // Fall through to canonical classval label resolution.
+    }
+
+    $labelStmt = $pdo->prepare('
+        SELECT
+            id,
+            code,
+            label
+        FROM calendar_time_label_classvals
+        WHERE LOWER(TRIM(label)) = LOWER(TRIM(:value))
+           OR LOWER(TRIM(code)) = LOWER(TRIM(:value))
+        LIMIT 1
+    ');
+
+    $labelStmt->execute([
+        'value' => $trimmed,
+    ]);
+
+    $label = $labelStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($label)) {
+        throw new RuntimeException(
+            'Invalid canonical Book time input'
+        );
+    }
+
+    return [
+        'time_lookup_mode' => 'time_label',
+        'time_index' => 0,
+        'time_label_id' => trim((string)($label['id'] ?? '')),
+        'time_label' => trim((string)($label['label'] ?? '')),
+        'time_label_code' => trim((string)($label['code'] ?? '')),
+    ];
 }
 
 function fw_normalize_calendar_day_index(string $value): int
