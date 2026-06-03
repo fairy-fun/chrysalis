@@ -233,7 +233,21 @@ That usage level means classval-backed attribute storage is a normal path, not a
 
 # Profile Types
 
-Verified examples from the live database include:
+Verified current classval-backed examples from the live database include:
+
+```text
+LEGAL_NAME
+FORMER_NAME
+ALIAS
+appearance
+BIOGRAPHY
+PERSONALITY
+MOTIVATION
+```
+
+Additional profile types may be added over time.
+
+Earlier documentation may still refer to older naming patterns such as:
 
 ```text
 profile_type_public_name
@@ -243,7 +257,7 @@ profile_type_alias
 profile_type_appearance
 ```
 
-Additional profile types may be added over time.
+Treat those as older documentation vocabulary, not the preferred representation of the current classval layer.
 
 ---
 
@@ -362,11 +376,11 @@ How the character appears to others.
 Verified attribute families:
 
 ```text
-attr_hair_color
-attr_eye_color
-attr_skin_tone
-attr_appearance_contrast
-attr_appearance_presence
+hair_color
+eye_color
+skin_tone
+appearance_contrast
+appearance_presence
 ```
 
 Example:
@@ -393,15 +407,15 @@ So appearance should be treated as structured resolved data, not only prose.
 
 # Voice Profiles
 
-Verified attribute types:
+Verified current classval-backed attribute types:
 
 ```text
-attr_voice_tone
-attr_voice_cadence
-attr_voice_rhythm
-attr_voice_vocab
-attr_voice_quirk
-attr_voice_emotional_baseline
+voice_tone
+voice_cadence
+voice_rhythm
+voice_vocab
+voice_quirk
+voice_emotional_baseline
 ```
 
 Questions to answer:
@@ -417,17 +431,17 @@ What emotional tone do they project?
 
 # Psychological Profiles
 
-Verified attribute families:
+Verified current classval-backed attribute families:
 
 ```text
-attr_psych_origin_mother
-attr_psych_origin_father
-attr_psych_god_filter
-attr_psych_family_bind
-attr_psych_naming_block
-attr_psych_community_enforcement
-attr_psych_religious_context
-attr_psych_kaiju_model
+psych_origin_mother
+psych_origin_father
+psych_god_filter
+psych_family_bind
+psych_naming_block
+psych_community_enforcement
+psych_religious_context
+psych_kaiju_model
 ```
 
 Questions to answer:
@@ -443,17 +457,17 @@ What fears and loyalties constrain them?
 
 # Limbic Profile Attributes
 
-Verified attribute families:
+Verified current classval-backed attribute families:
 
 ```text
-attr_limbic_window
-attr_limbic_threat
-attr_limbic_safety
-attr_limbic_attachment
-attr_limbic_coreg
-attr_limbic_discharge
-attr_limbic_suppression
-attr_limbic_arc
+limbic_window_of_tolerance
+limbic_threat
+limbic_safety
+limbic_attachment
+limbic_coreg
+limbic_discharge
+limbic_suppression
+limbic_arc
 ```
 
 These represent enduring patterns and tendencies.
@@ -471,6 +485,29 @@ What happens under suppression?
 These are profile-level characteristics.
 
 They are not event-level state records.
+
+## Vocabulary Alignment Note
+
+Several older examples in historical docs use prefixes such as `profile_type_` and `attr_`.
+
+The live classval-backed surfaces now use codes closer to:
+
+```text
+LEGAL_NAME
+FORMER_NAME
+ALIAS
+appearance
+voice_tone
+psych_origin_mother
+limbic_window_of_tolerance
+```
+
+When this guide and the live database disagree, prefer the live classval vocabulary exposed by:
+
+```text
+character_profile_type_classvals
+character_profile_attribute_type_classvals
+```
 
 ---
 
