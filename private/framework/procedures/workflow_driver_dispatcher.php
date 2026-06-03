@@ -59,14 +59,14 @@ function fw_execute_workflow_driver_operation(
             'derive_beat_title' => 'fw_execute_workflow_calendar_event_derive_beat_title',
             'suggest_characters' => 'fw_execute_workflow_calendar_event_suggest_characters',
             'prepare_character_tag_approval' => 'fw_execute_workflow_calendar_event_prepare_character_tag_approval',
+            'prepare_character_role_approval' => 'fw_execute_workflow_calendar_event_prepare_character_role_approval',
             'apply_character_tags' => 'fw_execute_workflow_calendar_event_apply_character_tags',
+            'apply_character_tags_and_roles' => 'fw_execute_workflow_calendar_event_apply_character_tags_and_roles',
             'suggest_locations' => 'fw_execute_workflow_calendar_event_suggest_locations',
-
-                        'prepare_location_tag_approval'
-                            => 'fw_execute_workflow_calendar_event_prepare_location_tag_approval',
-
-                        'apply_location_tags'
-                            => 'fw_execute_workflow_calendar_event_apply_location_tags',
+            'prepare_location_tag_approval'
+                => 'fw_execute_workflow_calendar_event_prepare_location_tag_approval',
+            'apply_location_tags'
+                => 'fw_execute_workflow_calendar_event_apply_location_tags',
             'display_day_prose' => 'fw_execute_workflow_calendar_display_day_prose',
             'display_week_prose' => 'fw_execute_workflow_calendar_display_week_prose',
             'display_week_day_prose' => 'fw_execute_workflow_calendar_display_week_day_prose',
