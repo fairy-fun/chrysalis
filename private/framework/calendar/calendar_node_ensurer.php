@@ -683,12 +683,6 @@ function ensure_calendar_event_entity_exists(PDO $pdo, int $calendarEventRowId):
 
     $existingTypeId = $stmt->fetchColumn();
 
-    if (is_string($existingTypeId) && trim($existingTypeId) !== $entityTypeId) {
-        throw new RuntimeException(
-            "Calendar entity type mismatch for {$expectedEntityId}: expected {$entityTypeId}, found {$existingTypeId}"
-        );
-    }
-
     ensure_entity_row($pdo, $expectedEntityId, $entityTypeId);
 
     if ($currentEntityId !== $expectedEntityId) {
@@ -725,7 +719,7 @@ function ensure_entity_row(PDO $pdo, string $entityId, string $entityTypeId): vo
     $stmt = $pdo->prepare("
         INSERT INTO sxnzlfun_chrysalis.entities (id, entity_type_id)
         VALUES (:id, :type)
-        ON DUPLICATE KEY UPDATE id = id
+        ON DUPLICATE KEY UPDATE entity_type_id = VALUES(entity_type_id)
     ");
 
     $stmt->execute([
