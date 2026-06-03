@@ -180,13 +180,17 @@ function normalize_character_appearance_rows(array|false $rows): array
             continue;
         }
 
+        $valueClassvalId = $row['value_classval_id'] ?? null;
+        $valueClassvalCode = $row['value_classval_code'] ?? null;
+        $valueClassvalLabel = $row['value_classval_label'] ?? null;
+
         $normalized[] = [
             'character_id' => trim((string) ($row['character_id'] ?? '')),
             'attribute_id' => isset($row['attribute_id']) ? (int) $row['attribute_id'] : 0,
             'attribute_type_id' => trim((string) ($row['attribute_type_id'] ?? '')),
-            'value_classval_id' => trim((string) ($row['value_classval_id'] ?? '')),
-            'value_classval_code' => trim((string) ($row['value_classval_code'] ?? '')),
-            'value_classval_label' => trim((string) ($row['value_classval_label'] ?? '')),
+            'value_classval_id' => $valueClassvalId === null ? null : trim((string) $valueClassvalId),
+            'value_classval_code' => $valueClassvalCode === null ? null : trim((string) $valueClassvalCode),
+            'value_classval_label' => $valueClassvalLabel === null ? null : trim((string) $valueClassvalLabel),
             'tag_id' => trim((string) ($row['tag_id'] ?? '')),
             'tag_code' => trim((string) ($row['tag_code'] ?? '')),
             'tag_label' => trim((string) ($row['tag_label'] ?? '')),
