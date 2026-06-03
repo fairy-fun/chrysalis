@@ -9,15 +9,14 @@ function count_bad_calendar_event_links(PDO $pdo): int
          FROM sxnzlfun_chrysalis.calendar_events ce
          LEFT JOIN sxnzlfun_chrysalis.entities e
            ON e.id = ce.entity_id
-         WHERE e.id IS NULL
-            OR e.entity_type_id <> CASE ce.layer_id
-                WHEN 'calendar_layer_week' THEN 'entity_type_calendar_week'
-                WHEN 'calendar_layer_day' THEN 'entity_type_calendar_day'
-                WHEN 'calendar_layer_time' THEN 'entity_type_calendar_time'
-                WHEN 'calendar_layer_event' THEN 'entity_type_calendar_event'
-                WHEN 'calendar_layer_subevent' THEN 'entity_type_calendar_event'
-                ELSE '__invalid_calendar_layer__'
-            END"
+         WHERE ce.entity_id <> CONCAT('calendar_event:', ce.id)
+            OR e.id IS NULL
+            OR e.entity_type_id NOT IN (
+                'entity_type_calendar_week',
+                'entity_type_calendar_day',
+                'entity_type_calendar_time',
+                'entity_type_calendar_event'
+            )"
     );
 
     $count = $stmt->fetchColumn();
@@ -54,8 +53,8 @@ function validate_event_graph_identity_contract(PDO $pdo): void
     if ($badCalendarEventLinks > 0 || $badEventEntities > 0) {
         throw new RuntimeException(
             'Event graph identity contract violated: ' .
-            'calendar_events.entity_id must resolve to entities.id ' .
-            'with entity_type_id matching calendar_events.layer_id, and entity_type_event ' .
+            'calendar_events.entity_id must equal calendar_event:{calendar_events.id}, ' .
+            'resolve to entities.id, use a canonical calendar entity type, and entity_type_event ' .
             'must not be in active use.'
         );
     }
