@@ -203,8 +203,7 @@ return [
                         COALESCE(
                             NULLIF(TRIM(cv.label), \'\'),
                             NULLIF(TRIM(t.notes), \'\'),
-                            NULLIF(TRIM(t.summary), \'\'),
-                            CONCAT(\'Time \\', t.time_index)
+                            NULLIF(TRIM(t.summary), \'\')
                         ) AS display_label
                     FROM calendar_book_times t
                     LEFT JOIN calendar_time_label_classvals cv
