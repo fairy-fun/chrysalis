@@ -19,6 +19,12 @@ declare(strict_types=1);
  *     CI enforces meaning.
  *
  * Do not replace this audit with trigger-based DB logic.
+ *
+ * Retirement tracking note:
+ *
+ * profile_type_domain_map remains audited during transition, but its presence
+ * here does not imply live runtime authority. Treat it as a retirement
+ * candidate unless a runtime consumer is reintroduced.
  */
 
 function audit_domain_entity_mirror(PDO $pdo, string $schemaName): array
