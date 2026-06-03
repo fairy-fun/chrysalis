@@ -89,6 +89,19 @@ const FW_REPO_CONTRACT = [
             'behaviour_tested' => true,
             'audit_visibility_required' => true,
         ],
+        'resolveCharacterAppearance' => [
+            'handler' => 'public_html/pecherie/chill-api/character/resolve_character_appearance.php',
+            'description' => 'Resolve character appearance tag rows from the materialized appearance table with source-table fallback when needed.',
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
+        'rebuildCharacterAppearanceResolved' => [
+            'handler' => 'public_html/pecherie/chill-api/character/rebuild_character_appearance_resolved.php',
+            'description' => 'Rebuild the v_character_appearance_resolved materialized read model from character profile attribute tag sources.',
+            'writes' => true,
+            'behaviour_tested' => false,
+            'audit_visibility_required' => true,
+        ],
         'createCalendarWeek' => [
             'handler' => 'public_html/pecherie/chill-api/calendar/create_calendar_week.php',
             'behaviour_tested' => false,

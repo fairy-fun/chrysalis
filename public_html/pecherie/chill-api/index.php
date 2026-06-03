@@ -117,6 +117,14 @@ switch ($operation) {
         require __DIR__ . '/expression/resolve_character_expression_output.php';
         break;
 
+    case 'resolveCharacterAppearance':
+        require __DIR__ . '/character/resolve_character_appearance.php';
+        break;
+
+    case 'rebuildCharacterAppearanceResolved':
+        require __DIR__ . '/character/rebuild_character_appearance_resolved.php';
+        break;
+
     case 'createCalendarWeek':
         require __DIR__ . '/calendar/create_calendar_week.php';
         break;

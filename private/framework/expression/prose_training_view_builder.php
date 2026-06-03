@@ -1,9 +1,113 @@
 <?php
 
-const PROSE_TRAINING_ANNOTATION_TYPE_VOICE_ID = 'annotation_type_voice';
-const PROSE_TRAINING_ANNOTATION_TYPE_LIMBIC_ID = 'annotation_type_limbic';
-const PROSE_TRAINING_ANNOTATION_TYPE_EXPRESSION_ID = 'annotation_type_expression';
-const PROSE_TRAINING_ANNOTATION_TYPE_THEME_ID = 'annotation_type_theme';
+function prose_training_fetch_entity_summaries(PDO $pdo, array $entityIds): array
+{
+    $entityIds = array_values(array_unique(array_filter(
+        $entityIds,
+        static fn ($value): bool => is_string($value) && trim($value) !== ''
+    )));
+
+    if ($entityIds === []) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+
+    foreach ($entityIds as $index => $entityId) {
+        $placeholder = ':entity_id_' . $index;
+        $placeholders[] = $placeholder;
+        $params[$placeholder] = $entityId;
+    }
+
+    $sql = "
+        SELECT
+            e.id,
+            e.entity_type_id,
+            c.classval_type_id,
+            c.code AS classval_code,
+            c.label AS classval_label,
+            MIN(et.canonical_label) AS canonical_label
+        FROM sxnzlfun_chrysalis.entities e
+        LEFT JOIN sxnzlfun_chrysalis.classvals c
+            ON c.id = e.id
+        LEFT JOIN sxnzlfun_chrysalis.entity_texts et
+            ON et.entity_id = e.id
+        WHERE e.id IN (" . implode(', ', $placeholders) . ")
+        GROUP BY
+            e.id,
+            e.entity_type_id,
+            c.classval_type_id,
+            c.code,
+            c.label
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $summaries = [];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $summaries[$row['id']] = [
+            'id' => $row['id'],
+            'entity_type_id' => $row['entity_type_id'],
+            'canonical_label' => $row['canonical_label'],
+            'classval_type_id' => $row['classval_type_id'],
+            'classval_code' => $row['classval_code'],
+            'classval_label' => $row['classval_label'],
+        ];
+    }
+
+    return $summaries;
+}
+
+function prose_training_annotation_bucket_key(array $typeEntity): ?string
+{
+    $candidates = [
+        $typeEntity['canonical_label'] ?? null,
+        $typeEntity['classval_label'] ?? null,
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (!is_string($candidate) || trim($candidate) === '') {
+            continue;
+        }
+
+        $normalized = strtolower(trim($candidate));
+
+        if ($normalized === 'voice') {
+            return 'voice';
+        }
+
+        if ($normalized === 'limbic') {
+            return 'limbic';
+        }
+
+        if ($normalized === 'expression') {
+            return 'expression';
+        }
+
+        if ($normalized === 'theme') {
+            return 'theme';
+        }
+    }
+
+    return null;
+}
+
+function prose_training_annotation_value_label(?array $valueEntity, string $fallbackId): string
+{
+    foreach ([
+        $valueEntity['canonical_label'] ?? null,
+        $valueEntity['classval_label'] ?? null,
+    ] as $candidate) {
+        if (is_string($candidate) && trim($candidate) !== '') {
+            return trim($candidate);
+        }
+    }
+
+    return $fallbackId;
+}
 
 function buildProseTrainingView(
     PDO $pdo,
@@ -88,9 +192,31 @@ function buildProseTrainingView(
 
     $annotations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $entityIds = [];
+    foreach ($annotations as $annotation) {
+        $entityIds[] = $annotation['annotation_type_id'];
+        $entityIds[] = $annotation['annotation_value_id'];
+
+        if (is_string($annotation['subject_entity_id']) && trim($annotation['subject_entity_id']) !== '') {
+            $entityIds[] = $annotation['subject_entity_id'];
+        }
+    }
+
+    $entitySummaries = prose_training_fetch_entity_summaries($pdo, $entityIds);
+
     $proseText = $draft['prose_body'];
 
     foreach ($annotations as &$annotation) {
+        $typeId = $annotation['annotation_type_id'];
+        $valueId = $annotation['annotation_value_id'];
+        $subjectId = $annotation['subject_entity_id'];
+
+        $annotation['type_entity'] = $entitySummaries[$typeId] ?? null;
+        $annotation['value_entity'] = $entitySummaries[$valueId] ?? null;
+        $annotation['subject_entity'] = is_string($subjectId)
+            ? ($entitySummaries[$subjectId] ?? null)
+            : null;
+
         if ($annotation['span_start'] !== null && $annotation['span_end'] !== null) {
             $annotation['span_text'] = mb_substr(
                 $proseText,
@@ -110,21 +236,31 @@ function buildProseTrainingView(
     $themeLabels = [];
 
     foreach ($annotations as $annotation) {
-        $type = $annotation['annotation_type_id'];
-        $value = $annotation['annotation_value_id'];
-
         if ($annotation['subject_entity_id'] !== null) {
             $characters[$annotation['subject_entity_id']] = true;
         }
 
-        if ($type === PROSE_TRAINING_ANNOTATION_TYPE_VOICE_ID) {
-            $voiceLabels[] = $value;
-        } elseif ($type === PROSE_TRAINING_ANNOTATION_TYPE_LIMBIC_ID) {
-            $limbicLabels[] = $value;
-        } elseif ($type === PROSE_TRAINING_ANNOTATION_TYPE_EXPRESSION_ID) {
-            $expressionLabels[] = $value;
-        } elseif ($type === PROSE_TRAINING_ANNOTATION_TYPE_THEME_ID) {
-            $themeLabels[] = $value;
+        $bucketKey = prose_training_annotation_bucket_key(
+            $annotation['type_entity'] ?? []
+        );
+
+        if ($bucketKey === null) {
+            continue;
+        }
+
+        $valueLabel = prose_training_annotation_value_label(
+            $annotation['value_entity'] ?? null,
+            $annotation['annotation_value_id']
+        );
+
+        if ($bucketKey === 'voice') {
+            $voiceLabels[] = $valueLabel;
+        } elseif ($bucketKey === 'limbic') {
+            $limbicLabels[] = $valueLabel;
+        } elseif ($bucketKey === 'expression') {
+            $expressionLabels[] = $valueLabel;
+        } elseif ($bucketKey === 'theme') {
+            $themeLabels[] = $valueLabel;
         }
     }
 

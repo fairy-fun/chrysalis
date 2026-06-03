@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/resolve_character_appearance.php';
+
 function resolve_character_knowledge_packet(PDO $pdo, string $characterId): array
 {
     $characterId = trim($characterId);
@@ -22,6 +24,7 @@ function resolve_character_knowledge_packet(PDO $pdo, string $characterId): arra
         'character_id' => $characterId,
         'entity_id' => $entityId,
         'character' => $character,
+        'appearance' => resolve_character_appearance($pdo, $characterId),
         'relationships' => fetch_character_relationship_packets($pdo, $entityId),
         'relationship_facts' => fetch_character_relationship_facts($pdo, $entityId),
         'character_facts' => fetch_character_facts($pdo, $entityId),

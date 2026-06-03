@@ -320,6 +320,29 @@ Future body measurements
 
 A profile may depend on measurements without duplicating them in profile JSON.
 
+Appearance Tags
+
+Primary tables:
+
+appearance_tags
+character_profile_attribute_tags
+
+These tags are real structured appearance data.
+
+They are attached to specific character profile attributes rather than living only in profile JSON.
+
+Example chain:
+
+character_id
+→ character_profiles.profile_id
+→ character_profile_attributes.attribute_id
+→ character_profile_attribute_tags.tag_id
+→ appearance_tags
+
+This means appearance tags must be resolved from linked tables.
+
+They should not be assumed absent just because profile_json is empty.
+
 Appearance Example
 
 Consider:
@@ -374,6 +397,7 @@ Examples:
 Attributes
 Classvals
 Measurements
+Appearance Tags
 
 JSON may still be empty.
 
@@ -384,9 +408,9 @@ Profile JSON contains meaningful descriptive content.
 Examples:
 
 Biography summary
+Appearance narrative
 Personality description
 Social role notes
-Appearance narrative
 Fully Populated
 
 Both structured and narrative information exist.
@@ -397,6 +421,7 @@ Structured:
 Hair color
 Eye color
 Height
+Appearance tags
 
 Narrative:
 Appearance summary
@@ -435,6 +460,7 @@ Many profile facts may be sourced from:
 character_profile_attributes
 classvals
 character_measurements
+appearance_tags
 identity resolution
 future resolver views
 
@@ -447,6 +473,7 @@ When evaluating a character:
 Start with the character record.
 Resolve identity.
 Resolve profile attributes.
+Resolve appearance tags.
 Resolve measurements.
 Resolve profile JSON.
 Combine all resolved sources.
@@ -482,6 +509,7 @@ character_profiles
 character_profile_attributes
 classvals
 character_measurements
+appearance_tags
 
 As a result, inspecting only one table can produce an incorrect understanding of the character.
 
@@ -586,6 +614,7 @@ Eye Color
 Skin Tone
 Height
 Classified Attributes
+Appearance Tags
 
 These facts may be stored outside the profile JSON.
 
@@ -615,10 +644,34 @@ With resolution:
 Hair Color = Brown
 Eye Color = Hazel
 Height = 5'4"
+Appearance Tags = [ ... ]
 
 the profile is recognized as populated.
 
 This distinction is critical when auditing character completeness.
+
+Appearance Tag Operational Note
+
+`v_character_appearance_resolved` is a materialized read model.
+
+It is not the canonical source of appearance tag assignments.
+
+Canonical source data lives in:
+
+character_profiles
+character_profile_attributes
+character_profile_attribute_tags
+appearance_tags
+
+If `v_character_appearance_resolved` is empty or stale, consumers can receive an incomplete appearance payload even though source-table data exists.
+
+The resolver stack now treats this materialized table as a convenience surface with source-table fallback.
+
+That means:
+
+- rebuild the materialized table when needed
+- do not treat an empty `v_character_appearance_resolved` table as proof that no appearance tags exist
+- when auditing, verify both the source chain and the materialized read model
 
 Recommended Workflow
 
@@ -626,6 +679,7 @@ When evaluating a character:
 
 Query v_character_resolved.
 Review the resolved character representation.
+Resolve appearance tags.
 Determine which information already exists.
 Identify genuine gaps.
 Author new profile content only where information is truly missing.
@@ -644,6 +698,10 @@ character_profiles
 +
 character_profile_attributes
 +
+character_profile_attribute_tags
++
+appearance_tags
++
 classvals
 +
 character_measurements
@@ -652,7 +710,7 @@ other resolver-backed sources
 
 v_character_resolved is the primary entry point for viewing that aggregate.
 
-he key is to stop thinking of profile population as a process that starts with profiles.
+The key is to stop thinking of profile population as a process that starts with profiles.
 
 Instead, it should start with resolution.
 
@@ -787,6 +845,7 @@ height
 hair
 eyes
 skin
+appearance tags
 
 from attributes?
 

@@ -44,12 +44,13 @@ It does not redefine them.
 ## Current Resolver Assembly Order
 
 1. Character
-2. Relationships
-3. Relationship Facts
-4. Character Facts
-5. Knowledge Packet
-6. Gap Analysis
-7. Profile Generation
+2. Appearance
+3. Relationships
+4. Relationship Facts
+5. Character Facts
+6. Knowledge Packet
+7. Gap Analysis
+8. Profile Generation
 
 This order must remain resolver-first.
 
@@ -121,6 +122,35 @@ Authority:
 
 - canonical bridge from character identity to graph identity
 
+### Appearance block
+
+Primary source tables:
+
+- `character_profiles`
+- `character_profile_attributes`
+- `character_profile_attribute_tags`
+- `appearance_tags`
+
+Materialized read model:
+
+- `v_character_appearance_resolved`
+
+Current resolver functions:
+
+- `resolve_character_appearance(...)`
+- `fetch_materialized_character_appearance_rows(...)`
+- `derive_character_appearance_rows_from_source(...)`
+
+Authority:
+
+- source-table appearance tag assignments with materialized-table convenience
+
+Notes:
+
+- the materialized table is a read model, not the canonical source
+- when `v_character_appearance_resolved` is empty for a character, the resolver falls back to source-table derivation
+- rebuilds are handled by `rebuild_character_appearance_resolved(...)`
+
 ### Relationships block
 
 Source:
@@ -187,10 +217,23 @@ Notes:
 {
   "character_id": "...",
   "entity_id": "...",
-  "character": { ... },
-  "relationships": [ ... ],
-  "relationship_facts": [ ... ],
-  "character_facts": [ ... ]
+  "character": { "...": "..." },
+  "appearance": [
+    {
+      "character_id": "...",
+      "attribute_id": 0,
+      "attribute_type_id": "...",
+      "value_classval_id": "...",
+      "value_classval_code": "...",
+      "value_classval_label": "...",
+      "tag_id": "...",
+      "tag_code": "...",
+      "tag_label": "..."
+    }
+  ],
+  "relationships": [ "..." ],
+  "relationship_facts": [ "..." ],
+  "character_facts": [ "..." ]
 }
 ```
 
@@ -199,7 +242,7 @@ The outer API endpoint currently wraps this as:
 ```json
 {
   "ok": true,
-  "data": { ... }
+  "data": { "...": "..." }
 }
 ```
 
@@ -209,13 +252,22 @@ The outer API endpoint currently wraps this as:
 
 The following files currently feed the knowledge packet directly:
 
+- `private/framework/character/resolve_character_appearance.php`
 - `private/framework/character/resolve_knowledge_packet.php`
+- `public_html/pecherie/chill-api/character/resolve_character_appearance.php`
 - `public_html/pecherie/chill-api/character/resolve_knowledge_packet.php`
+- `public_html/pecherie/chill-api/character/rebuild_character_appearance_resolved.php`
 
-The following database surfaces are consumed directly by that resolver:
+The following database surfaces are consumed directly by that resolver stack:
 
 - `v_character_resolved`
 - `characters`
+- `v_character_appearance_resolved`
+- `character_profiles`
+- `character_profile_attributes`
+- `character_profile_attribute_tags`
+- `appearance_tags`
+- `classvals`
 - `v_character_relationship_packet`
 - `v_relationship_fact_resolved`
 - `relationships`
@@ -228,6 +280,7 @@ If any new helper file is introduced for:
 - payload shaping
 - relationship read fallback
 - fact read fallback
+- appearance read fallback
 
 it must be added to this inventory.
 
@@ -240,11 +293,16 @@ it must be added to this inventory.
 - `characters.entity_id`
 - `relationships`
 - `canonical_entity_linked_facts_global`
+- `character_profiles`
+- `character_profile_attributes`
+- `character_profile_attribute_tags`
+- `appearance_tags`
 - canonical relationship fact lineage as surfaced through `v_relationship_fact_resolved`
 
 ### Resolver convenience surfaces
 
 - `v_character_resolved`
+- `v_character_appearance_resolved`
 - `v_character_relationship_packet`
 - `v_relationship_fact_resolved`
 
@@ -266,6 +324,7 @@ When modifying the Character Knowledge Packet system:
 4. Do not move relationship or fact canon into profile payloads.
 5. Do not extend `v_character_resolved` just to carry knowledge-packet data.
 6. Keep the endpoint thin and the resolver procedural.
+7. Treat `v_character_appearance_resolved` as a materialized convenience surface, not the canonical source of appearance tag assignments.
 
 ---
 
@@ -277,4 +336,5 @@ Do not:
 - copy relationship logic already present in SQL views into PHP
 - use profile JSON as the canonical fact source
 - bypass `characters.entity_id` when resolving downstream relationship/fact surfaces
+- treat `v_character_appearance_resolved` as authoritative when source tables disagree
 - add helper files without indexing them here

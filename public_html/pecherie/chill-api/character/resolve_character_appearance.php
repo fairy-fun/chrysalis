@@ -5,7 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../../../private/framework/api/api_bootstrap.php';
-require_once __DIR__ . '/../../../../private/framework/character/resolve_knowledge_packet.php';
+require_once __DIR__ . '/../../../../private/framework/character/resolve_character_appearance.php';
 
 function fail(int $status, string $message): never
 {
@@ -24,23 +24,27 @@ function parse_required_string(mixed $value, string $field): string
 }
 
 try {
-    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
+    $method = $_SERVER['REQUEST_METHOD'] ?? '';
+
+    if ($method !== 'GET' && $method !== 'POST') {
         fail(405, 'Method not allowed');
     }
 
     requireAuth();
 
-    $characterId = parse_required_string($_GET['character_id'] ?? null, 'character_id');
+    $input = $method === 'POST' ? getJsonBody() : $_GET;
+    $characterId = parse_required_string($input['character_id'] ?? null, 'character_id');
 
     $pdo = makePdo('read');
     verifyExpectedDatabase($pdo);
 
-    $result = resolve_character_knowledge_packet($pdo, $characterId);
-
     echo json_encode(
         [
             'ok' => true,
-            'data' => $result,
+            'data' => [
+                'character_id' => $characterId,
+                'appearance' => resolve_character_appearance($pdo, $characterId),
+            ],
         ],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
     );
