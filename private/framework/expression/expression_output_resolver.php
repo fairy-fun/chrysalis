@@ -63,21 +63,35 @@ function resolve_character_expression_output(PDO $pdo, string $characterId, ?str
     $psych = [];
     $limbic = [];
     $unlayered = [];
+    $resolvedOutput = [
+        'layer_voice' => [],
+        'layer_psych' => [],
+        'layer_limbic' => [],
+    ];
 
     foreach ($winners as $attributeTypeId => $winner) {
         $value = $winner['value'];
+        $resolvedItem = [
+            'attribute_type_id' => $winner['attribute_type_id'],
+            'profile_id' => $winner['profile_id'],
+            'value_text' => $winner['value_source'] === 'text' ? $winner['value'] : null,
+            'value_classval_id' => $winner['value_source'] === 'classval' ? $winner['value'] : null,
+        ];
 
         switch ($winner['layer_classval_id']) {
             case EXPRESSION_LAYER_VOICE:
                 $voice[$attributeTypeId] = $value;
+                $resolvedOutput['layer_voice'][] = $resolvedItem;
                 break;
 
             case EXPRESSION_LAYER_PSYCH:
                 $psych[$attributeTypeId] = $value;
+                $resolvedOutput['layer_psych'][] = $resolvedItem;
                 break;
 
             case EXPRESSION_LAYER_LIMBIC:
                 $limbic[$attributeTypeId] = $value;
+                $resolvedOutput['layer_limbic'][] = $resolvedItem;
                 break;
 
             default:
@@ -85,6 +99,14 @@ function resolve_character_expression_output(PDO $pdo, string $characterId, ?str
                 break;
         }
     }
+
+    foreach ($resolvedOutput as &$layerItems) {
+        usort(
+            $layerItems,
+            static fn(array $a, array $b): int => strcmp($a['attribute_type_id'], $b['attribute_type_id'])
+        );
+    }
+    unset($layerItems);
 
     return [
         'character_id' => $characterId,
@@ -95,6 +117,7 @@ function resolve_character_expression_output(PDO $pdo, string $characterId, ?str
         'psych_state' => $psych,
         'limbic_state' => $limbic,
         'unlayered_state' => $unlayered,
+        'resolved_output' => $resolvedOutput,
         'winners' => $winners,
     ];
 }
