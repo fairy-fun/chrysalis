@@ -330,7 +330,7 @@ updated_at
 
 ## What Gets Created
 
-A row in:
+A row in the table:
 
 ```text
 calendar_book_times
