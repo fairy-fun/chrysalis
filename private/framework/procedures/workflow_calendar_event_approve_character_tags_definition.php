@@ -94,16 +94,46 @@ return [
                 'cases' => [
                     '' => 'await_character_tag_approval',
                 ],
-                'default' => 'apply_character_tags',
+                'default' => 'prepare_character_role_approval',
             ],
         ],
 
-        'apply_character_tags' => [
+        'prepare_character_role_approval' => [
             'type' => 'action',
 
             'action' => [
                 'driver' => 'calendar',
-                'operation' => 'apply_character_tags',
+                'operation' => 'prepare_character_role_approval',
+            ],
+
+            'transition' => [
+                'driver' => 'boolean',
+                'next' => 'await_character_role_approval',
+                'failure_state' => 'apply_character_tags_and_roles',
+            ],
+        ],
+
+        'await_character_role_approval' => [
+            'type' => 'input',
+            'prompt' => 'Approve the suggested event-relative participant roles? Reply yes, apply identities only, reject all role assignments, or specify overrides such as CHAR-MAIN-1004 as role_observer.',
+            'expected_input' => 'character_role_approval',
+
+            'transition' => [
+                'driver' => 'match',
+                'value' => '$input.character_role_approval',
+                'cases' => [
+                    '' => 'await_character_role_approval',
+                ],
+                'default' => 'apply_character_tags_and_roles',
+            ],
+        ],
+
+        'apply_character_tags_and_roles' => [
+            'type' => 'action',
+
+            'action' => [
+                'driver' => 'calendar',
+                'operation' => 'apply_character_tags_and_roles',
             ],
 
             'transition' => [
@@ -115,12 +145,12 @@ return [
 
         'terminal_character_tags_applied' => [
             'type' => 'terminal',
-            'message' => 'Character tags approved and applied to calendar_event_participants.',
+            'message' => 'Character participation was applied to calendar_event_participants, including approved event-relative roles where available.',
         ],
 
         'terminal_character_tag_approval_rejected' => [
             'type' => 'terminal',
-            'message' => 'Character tag approval was rejected or no approved subset remained. No participant links were created.',
+            'message' => 'Character tag approval was rejected or no approved subset remained. No participant identity links were created.',
         ],
 
         'terminal_no_resolved_character_suggestions' => [
