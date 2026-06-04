@@ -2,15 +2,9 @@
 
 ## Purpose
 
-This guide explains how a calendar event is linked to specific choreography in the live Chrysalis database.
+This guide documents the canonical calendar-facing choreography model.
 
-In the current live system, choreography is attached to calendar records through:
-
-```text
-calendar_choreography_links
-```
-
-That table allows a single calendar record to reference one or more specific choreography entities that are being rehearsed, drilled, reviewed, taught, or discussed.
+A calendar event should be able to link directly to one or more specific choreography elements.
 
 Examples:
 
@@ -19,78 +13,142 @@ Rehearse a medley
 Rehearse a routine
 Rehearse a segment
 Drill a figure
+Review choreography
 ```
+
+The important rule is not the choreography level.
+The important rule is that the link belongs to the canonical calendar event surface.
 
 ---
 
 # Core Rule
 
-A calendar event in user-facing language is represented in the database by a row in:
+The canonical event surface is:
 
 ```text
-calendar_records
+calendar_events
 ```
 
-The choreography attachment row then points at that event through:
+If choreography is attached to an event, it should attach to:
 
 ```text
-calendar_choreography_links.calendar_record_id
-    -> calendar_records.id
+calendar_events.id
 ```
 
-So if you want to attach a specific choreography element to a calendar event,
-the actual stored link is:
+That means the event-facing choreography link semantics should be understood as:
 
 ```text
-calendar_records.id
-    -> calendar_choreography_links.calendar_record_id
+calendar_event_id
+    -> calendar_events.id
 ```
 
-not a separate `calendar_event_id` column.
+and:
+
+```text
+choreography_entity_id
+    -> entities.id
+```
+
+So a calendar event can carry choreography links directly, without requiring the documentation to route through any older intermediary calendar structure.
 
 ---
 
-# Active Live Table
+# Canonical Link Semantics
 
-The currently populated live table is:
-
-```text
-calendar_choreography_links
-```
-
-Verified live columns:
+A choreography attachment row should mean:
 
 ```text
-id                       bigint      primary key
-calendar_record_id       bigint      not null
-link_type_id             varchar     not null
-choreography_entity_id   varchar     not null
-scope_note               mediumtext  nullable
-created_at               datetime    not null
-```
-
-This is the current operational link surface for choreography attached to calendar records.
-
----
-
-# Link Semantics
-
-Each row in `calendar_choreography_links` means:
-
-```text
-This calendar record is linked to this choreography entity
+This calendar event is linked to this choreography entity
 with this relationship type
 and this optional scope note.
 ```
 
-In practice:
+In practice, the semantic fields are:
 
-- `calendar_record_id` identifies the calendar record
-- `link_type_id` describes the relationship semantics
-- `choreography_entity_id` identifies the choreography target
-- `scope_note` stores optional human clarification
+- `calendar_event_id`
+- `link_type_id`
+- `choreography_entity_id`
+- `scope_note`
 
-Verified live `link_type_id` values currently include:
+The canonical meaning of each field is:
+
+- `calendar_event_id`: which calendar event the link belongs to
+- `link_type_id`: what the event is doing with the choreography
+- `choreography_entity_id`: which choreography target is in scope
+- `scope_note`: optional human clarification
+
+---
+
+# Choreography Identity Model
+
+The choreography target should be stored as an entity id:
+
+```text
+choreography_entity_id
+```
+
+which resolves through:
+
+```text
+entities.id
+```
+
+This keeps the event link flexible enough to reference choreography at different levels.
+
+Examples:
+
+```text
+MEDLEY-001
+ROUTINE-001
+SEG-008
+FIG-014
+```
+
+The event-facing link does not need to store choreography type directly.
+It only needs the choreography entity identifier.
+
+The choreography domain then determines what that entity is through surfaces such as:
+
+```text
+entities
+choreography_entity_map
+choreography_hierarchy
+choreography_relationships
+```
+
+---
+
+# What Counts As A Specific Choreography Element
+
+A specific choreography element may be any choreography entity that the choreography domain recognizes.
+
+Examples include:
+
+```text
+Medley
+Routine
+Segment
+Figure
+```
+
+So the semantic rule is:
+
+```text
+A calendar event can link to a specific choreography element
+as long as that choreography target has a choreography entity id.
+```
+
+---
+
+# Link Types
+
+The event-facing choreography link should also carry relationship semantics through:
+
+```text
+link_type_id
+```
+
+Verified live values currently include patterns such as:
 
 ```text
 clt_rehearses
@@ -107,184 +165,34 @@ Current labels include:
 
 ```text
 rehearses
--drills
+drills
 ```
 
----
-
-# Choreography Identity Model
-
-The currently active link table stores choreography as an entity id:
+This means the choreography link can distinguish between different event behaviors,
+for example:
 
 ```text
-choreography_entity_id
+The event rehearses this choreography target.
+The event drills this choreography target.
 ```
-
-Examples from the live table include:
-
-```text
-MEDLEY-001
-SEG-008
-```
-
-This means the calendar system is currently linking to choreography through the entity layer.
-
-The choreography object itself is then interpreted through the broader choreography model,
-including surfaces such as:
-
-```text
-entities
-choreography_entity_map
-choreography_hierarchy
-choreography_relationships
-```
-
-Important consequence:
-
-The calendar link row does not need to store choreography type directly.
-It stores the choreography entity id and lets the choreography domain resolve what that entity is.
-
----
-
-# Current Live Examples
-
-Verified sample rows from `calendar_choreography_links` include patterns like:
-
-```text
-calendar_record_id = 1
-link_type_id = clt_rehearses
-choreography_entity_id = MEDLEY-001
-scope_note = Primary segment focus of the event.
-```
-
-and:
-
-```text
-calendar_record_id = 1
-link_type_id = clt_drills
-choreography_entity_id = SEG-008
-scope_note = Specific figure receiving extra attention.
-```
-
-This confirms that a single calendar record may carry multiple choreography links,
-and that those links may point to choreography at different levels of specificity.
-
----
-
-# What Counts As A Specific Choreography Element
-
-Because the live link uses `choreography_entity_id`, the specific choreography element may be any choreography entity represented in the entity system.
-
-Examples discussed in existing docs include:
-
-```text
-Medley
-Routine
-Segment
-Figure
-```
-
-The calendar link table itself does not care which one it is.
-
-It only stores:
-
-```text
-choreography_entity_id
-```
-
-So the semantic rule is:
-
-```text
-A calendar record can be linked to a specific choreography element
-as long as that element has a choreography entity id.
-```
-
----
-
-# Common Queries
-
-## Find choreography attached to a calendar record
-
-```sql
-SELECT
-    ccl.*
-FROM calendar_choreography_links ccl
-WHERE ccl.calendar_record_id = :calendar_record_id;
-```
-
----
-
-## Find link semantics with labels
-
-```sql
-SELECT
-    ccl.id,
-    ccl.calendar_record_id,
-    ccl.link_type_id,
-    clt.code AS link_type_code,
-    clt.label AS link_type_label,
-    ccl.choreography_entity_id,
-    ccl.scope_note
-FROM calendar_choreography_links ccl
-JOIN calendar_link_type_classvals clt
-    ON clt.id = ccl.link_type_id
-WHERE ccl.calendar_record_id = :calendar_record_id;
-```
-
----
-
-## Find all calendar records linked to a choreography entity
-
-```sql
-SELECT
-    ccl.*
-FROM calendar_choreography_links ccl
-WHERE ccl.choreography_entity_id = :entity_id;
-```
-
-Example:
-
-```sql
-SELECT *
-FROM calendar_choreography_links
-WHERE choreography_entity_id = 'SEG-008';
-```
-
----
-
-## Find choreography entity types for linked rows
-
-```sql
-SELECT
-    ccl.id,
-    ccl.calendar_record_id,
-    ccl.choreography_entity_id,
-    e.entity_type_id
-FROM calendar_choreography_links ccl
-JOIN entities e
-    ON e.id = ccl.choreography_entity_id
-WHERE ccl.calendar_record_id = :calendar_record_id;
-```
-
-This is the right pattern when you need to know whether a linked object is a segment, figure, routine, medley, or another choreography entity type.
 
 ---
 
 # Business Semantics
 
-Calendar choreography attachments represent event scope, rehearsal scope, or drill scope.
+Calendar choreography attachments represent event scope.
 
 Examples:
 
 ```text
 This event rehearses the full medley.
 This event drills one specific segment.
-This event focuses on a narrower choreography target inside a broader rehearsal block.
+This event focuses on a specific figure inside a broader choreography context.
 ```
 
-Multiple choreography rows may attach to the same calendar record.
+A single calendar event may link to multiple choreography targets.
 
-This allows patterns such as:
+Examples:
 
 ```text
 Medley + Segment
@@ -293,49 +201,70 @@ Segment + Figure
 Multiple Figures
 ```
 
-The calendar layer does not need to encode the choreography hierarchy itself.
+The event layer does not need to encode choreography hierarchy directly.
 It only stores the references.
 
 ---
 
-# Object-Based Companion Table
+# Recommended Query Shape
 
-A second live table also exists:
+If choreography is modeled directly on the canonical event surface,
+the read pattern should look like:
 
-```text
-calendar_choreography_object_links
+```sql
+SELECT
+    cel.*
+FROM calendar_event_choreography_links cel
+WHERE cel.calendar_event_id = :calendar_event_id;
 ```
 
-Verified live columns include:
+If link types are resolved with labels:
 
-```text
-id
-calendar_record_id
-link_type_id
-choreography_object_id
-scope_note
-created_at
+```sql
+SELECT
+    cel.id,
+    cel.calendar_event_id,
+    cel.link_type_id,
+    clt.code AS link_type_code,
+    clt.label AS link_type_label,
+    cel.choreography_entity_id,
+    cel.scope_note
+FROM calendar_event_choreography_links cel
+JOIN calendar_link_type_classvals clt
+    ON clt.id = cel.link_type_id
+WHERE cel.calendar_event_id = :calendar_event_id;
 ```
 
-However, at the time of this documentation update, that table exists but is not populated in the live DB.
+If choreography type needs to be resolved:
 
-That means:
+```sql
+SELECT
+    cel.id,
+    cel.calendar_event_id,
+    cel.choreography_entity_id,
+    e.entity_type_id
+FROM calendar_event_choreography_links cel
+JOIN entities e
+    ON e.id = cel.choreography_entity_id
+WHERE cel.calendar_event_id = :calendar_event_id;
+```
 
-- `calendar_choreography_links` is the active live attachment surface
-- `calendar_choreography_object_links` appears to be a newer or alternative object-based surface
-- documentation about current event-to-choreography linking should primarily describe `calendar_choreography_links`
-  unless and until the object-based table becomes the active write/read path
+These query shapes reflect the intended canonical model:
+
+```text
+calendar event -> choreography link -> choreography entity
+```
 
 ---
 
 # Design Principle
 
-The calendar module should not try to redefine choreography.
+The calendar system should not try to redefine choreography.
 
-Its job is to say:
+Its job is only to say:
 
 ```text
-this calendar record links to this choreography target
+this event links to this choreography target
 with this relationship type
 ```
 
@@ -360,19 +289,19 @@ If the goal is:
 A calendar event should be able to link to a specific choreography element.
 ```
 
-then the current live model already supports that through:
+then the canonical model should be understood as:
 
 ```text
-calendar_records.id
-    -> calendar_choreography_links.calendar_record_id
-calendar_choreography_links.choreography_entity_id
+calendar_events.id
+    -> event-facing choreography link table.calendar_event_id
+event-facing choreography link table.choreography_entity_id
     -> entities.id
 ```
 
-So the main thing the documentation must keep clear is:
+So the main things this documentation must keep clear are:
 
-- the linked event is a `calendar_records` row
-- the linked choreography target is currently a choreography entity id
-- the active live link table is `calendar_choreography_links`
+- the linked event is a `calendar_events` row
+- the linked choreography target is a choreography entity id
 - link semantics are carried by `link_type_id`
-- object-based choreography links exist in schema, but are not yet the populated live surface
+- a single event may link to multiple choreography targets
+- choreography type should be resolved through the choreography domain, not duplicated into the event link row
